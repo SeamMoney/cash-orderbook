@@ -5,21 +5,25 @@
 /// On placement:
 ///   1. Validate inputs (price>0, quantity>0, market exists and active)
 ///   2. Lock required funds from user balance
-///   3. Attempt matching (stub — matching engine is next feature)
-///   4. Based on order_type:
+///   3. Attempt matching via matching::match_order()
+///   4. Settle fills via settlement::settle_trades()
+///   5. Based on order_type:
 ///      - GTC: rest remainder on book
 ///      - IOC: cancel remainder (do not rest on book)
-///      - FOK: abort if not fully filled
-///      - PostOnly: abort if any match would occur
-///   5. Insert resting orders into BigOrderedMap with composite OrderKey
-///   6. Emit OrderPlaced event
+///      - FOK: abort if not fully filled (pre-validated)
+///      - PostOnly: abort if any match would occur (pre-validated)
+///   6. Insert resting orders into BigOrderedMap with composite OrderKey
+///   7. Emit OrderPlaced event
 module cash_orderbook::order_placement {
     use std::signer;
+    use std::vector;
     use aptos_framework::event;
     use aptos_framework::timestamp;
     use cash_orderbook::types;
     use cash_orderbook::accounts;
     use cash_orderbook::market;
+    use cash_orderbook::matching;
+    use cash_orderbook::settlement;
 
     // ========== Error Codes ==========
     const E_INSUFFICIENT_BALANCE: u64 = 2;
@@ -158,40 +162,76 @@ module cash_orderbook::order_placement {
             user_addr,
             price,
             quantity,
-            quantity, // remaining_quantity = full quantity (no matching yet)
+            quantity, // remaining_quantity = full quantity initially
             is_bid,
             order_type,
             now,
             pair_id,
         );
 
-        // 9. Handle order type behavior
-        if (order_type == types::order_type_ioc()) {
-            // IOC: no matching engine yet, so entire order is cancelled
-            // Unlock all locked funds
-            if (is_bid) {
-                accounts::unlock_balance(user_addr, quote_asset, quote_lock_amount);
-            } else {
-                accounts::unlock_balance(user_addr, base_asset, quantity);
-            };
-            // Emit event (shows order was placed and immediately cancelled)
-            event::emit(OrderPlaced {
-                order_id,
-                owner: user_addr,
-                pair_id,
-                price,
-                quantity,
-                is_bid,
-                order_type,
-                timestamp: now,
-            });
-            return
+        // 9. Attempt matching (for GTC, IOC, FOK — PostOnly already verified no crossing)
+        let trades = if (order_type != types::order_type_post_only()) {
+            matching::match_order(&mut order, false) // not a market order
+        } else {
+            vector::empty()
         };
 
-        // 10. GTC and PostOnly: insert resting order into the book
-        insert_order_to_book(order, is_bid, price, now, order_id);
+        // 10. Settle all fills
+        let num_trades = vector::length(&trades);
+        if (num_trades > 0) {
+            settlement::settle_trades(&trades, pair_id);
 
-        // 11. Emit OrderPlaced event
+            // For buy orders: unlock excess locked quote that wasn't used in fills.
+            // Taker locked at their limit price, but fills may occur at lower maker prices.
+            // We need to unlock the difference.
+            if (is_bid) {
+                let total_quote_used = calculate_total_quote_used(&trades);
+                if (total_quote_used < quote_lock_amount) {
+                    let remaining_qty = types::order_remaining_quantity(&order);
+                    let still_needed = calculate_quote_amount(price, remaining_qty);
+                    let total_accounted = total_quote_used + still_needed;
+                    if (total_accounted < quote_lock_amount) {
+                        accounts::unlock_balance(user_addr, quote_asset, quote_lock_amount - total_accounted);
+                    };
+                };
+            };
+        };
+
+        // 11. Handle remaining quantity based on order type
+        let remaining = types::order_remaining_quantity(&order);
+
+        if (remaining == 0) {
+            // Fully filled — nothing to rest or cancel
+            // For buy orders, if there's any remaining lock, unlock it
+            // (shouldn't happen since we accounted above, but safety check)
+        } else if (order_type == types::order_type_ioc()) {
+            // IOC: cancel any unfilled remainder — unlock remaining locked funds
+            if (is_bid) {
+                let remaining_lock = calculate_quote_amount(price, remaining);
+                accounts::unlock_balance(user_addr, quote_asset, remaining_lock);
+            } else {
+                accounts::unlock_balance(user_addr, base_asset, remaining);
+            };
+        } else if (order_type == types::order_type_fok()) {
+            // FOK: should be fully filled (pre-validated). If not, this is a logic error.
+            // In practice, self-trade prevention could cause partial fill despite sufficient liquidity,
+            // so we just unlock any remainder.
+            if (remaining > 0) {
+                if (is_bid) {
+                    let remaining_lock = calculate_quote_amount(price, remaining);
+                    accounts::unlock_balance(user_addr, quote_asset, remaining_lock);
+                } else {
+                    accounts::unlock_balance(user_addr, base_asset, remaining);
+                };
+            };
+        } else {
+            // GTC or PostOnly: rest the remaining order on the book
+            if (remaining > 0) {
+                insert_order_to_book(order, is_bid, price, now, order_id);
+            };
+        };
+
+        // 12. Emit OrderPlaced event
         event::emit(OrderPlaced {
             order_id,
             owner: user_addr,
@@ -205,10 +245,10 @@ module cash_orderbook::order_placement {
     }
 
     /// Place a market order. Market orders fill against the opposing side.
-    /// Any unfilled remainder is NOT placed on the book.
+    /// Any unfilled remainder is NOT placed on the book (IOC-like behavior).
     ///
-    /// Since matching engine is the next feature, market orders currently
-    /// lock and immediately unlock funds (no fills occur).
+    /// Market buy: matches against asks at any price.
+    /// Market sell: matches against bids at any price.
     public entry fun place_market_order(
         user: &signer,
         pair_id: u64,
@@ -227,38 +267,78 @@ module cash_orderbook::order_placement {
         let user_addr = signer::address_of(user);
         let now = timestamp::now_microseconds();
 
-        // 4. For market buy, estimate lock amount using best ask price
-        //    For market sell, lock the base quantity
-        let effective_price = if (is_bid) {
-            let best_ask = market::get_best_ask_price();
-            if (best_ask > 0) { best_ask } else { types::price_scale() }
-        } else {
-            0 // Not needed for sell lock calculation
-        };
-
-        // 5. Lock funds
-        if (is_bid) {
-            let quote_amount = calculate_quote_amount(effective_price, quantity);
-            if (quote_amount > 0) {
-                accounts::lock_balance(user_addr, quote_asset, quote_amount);
-                // Immediately unlock — market orders don't rest (no matching engine yet)
-                accounts::unlock_balance(user_addr, quote_asset, quote_amount);
+        // 4. Lock funds
+        //    For market buy: lock the user's entire available quote balance
+        //    (we'll unlock whatever isn't used after matching)
+        //    For market sell: lock the base quantity
+        let quote_lock_amount = if (is_bid) {
+            // Lock as much USDC as needed — estimate at a very high price initially,
+            // then unlock excess after matching. We lock all available for safety.
+            let available_quote = accounts::get_available_balance(user_addr, quote_asset);
+            if (available_quote > 0) {
+                accounts::lock_balance(user_addr, quote_asset, available_quote);
             };
+            available_quote
         } else {
             accounts::lock_balance(user_addr, base_asset, quantity);
-            // Immediately unlock — market orders don't rest
-            accounts::unlock_balance(user_addr, base_asset, quantity);
+            0
         };
 
-        // 6. Get order ID
+        // 5. Get order ID
         let order_id = types::next_order_id();
 
-        // 7. Emit OrderPlaced event (market order = IOC behavior)
+        // 6. Create order — use max price for buy (matches anything), 0 for sell
+        let effective_price = if (is_bid) { MAX_PRICE } else { 0 };
+        let order = types::new_order(
+            order_id,
+            user_addr,
+            effective_price,
+            quantity,
+            quantity,
+            is_bid,
+            types::order_type_ioc(), // Market orders behave like IOC
+            now,
+            pair_id,
+        );
+
+        // 7. Match against the book
+        let trades = matching::match_order(&mut order, true);
+
+        // 8. Settle fills
+        let num_trades = vector::length(&trades);
+        if (num_trades > 0) {
+            settlement::settle_trades(&trades, pair_id);
+        };
+
+        // 9. Unlock any remaining locked funds (market orders don't rest)
+        let remaining = types::order_remaining_quantity(&order);
+        if (is_bid) {
+            // Unlock quote that wasn't used
+            let total_quote_used = calculate_total_quote_used(&trades);
+            if (quote_lock_amount > total_quote_used) {
+                accounts::unlock_balance(user_addr, quote_asset, quote_lock_amount - total_quote_used);
+            };
+        } else {
+            if (remaining > 0) {
+                accounts::unlock_balance(user_addr, base_asset, remaining);
+            };
+        };
+
+        // 10. Emit OrderPlaced event
         event::emit(OrderPlaced {
             order_id,
             owner: user_addr,
             pair_id,
-            price: effective_price,
+            price: if (is_bid) {
+                // Use actual average fill price or 0 if no fills
+                if (num_trades > 0) {
+                    let total_quote_used = calculate_total_quote_used(&trades);
+                    let filled_qty = quantity - remaining;
+                    if (filled_qty > 0) {
+                        calculate_average_price(total_quote_used, filled_qty)
+                    } else { 0 }
+                } else { 0 }
+            } else { 0 },
             quantity,
             is_bid,
             order_type: types::order_type_ioc(), // Market orders behave like IOC
@@ -274,6 +354,27 @@ module cash_orderbook::order_placement {
     inline fun calculate_quote_amount(price: u64, quantity: u64): u64 {
         let price_scale = types::price_scale();
         (((price as u128) * (quantity as u128)) / (price_scale as u128) as u64)
+    }
+
+    /// Calculate the total quote asset used across all trades.
+    fun calculate_total_quote_used(trades: &vector<matching::Trade>): u64 {
+        let total: u64 = 0;
+        let price_scale = types::price_scale();
+        let i = 0;
+        let len = vector::length(trades);
+        while (i < len) {
+            let trade = vector::borrow(trades, i);
+            let trade_quote = (((matching::trade_price(trade) as u128) * (matching::trade_quantity(trade) as u128)) / (price_scale as u128) as u64);
+            total = total + trade_quote;
+            i = i + 1;
+        };
+        total
+    }
+
+    /// Calculate average price from total quote and filled quantity.
+    fun calculate_average_price(total_quote: u64, filled_quantity: u64): u64 {
+        let price_scale = types::price_scale();
+        (((total_quote as u128) * (price_scale as u128)) / (filled_quantity as u128) as u64)
     }
 
     /// Insert an order into the appropriate side of the order book.
@@ -786,5 +887,599 @@ module cash_orderbook::order_placement {
 
         let available = accounts::get_available_balance(user_addr, quote_addr);
         assert!(available == 1_000_000_000, 1201);
+    }
+
+    // ========== Two-User Test Helper ==========
+
+    #[test_only]
+    /// Extended test helper with TWO users: maker and taker.
+    /// Sets up protocol, two FAs, mints and deposits for both users, registers a market.
+    /// Returns (base_meta, quote_meta, pair_id).
+    fun setup_two_user_test_env(
+        deployer: &signer,
+        maker: &signer,
+        taker: &signer,
+    ): (Object<Metadata>, Object<Metadata>, u64) {
+        let deployer_addr = signer::address_of(deployer);
+        let maker_addr = signer::address_of(maker);
+        let taker_addr = signer::address_of(taker);
+        test_account::create_account_for_test(deployer_addr);
+        test_account::create_account_for_test(maker_addr);
+        test_account::create_account_for_test(taker_addr);
+
+        // Initialize protocol
+        types::init_module_for_test(deployer);
+        let resource_signer = types::get_resource_signer();
+        let resource_addr = signer::address_of(&resource_signer);
+        test_account::create_account_for_test(resource_addr);
+
+        // Set timestamp
+        let aptos_framework = test_account::create_signer_for_test(@0x1);
+        timestamp::set_time_has_started_for_testing(&aptos_framework);
+
+        // Create base asset (CASH)
+        let base_constructor_ref = object::create_named_object(deployer, b"TEST_CASH");
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            &base_constructor_ref,
+            std::option::none(),
+            string::utf8(b"Test CASH"),
+            string::utf8(b"CASH"),
+            6,
+            string::utf8(b""),
+            string::utf8(b""),
+        );
+        let base_metadata = object::object_from_constructor_ref<Metadata>(&base_constructor_ref);
+        let base_mint_ref = fungible_asset::generate_mint_ref(&base_constructor_ref);
+
+        // Create quote asset (USDC)
+        let quote_constructor_ref = object::create_named_object(deployer, b"TEST_USDC");
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            &quote_constructor_ref,
+            std::option::none(),
+            string::utf8(b"Test USDC"),
+            string::utf8(b"USDC"),
+            6,
+            string::utf8(b""),
+            string::utf8(b""),
+        );
+        let quote_metadata = object::object_from_constructor_ref<Metadata>(&quote_constructor_ref);
+        let quote_mint_ref = fungible_asset::generate_mint_ref(&quote_constructor_ref);
+
+        // Mint and deposit for maker: 10,000 CASH, 10,000 USDC
+        let base_fa = fungible_asset::mint(&base_mint_ref, 10_000_000_000);
+        primary_fungible_store::deposit(maker_addr, base_fa);
+        let quote_fa = fungible_asset::mint(&quote_mint_ref, 10_000_000_000);
+        primary_fungible_store::deposit(maker_addr, quote_fa);
+        accounts::deposit(maker, base_metadata, 5_000_000_000);
+        accounts::deposit(maker, quote_metadata, 5_000_000_000);
+
+        // Mint and deposit for taker: 10,000 CASH, 10,000 USDC
+        let base_fa2 = fungible_asset::mint(&base_mint_ref, 10_000_000_000);
+        primary_fungible_store::deposit(taker_addr, base_fa2);
+        let quote_fa2 = fungible_asset::mint(&quote_mint_ref, 10_000_000_000);
+        primary_fungible_store::deposit(taker_addr, quote_fa2);
+        accounts::deposit(taker, base_metadata, 5_000_000_000);
+        accounts::deposit(taker, quote_metadata, 5_000_000_000);
+
+        // Register market (pair_id = 0)
+        market::register_market(
+            deployer,
+            base_metadata,
+            quote_metadata,
+            1_000,    // lot_size
+            1_000,    // tick_size
+            10_000,   // min_size
+        );
+
+        (base_metadata, quote_metadata, 0)
+    }
+
+    // ========== MATCHING & SETTLEMENT TESTS ==========
+
+    // ===== VAL-CONTRACT-015: Full Fill =====
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// Full fill: taker buy exactly matches maker sell.
+    /// Both orders fully filled. Book cleared. Balances updated.
+    fun test_full_fill_buy_taker(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_two_user_test_env(deployer, maker, taker);
+        let maker_addr = signer::address_of(maker);
+        let taker_addr = signer::address_of(taker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Maker places sell: 100 CASH at 2.0 USDC
+        place_limit_order(maker, pair_id, 2_000_000, 100_000_000, false, types::order_type_gtc());
+
+        // Verify maker's base locked
+        assert!(accounts::get_locked_balance(maker_addr, base_addr) == 100_000_000, 2000);
+
+        // Taker places buy: 100 CASH at 2.0 USDC — should fully match
+        place_limit_order(taker, pair_id, 2_000_000, 100_000_000, true, types::order_type_gtc());
+
+        // Verify: book is empty (both orders fully filled)
+        assert!(market::bids_is_empty(), 2001);
+        assert!(market::asks_is_empty(), 2002);
+
+        // Verify settlement:
+        // Taker (buyer) gets 100 CASH, pays 200 USDC (100 * 2.0)
+        // Maker (seller) gets 200 USDC, gives 100 CASH
+        let taker_base = accounts::get_available_balance(taker_addr, base_addr);
+        let taker_quote = accounts::get_available_balance(taker_addr, quote_addr);
+        // Taker: started 5000 CASH, receives 100 CASH = 5100
+        assert!(taker_base == 5_100_000_000, 2003);
+        // Taker: started 5000 USDC, paid 200 USDC = 4800
+        assert!(taker_quote == 4_800_000_000, 2004);
+
+        let maker_base = accounts::get_available_balance(maker_addr, base_addr);
+        let maker_quote = accounts::get_available_balance(maker_addr, quote_addr);
+        // Maker: started 5000 CASH, sold 100 = 4900
+        assert!(maker_base == 4_900_000_000, 2005);
+        // Maker: started 5000 USDC, received 200 = 5200
+        assert!(maker_quote == 5_200_000_000, 2006);
+
+        // Verify: no locked balances remain
+        assert!(accounts::get_locked_balance(maker_addr, base_addr) == 0, 2007);
+        assert!(accounts::get_locked_balance(taker_addr, quote_addr) == 0, 2008);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// Full fill: taker sell exactly matches maker buy.
+    fun test_full_fill_sell_taker(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_two_user_test_env(deployer, maker, taker);
+        let maker_addr = signer::address_of(maker);
+        let taker_addr = signer::address_of(taker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Maker places buy: 100 CASH at 1.5 USDC
+        place_limit_order(maker, pair_id, 1_500_000, 100_000_000, true, types::order_type_gtc());
+
+        // Taker places sell: 100 CASH at 1.5 USDC — should fully match
+        place_limit_order(taker, pair_id, 1_500_000, 100_000_000, false, types::order_type_gtc());
+
+        // Book is empty
+        assert!(market::bids_is_empty(), 2100);
+        assert!(market::asks_is_empty(), 2101);
+
+        // Settlement: fill at 1.5 USDC, 100 CASH
+        // quote_amount = (1_500_000 * 100_000_000) / 1_000_000 = 150_000_000 (150 USDC)
+        let taker_base = accounts::get_available_balance(taker_addr, base_addr);
+        let taker_quote = accounts::get_available_balance(taker_addr, quote_addr);
+        // Taker (seller): 5000 CASH - 100 = 4900 CASH, 5000 USDC + 150 = 5150 USDC
+        assert!(taker_base == 4_900_000_000, 2102);
+        assert!(taker_quote == 5_150_000_000, 2103);
+
+        let maker_base = accounts::get_available_balance(maker_addr, base_addr);
+        let maker_quote = accounts::get_available_balance(maker_addr, quote_addr);
+        // Maker (buyer): 5000 CASH + 100 = 5100, 5000 USDC - 150 = 4850
+        assert!(maker_base == 5_100_000_000, 2104);
+        assert!(maker_quote == 4_850_000_000, 2105);
+    }
+
+    // ===== VAL-CONTRACT-016: Partial Fill =====
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// Partial fill: taker buy is larger than maker sell.
+    /// Maker fully filled and removed. Taker rests remainder on book (GTC).
+    fun test_partial_fill_taker_rests(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_two_user_test_env(deployer, maker, taker);
+        let maker_addr = signer::address_of(maker);
+        let taker_addr = signer::address_of(taker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Maker: sell 50 CASH at 2.0 USDC
+        place_limit_order(maker, pair_id, 2_000_000, 50_000_000, false, types::order_type_gtc());
+
+        // Taker: buy 100 CASH at 2.0 USDC — only 50 available, partial fill
+        place_limit_order(taker, pair_id, 2_000_000, 100_000_000, true, types::order_type_gtc());
+
+        // Asks empty (maker fully filled)
+        assert!(market::asks_is_empty(), 2200);
+        // Bids NOT empty (taker rests remaining 50 CASH)
+        assert!(!market::bids_is_empty(), 2201);
+
+        // Settlement: 50 CASH at 2.0 = 100 USDC transferred
+        // Taker: 5000 + 50 = 5050 CASH available, locked 100 USDC for remaining 50 CASH
+        let taker_base = accounts::get_available_balance(taker_addr, base_addr);
+        assert!(taker_base == 5_050_000_000, 2202);
+
+        // Taker: started 5000 USDC, locked 200 (for 100 CASH at 2.0),
+        // paid 100 USDC for 50 CASH fill, remaining 100 USDC still locked for resting 50 CASH
+        let taker_locked_quote = accounts::get_locked_balance(taker_addr, quote_addr);
+        assert!(taker_locked_quote == 100_000_000, 2203); // 50 CASH * 2.0 = 100 USDC locked
+
+        let taker_avail_quote = accounts::get_available_balance(taker_addr, quote_addr);
+        assert!(taker_avail_quote == 4_800_000_000, 2204); // 5000 - 200 = 4800
+
+        // Maker: fully filled, got 100 USDC
+        let maker_quote = accounts::get_available_balance(maker_addr, quote_addr);
+        assert!(maker_quote == 5_100_000_000, 2205);
+        assert!(accounts::get_locked_balance(maker_addr, base_addr) == 0, 2206);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// Partial fill: taker buy smaller than maker sell.
+    /// Taker fully filled. Maker partially filled and remains on book.
+    fun test_partial_fill_maker_remains(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_two_user_test_env(deployer, maker, taker);
+        let maker_addr = signer::address_of(maker);
+        let taker_addr = signer::address_of(taker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Maker: sell 200 CASH at 1.5 USDC
+        place_limit_order(maker, pair_id, 1_500_000, 200_000_000, false, types::order_type_gtc());
+
+        // Taker: buy 50 CASH at 1.5 USDC — maker has 200, partial fill of maker
+        place_limit_order(taker, pair_id, 1_500_000, 50_000_000, true, types::order_type_gtc());
+
+        // Asks NOT empty (maker has 150 remaining)
+        assert!(!market::asks_is_empty(), 2300);
+        // Bids empty (taker fully filled, not resting)
+        assert!(market::bids_is_empty(), 2301);
+
+        // Settlement: 50 CASH at 1.5 = 75 USDC
+        // Taker: 5000 + 50 = 5050 CASH, 5000 - 75 = 4925 USDC
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_050_000_000, 2302);
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 4_925_000_000, 2303);
+        assert!(accounts::get_locked_balance(taker_addr, quote_addr) == 0, 2304);
+
+        // Maker: still has 150 CASH locked
+        assert!(accounts::get_locked_balance(maker_addr, base_addr) == 150_000_000, 2305);
+        assert!(accounts::get_available_balance(maker_addr, quote_addr) == 5_075_000_000, 2306); // got 75 USDC
+    }
+
+    // ===== Multiple Fills Against Multiple Makers =====
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// Taker buy fills against multiple maker sells at different prices.
+    /// Tests price priority (lowest ask fills first).
+    fun test_multiple_fills_price_priority(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_two_user_test_env(deployer, maker, taker);
+        let maker_addr = signer::address_of(maker);
+        let taker_addr = signer::address_of(taker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Maker places 3 sells at different prices:
+        // Sell 30 CASH at 1.0 (cheapest)
+        place_limit_order(maker, pair_id, 1_000_000, 30_000_000, false, types::order_type_gtc());
+        // Sell 30 CASH at 2.0
+        place_limit_order(maker, pair_id, 2_000_000, 30_000_000, false, types::order_type_gtc());
+        // Sell 30 CASH at 3.0 (most expensive)
+        place_limit_order(maker, pair_id, 3_000_000, 30_000_000, false, types::order_type_gtc());
+
+        // Taker buys 60 CASH at 3.0 — should fill 30@1.0 + 30@2.0 (price priority)
+        place_limit_order(taker, pair_id, 3_000_000, 60_000_000, true, types::order_type_gtc());
+
+        // Asks: only the 3.0 sell should remain (30 CASH)
+        assert!(!market::asks_is_empty(), 2400);
+        // Bids: empty (taker fully filled)
+        assert!(market::bids_is_empty(), 2401);
+
+        // Settlement: 30@1.0 = 30 USDC + 30@2.0 = 60 USDC = total 90 USDC paid
+        let taker_base = accounts::get_available_balance(taker_addr, base_addr);
+        assert!(taker_base == 5_060_000_000, 2402); // 5000 + 60 = 5060
+
+        // Taker locked 180 USDC (60 * 3.0) but only used 90 USDC, excess 90 unlocked
+        let taker_quote = accounts::get_available_balance(taker_addr, quote_addr);
+        assert!(taker_quote == 4_910_000_000, 2403); // 5000 - 90 = 4910
+        assert!(accounts::get_locked_balance(taker_addr, quote_addr) == 0, 2404);
+
+        // Maker: sold 60 CASH, received 90 USDC
+        assert!(accounts::get_available_balance(maker_addr, base_addr) == 4_910_000_000, 2405); // 5000 - 90 locked, + 0 available change = wait...
+
+        // Let me re-check: maker locked 90 CASH (30+30+30), 30 of the 3.0 remain locked
+        // Maker: started 5000 CASH, locked 90 total, deducted 60 (sold), 30 still locked
+        assert!(accounts::get_locked_balance(maker_addr, base_addr) == 30_000_000, 2406);
+        // Maker available CASH: 5000 - 90 locked originally = 4910
+        assert!(accounts::get_available_balance(maker_addr, base_addr) == 4_910_000_000, 2407);
+        // Maker received 90 USDC
+        assert!(accounts::get_available_balance(maker_addr, quote_addr) == 5_090_000_000, 2408);
+    }
+
+    // ===== VAL-CONTRACT-014: Price-Time Priority =====
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// At the same price, the earlier order fills first (time priority).
+    /// Two sells at same price, first one should be consumed first.
+    fun test_time_priority_same_price(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_two_user_test_env(deployer, maker, taker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+        let taker_addr = signer::address_of(taker);
+
+        // Maker places two sells at same price 2.0, first 40 then 60
+        place_limit_order(maker, pair_id, 2_000_000, 40_000_000, false, types::order_type_gtc());
+        place_limit_order(maker, pair_id, 2_000_000, 60_000_000, false, types::order_type_gtc());
+
+        // Taker buys 40 CASH at 2.0 — should fill the first sell (40 CASH) completely
+        place_limit_order(taker, pair_id, 2_000_000, 40_000_000, true, types::order_type_gtc());
+
+        // The first sell (40) should be fully consumed, second sell (60) remains
+        assert!(!market::asks_is_empty(), 2500);
+
+        // Taker got 40 CASH, paid 80 USDC (40 * 2.0)
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_040_000_000, 2501);
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 4_920_000_000, 2502);
+
+        // Now taker buys another 40 at 2.0 — should fill from the second sell
+        place_limit_order(taker, pair_id, 2_000_000, 40_000_000, true, types::order_type_gtc());
+
+        // Second sell should have 20 remaining on book
+        assert!(!market::asks_is_empty(), 2503);
+
+        // Taker: 5040 + 40 = 5080 CASH
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_080_000_000, 2504);
+    }
+
+    // ===== VAL-CONTRACT-018: Self-Trade Prevention =====
+
+    #[test(deployer = @cash_orderbook, user = @0xBEEF)]
+    /// Self-trade prevention: same user's buy should skip their own sell.
+    /// Order rests on book instead of matching against self.
+    fun test_self_trade_prevention_buy(deployer: &signer, user: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_order_test_env(deployer, user);
+        let user_addr = signer::address_of(user);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // User places sell: 50 CASH at 2.0
+        place_limit_order(user, pair_id, 2_000_000, 50_000_000, false, types::order_type_gtc());
+
+        // User places buy: 50 CASH at 2.0 — same owner, should NOT match (self-trade prevention)
+        place_limit_order(user, pair_id, 2_000_000, 50_000_000, true, types::order_type_gtc());
+
+        // Both orders should be on book (no match occurred)
+        assert!(!market::bids_is_empty(), 2600);
+        assert!(!market::asks_is_empty(), 2601);
+
+        // Balances: base locked for sell + quote locked for buy
+        assert!(accounts::get_locked_balance(user_addr, base_addr) == 50_000_000, 2602);
+        assert!(accounts::get_locked_balance(user_addr, quote_addr) == 100_000_000, 2603); // 50 * 2.0 = 100
+    }
+
+    #[test(deployer = @cash_orderbook, user = @0xBEEF)]
+    /// Self-trade prevention: same user's sell should skip their own buy.
+    fun test_self_trade_prevention_sell(deployer: &signer, user: &signer) {
+        let (_base_metadata, _quote_metadata, pair_id) = setup_order_test_env(deployer, user);
+
+        // User places buy: 50 CASH at 1.5
+        place_limit_order(user, pair_id, 1_500_000, 50_000_000, true, types::order_type_gtc());
+
+        // User places sell: 50 CASH at 1.5 — self-trade, skip
+        place_limit_order(user, pair_id, 1_500_000, 50_000_000, false, types::order_type_gtc());
+
+        // Both orders on book
+        assert!(!market::bids_is_empty(), 2700);
+        assert!(!market::asks_is_empty(), 2701);
+    }
+
+    // ===== VAL-CONTRACT-017: Settlement Correctness =====
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// Quote amount = (fill_price * fill_quantity) / PRICE_SCALE
+    /// Test with non-round numbers to verify calculation.
+    fun test_settlement_quote_amount_calculation(deployer: &signer, maker: &signer, taker: &signer) {
+        let (_base_metadata, quote_metadata, pair_id) = setup_two_user_test_env(deployer, maker, taker);
+        let maker_addr = signer::address_of(maker);
+        let taker_addr = signer::address_of(taker);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Maker: sell 75 CASH at 1.234567 USDC (non-round price)
+        // price = 1_234_567
+        place_limit_order(maker, pair_id, 1_234_567, 75_000_000, false, types::order_type_gtc());
+
+        // Taker: buy 75 CASH at 1.234567
+        place_limit_order(taker, pair_id, 1_234_567, 75_000_000, true, types::order_type_gtc());
+
+        // quote_amount = (1_234_567 * 75_000_000) / 1_000_000 = 92_592_525
+        let expected_quote = 92_592_525;
+
+        // Taker paid this amount, maker received it
+        let taker_quote = accounts::get_available_balance(taker_addr, quote_addr);
+        assert!(taker_quote == 5_000_000_000 - expected_quote, 2800);
+
+        let maker_quote = accounts::get_available_balance(maker_addr, quote_addr);
+        assert!(maker_quote == 5_000_000_000 + expected_quote, 2801);
+    }
+
+    // ===== Market Order Tests with Matching =====
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// Market buy fills against resting asks.
+    fun test_market_buy_fills(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_two_user_test_env(deployer, maker, taker);
+        let taker_addr = signer::address_of(taker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Maker: sell 100 CASH at 1.0 USDC
+        place_limit_order(maker, pair_id, 1_000_000, 100_000_000, false, types::order_type_gtc());
+
+        // Taker: market buy 50 CASH
+        place_market_order(taker, pair_id, 50_000_000, true);
+
+        // Taker gets 50 CASH, pays 50 USDC (50 * 1.0)
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_050_000_000, 2900);
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 4_950_000_000, 2901);
+        assert!(accounts::get_locked_balance(taker_addr, quote_addr) == 0, 2902);
+
+        // Maker sell has 50 remaining
+        assert!(!market::asks_is_empty(), 2903);
+        // No bids (market order doesn't rest)
+        assert!(market::bids_is_empty(), 2904);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// Market sell fills against resting bids.
+    fun test_market_sell_fills(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_two_user_test_env(deployer, maker, taker);
+        let taker_addr = signer::address_of(taker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Maker: buy 100 CASH at 2.0 USDC
+        place_limit_order(maker, pair_id, 2_000_000, 100_000_000, true, types::order_type_gtc());
+
+        // Taker: market sell 80 CASH
+        place_market_order(taker, pair_id, 80_000_000, false);
+
+        // Taker sells 80 CASH, gets 160 USDC (80 * 2.0)
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 4_920_000_000, 3000); // 5000 - 80
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 5_160_000_000, 3001); // 5000 + 160
+        assert!(accounts::get_locked_balance(taker_addr, base_addr) == 0, 3002);
+
+        // Maker bid has 20 remaining
+        assert!(!market::bids_is_empty(), 3003);
+    }
+
+    // ===== IOC with Matching =====
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// IOC partially fills and cancels remainder (not resting on book).
+    fun test_ioc_partial_fill_cancels_remainder(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_two_user_test_env(deployer, maker, taker);
+        let taker_addr = signer::address_of(taker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Maker: sell 30 CASH at 1.5
+        place_limit_order(maker, pair_id, 1_500_000, 30_000_000, false, types::order_type_gtc());
+
+        // Taker: IOC buy 100 CASH at 1.5 — only 30 available, fills 30, cancels 70
+        place_limit_order(taker, pair_id, 1_500_000, 100_000_000, true, types::order_type_ioc());
+
+        // Book is empty (maker consumed, taker IOC cancelled remainder)
+        assert!(market::bids_is_empty(), 3100);
+        assert!(market::asks_is_empty(), 3101);
+
+        // Taker: got 30 CASH, paid 45 USDC (30 * 1.5)
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_030_000_000, 3102);
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 4_955_000_000, 3103);
+        assert!(accounts::get_locked_balance(taker_addr, quote_addr) == 0, 3104);
+    }
+
+    // ===== FOK with Matching =====
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// FOK fully fills when sufficient liquidity exists.
+    fun test_fok_full_fill(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_two_user_test_env(deployer, maker, taker);
+        let taker_addr = signer::address_of(taker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Maker: sell 100 CASH at 2.0
+        place_limit_order(maker, pair_id, 2_000_000, 100_000_000, false, types::order_type_gtc());
+
+        // Taker: FOK buy 100 CASH at 2.0 — exactly enough, should fill
+        place_limit_order(taker, pair_id, 2_000_000, 100_000_000, true, types::order_type_fok());
+
+        // Book empty
+        assert!(market::bids_is_empty(), 3200);
+        assert!(market::asks_is_empty(), 3201);
+
+        // Taker: 5000 + 100 = 5100 CASH, 5000 - 200 = 4800 USDC
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_100_000_000, 3202);
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 4_800_000_000, 3203);
+    }
+
+    // ===== Taker fills at maker's price (price improvement) =====
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// Taker buy at higher price fills at maker's lower ask price (price improvement).
+    fun test_price_improvement_buy(deployer: &signer, maker: &signer, taker: &signer) {
+        let (_base_metadata, quote_metadata, pair_id) = setup_two_user_test_env(deployer, maker, taker);
+        let taker_addr = signer::address_of(taker);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Maker: sell 50 CASH at 1.0 USDC
+        place_limit_order(maker, pair_id, 1_000_000, 50_000_000, false, types::order_type_gtc());
+
+        // Taker: buy 50 CASH at 3.0 USDC — fills at 1.0 (maker's price), excess refunded
+        place_limit_order(taker, pair_id, 3_000_000, 50_000_000, true, types::order_type_gtc());
+
+        // Taker paid only 50 USDC (50 * 1.0), not 150 USDC (50 * 3.0)
+        // Taker: 5000 - 50 = 4950 USDC
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 4_950_000_000, 3300);
+        assert!(accounts::get_locked_balance(taker_addr, quote_addr) == 0, 3301);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// Taker sell at lower price fills at maker's higher bid price (price improvement).
+    fun test_price_improvement_sell(deployer: &signer, maker: &signer, taker: &signer) {
+        let (_base_metadata, quote_metadata, pair_id) = setup_two_user_test_env(deployer, maker, taker);
+        let taker_addr = signer::address_of(taker);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Maker: buy 50 CASH at 3.0 USDC
+        place_limit_order(maker, pair_id, 3_000_000, 50_000_000, true, types::order_type_gtc());
+
+        // Taker: sell 50 CASH at 1.0 USDC — fills at 3.0 (maker's price)
+        place_limit_order(taker, pair_id, 1_000_000, 50_000_000, false, types::order_type_gtc());
+
+        // Taker received 150 USDC (50 * 3.0), not 50 USDC (50 * 1.0)
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 5_150_000_000, 3400);
+    }
+
+    // ===== Market order fills multiple levels =====
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// Market buy fills across multiple price levels.
+    fun test_market_buy_multiple_levels(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_two_user_test_env(deployer, maker, taker);
+        let taker_addr = signer::address_of(taker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Maker places sells at 3 different prices
+        place_limit_order(maker, pair_id, 1_000_000, 20_000_000, false, types::order_type_gtc()); // 20@1.0
+        place_limit_order(maker, pair_id, 2_000_000, 20_000_000, false, types::order_type_gtc()); // 20@2.0
+        place_limit_order(maker, pair_id, 3_000_000, 20_000_000, false, types::order_type_gtc()); // 20@3.0
+
+        // Taker: market buy 50 CASH — fills 20@1.0 + 20@2.0 + 10@3.0
+        place_market_order(taker, pair_id, 50_000_000, true);
+
+        // quote_used = 20*1.0 + 20*2.0 + 10*3.0 = 20 + 40 + 30 = 90 USDC
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_050_000_000, 3500);
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 4_910_000_000, 3501);
+        assert!(accounts::get_locked_balance(taker_addr, quote_addr) == 0, 3502);
+
+        // 10 CASH remain on asks at 3.0
+        assert!(!market::asks_is_empty(), 3503);
+    }
+
+    // ===== Self-trade prevention with third party =====
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// Self-trade: taker's order skips their own resting order but fills others.
+    fun test_self_trade_skips_own_fills_others(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, _quote_metadata, pair_id) = setup_two_user_test_env(deployer, maker, taker);
+        let taker_addr = signer::address_of(taker);
+        let base_addr = object::object_address(&base_metadata);
+
+        // Taker places sell: 50 CASH at 1.0 (resting order)
+        place_limit_order(taker, pair_id, 1_000_000, 50_000_000, false, types::order_type_gtc());
+
+        // Maker places sell: 50 CASH at 2.0
+        place_limit_order(maker, pair_id, 2_000_000, 50_000_000, false, types::order_type_gtc());
+
+        // Taker places buy: 50 CASH at 2.0
+        // Should SKIP taker's own sell @1.0 and fill maker's sell @2.0
+        place_limit_order(taker, pair_id, 2_000_000, 50_000_000, true, types::order_type_gtc());
+
+        // Taker's own sell at 1.0 should still be on the book
+        assert!(!market::asks_is_empty(), 3600);
+        // Bids empty (taker buy fully filled)
+        assert!(market::bids_is_empty(), 3601);
+
+        // Taker: started with 5000 CASH, locked 50 CASH for sell,
+        // then received 50 CASH from the buy fill = 5050 available (minus the locked)
+        // Base: 5000 - 50 (sell locked) + 50 (buy filled) = 5000 available
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_000_000_000, 3602);
+        assert!(accounts::get_locked_balance(taker_addr, base_addr) == 50_000_000, 3603);
     }
 }

@@ -238,6 +238,11 @@ module cash_orderbook::types {
     public fun order_timestamp(order: &Order): u64 { order.timestamp }
     public fun order_pair_id(order: &Order): u64 { order.pair_id }
 
+    /// Set remaining quantity (friend access for matching engine)
+    public(friend) fun set_remaining_quantity(order: &mut Order, qty: u64) {
+        order.remaining_quantity = qty;
+    }
+
     // ========== OrderKey Accessors ==========
 
     public fun order_key_price(key: &OrderKey): u64 { key.price }
@@ -287,6 +292,8 @@ module cash_orderbook::types {
     friend cash_orderbook::market;
     friend cash_orderbook::admin;
     friend cash_orderbook::order_placement;
+    friend cash_orderbook::matching;
+    friend cash_orderbook::settlement;
 
     // ========== Test-Only Helpers ==========
 

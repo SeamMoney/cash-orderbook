@@ -310,6 +310,66 @@ module cash_orderbook::market {
     // ========== Friend Declarations ==========
     friend cash_orderbook::admin;
     friend cash_orderbook::order_placement;
+    friend cash_orderbook::matching;
+    friend cash_orderbook::settlement;
+
+    /// Get market base and quote asset addresses (friend access).
+    public(friend) fun get_market_assets(pair_id: u64): (address, address) acquires MarketRegistry {
+        let resource_addr = types::get_resource_account_address();
+        let registry = borrow_global<MarketRegistry>(resource_addr);
+        let market = table::borrow(&registry.markets, pair_id);
+        (types::market_base_asset(market), types::market_quote_asset(market))
+    }
+
+    /// Remove the front (best) ask from the book. Returns (key, order).
+    /// The best ask is the one with the lowest price (begin of asks BigOrderedMap).
+    public(friend) fun pop_front_ask(): (OrderKey, Order) acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global_mut<OrderBook>(resource_addr);
+        big_ordered_map::pop_front(&mut order_book.asks)
+    }
+
+    /// Remove the front (best) bid from the book. Returns (key, order).
+    /// The best bid uses inverted price, so begin = highest real price.
+    public(friend) fun pop_front_bid(): (OrderKey, Order) acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global_mut<OrderBook>(resource_addr);
+        big_ordered_map::pop_front(&mut order_book.bids)
+    }
+
+    /// Peek at the best ask (lowest price) without removing.
+    /// Returns (price, remaining_quantity, owner) or aborts if empty.
+    public(friend) fun peek_best_ask(): (u64, u64, address) acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global<OrderBook>(resource_addr);
+        let iter = big_ordered_map::internal_new_begin_iter(&order_book.asks);
+        let order = big_ordered_map::iter_borrow(iter, &order_book.asks);
+        (types::order_price(order), types::order_remaining_quantity(order), types::order_owner(order))
+    }
+
+    /// Peek at the best bid (highest price) without removing.
+    /// Returns (price, remaining_quantity, owner) or aborts if empty.
+    public(friend) fun peek_best_bid(): (u64, u64, address) acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global<OrderBook>(resource_addr);
+        let iter = big_ordered_map::internal_new_begin_iter(&order_book.bids);
+        let order = big_ordered_map::iter_borrow(iter, &order_book.bids);
+        (types::order_price(order), types::order_remaining_quantity(order), types::order_owner(order))
+    }
+
+    /// Re-insert a partially filled ask order back to the book.
+    public(friend) fun reinsert_ask(key: OrderKey, order: Order) acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global_mut<OrderBook>(resource_addr);
+        big_ordered_map::add(&mut order_book.asks, key, order);
+    }
+
+    /// Re-insert a partially filled bid order back to the book.
+    public(friend) fun reinsert_bid(key: OrderKey, order: Order) acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global_mut<OrderBook>(resource_addr);
+        big_ordered_map::add(&mut order_book.bids, key, order);
+    }
 
     // ========== Test Helpers ==========
 

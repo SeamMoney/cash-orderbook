@@ -198,6 +198,7 @@ module cash_orderbook::accounts {
 
     // ========== Friend Declarations ==========
     friend cash_orderbook::order_placement;
+    friend cash_orderbook::settlement;
 
     // ========== View Functions ==========
 
