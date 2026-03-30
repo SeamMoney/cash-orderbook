@@ -8,7 +8,6 @@ upgrade_policy = "compatible"
 cash_orderbook = "_"
 
 [dev-addresses]
-cash_orderbook = "0xCAFE"
 
 [dependencies.AptosFramework]
 git = "https://github.com/aptos-labs/aptos-framework.git"

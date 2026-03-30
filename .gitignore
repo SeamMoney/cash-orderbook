@@ -21,6 +21,7 @@ build/
 .aptos/
 target/
 contracts/build/
+contracts/.coverage_map.mvcov
 
 # OS
 .DS_Store
