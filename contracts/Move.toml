@@ -1,0 +1,18 @@
+[package]
+name = "cash_orderbook"
+version = "1.0.0"
+authors = []
+upgrade_policy = "compatible"
+
+[addresses]
+cash_orderbook = "_"
+
+[dev-addresses]
+cash_orderbook = "0xCAFE"
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+rev = "mainnet"
+subdir = "aptos-framework"
+
+[dev-dependencies]

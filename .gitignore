@@ -1,10 +1,36 @@
+# Dependencies
 node_modules/
+
+# Build outputs
 dist/
 build/
+.next/
+
+# Environment
 .env
 .env.local
 .env*.local
+
+# Factory
 .factory/settings.local.json
+
+# TypeScript
 *.tsbuildinfo
+
+# Aptos / Move
 .aptos/
 target/
+contracts/build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Turbo
+.turbo/

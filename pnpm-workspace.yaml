@@ -1,0 +1,6 @@
+packages:
+  - "sdk"
+  - "api"
+  - "web"
+  - "shared"
+  - "scripts"
