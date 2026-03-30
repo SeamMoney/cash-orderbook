@@ -284,6 +284,8 @@ module cash_orderbook::types {
 
     // ========== Friend Declarations ==========
     friend cash_orderbook::accounts;
+    friend cash_orderbook::market;
+    friend cash_orderbook::admin;
 
     // ========== Test-Only Helpers ==========
 
