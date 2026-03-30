@@ -1,0 +1,33 @@
+{
+  "featureId": "testnet-testcash-deploy",
+  "reviewedAt": "2026-03-30T23:49:20Z",
+  "commitId": "973ccc343726d7acf0d2836fe1abf001e3439415",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Implementation satisfies the feature requirements: TestCASH FA metadata and initial supply are set correctly, admin-gated faucet is present, deploy-testnet.sh publishes with profile-derived named address, and tests cover decimals and initial supply. One script robustness issue was found but does not block expected behavior.",
+    "issues": [
+      {
+        "file": "scripts/deploy-testnet.sh",
+        "line": 63,
+        "severity": "non_blocking",
+        "description": "With `set -euo pipefail` (line 21), failures in the `aptos config show-profiles | grep ...` pipeline can terminate the script before the explicit empty-address error branch (line 68) runs, reducing error clarity for invalid/missing profiles."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "services",
+      "observation": "A new deployment workflow script was added, but `.factory/services.yaml` has no command entry for testnet deployment, so discoverable/shared operational commands are incomplete.",
+      "evidence": "Commit 973ccc3 adds `scripts/deploy-testnet.sh`; `.factory/services.yaml` only lists install/build/test/typecheck/lint/move-compile/move-test commands."
+    },
+    {
+      "area": "skills",
+      "observation": "The `move-worker` skill prescribes a strict tests-first red phase, but the transcript shows implementation created before any failing test run while `skillFeedback.followedProcedure` remained true; procedure wording/enforcement may be misaligned.",
+      "evidence": "Transcript skeleton for worker session `82d0b169-d89f-4699-aba8-63abf994606e` shows `Create contracts/sources/test_cash.move` before first `aptos move test --filter test_cash` execution."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed feature `testnet-testcash-deploy` at commit 973ccc3. Requirements are met and review status is PASS, with one non-blocking deploy script error-handling robustness note and two shared-state observations."
+}

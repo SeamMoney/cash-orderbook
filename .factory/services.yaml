@@ -6,6 +6,7 @@ commands:
   lint: pnpm -r lint
   move-compile: cd contracts && aptos move compile --named-addresses cash_orderbook=0xCAFE
   move-test: cd contracts && aptos move test --named-addresses cash_orderbook=0xCAFE --coverage
+  deploy-testnet: bash scripts/deploy-testnet.sh
 
 services:
   api:

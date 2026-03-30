@@ -1,0 +1,28 @@
+{
+  "featureId": "contract-core-types-accounts",
+  "reviewedAt": "2026-03-30T23:49:29Z",
+  "commitId": "a6f416a7d5075d1f6156e6daa7c705d6cc6aea4d",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "Core deposit/withdraw flow, ProtocolState init, and error handling are implemented, but the feature is incomplete because the required OrderBook key resource was not added in types.move.",
+    "issues": [
+      {
+        "file": "contracts/sources/types.move",
+        "line": 35,
+        "severity": "blocking",
+        "description": "Feature description explicitly requires an OrderBook resource (has key) in types.move, but this commit only defines Order, OrderKey, Market, and ProtocolState (see struct declarations at lines 38, 62, 72, 90). No OrderBook resource is present."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The move-worker skill does not document the cross-module test pattern of exposing a #[test_only] init_module_for_test helper for modules that need protocol initialization in tests.",
+      "evidence": "handoffs/2026-03-30T22-32-14-132Z__contract-core-types-accounts__6e721c4e-02ca-451a-81d1-0af113bd8669.json:145 and contracts/sources/types.move:290-294"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review failed due to a blocking spec miss: OrderBook resource was required in this feature but not implemented in the reviewed commit."
+}

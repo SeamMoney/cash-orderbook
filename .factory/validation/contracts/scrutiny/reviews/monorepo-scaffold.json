@@ -1,0 +1,28 @@
+{
+  "featureId": "monorepo-scaffold",
+  "reviewedAt": "2026-03-30T23:49:04Z",
+  "commitId": "c937137",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The scaffold commit sets up the monorepo structure, workspace config, turbo pipelines, Move.toml, and strict TypeScript base config, but it does not fully satisfy the feature description because the web scaffold is Next.js 15 instead of Next.js 16.",
+    "issues": [
+      {
+        "file": "web/package.json",
+        "line": 13,
+        "severity": "blocking",
+        "description": "Feature description requires `web/ (Next.js 16)`, but commit c937137 sets `next` to `^15.3.0`, so implementation is not fully compliant."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The assigned skill does not match this feature type: `move-worker` is specialized for Move contract implementation, while this feature is monorepo/package scaffolding.",
+      "evidence": "features.json sets `skillName` to `move-worker` for `monorepo-scaffold`; .factory/skills/move-worker/SKILL.md prescribes a Move TDD workflow; handoff.skillFeedback documents a procedure deviation because scaffold work did not fit that workflow."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review result: fail. The feature misses a stated requirement (Next.js 16) despite otherwise solid scaffold coverage."
+}

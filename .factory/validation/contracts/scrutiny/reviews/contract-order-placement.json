@@ -1,0 +1,56 @@
+{
+  "featureId": "contract-order-placement",
+  "reviewedAt": "2026-03-30T23:49:40Z",
+  "commitId": "fd87af8",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "Core order-type semantics are incomplete for this feature commit. Limit-order placement scaffolding exists, but IOC/FOK/market behavior does not satisfy the feature's expected fill behavior.",
+    "issues": [
+      {
+        "file": "contracts/sources/order_placement.move",
+        "line": 169,
+        "severity": "blocking",
+        "description": "IOC orders never attempt matching; they are always fully unlocked/cancelled immediately. This does not meet expected behavior requiring IOC to fill available liquidity and cancel only the remainder."
+      },
+      {
+        "file": "contracts/sources/order_placement.move",
+        "line": 212,
+        "severity": "blocking",
+        "description": "Market orders do not match against the opposing book; they only lock+unlock funds and emit an event. Expected behavior requires market buy/sell to consume opposing liquidity with no resting remainder."
+      },
+      {
+        "file": "contracts/sources/order_placement.move",
+        "line": 135,
+        "severity": "blocking",
+        "description": "FOK behavior is incorrect on the success path: after liquidity check, the order falls through to resting insertion (line 192) instead of filling atomically or aborting. FOK must never rest on book."
+      },
+      {
+        "file": "contracts/sources/order_placement.move",
+        "line": 79,
+        "severity": "blocking",
+        "description": "order_type input is not validated at the contract boundary. Unsupported values can bypass IOC/FOK/PostOnly branches and be inserted as resting orders with invalid order_type state."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Feature spec is internally inconsistent on sequencing: it says matching is a next feature, but expectedBehavior for this feature requires IOC/FOK/market fill semantics that depend on matching. This ambiguity likely enabled a stubbed implementation to be marked complete.",
+      "evidence": "features.json (contract-order-placement): description mentions \"attempt matching via match_order (next feature)\" while expectedBehavior requires IOC partial fills and market fills."
+    },
+    {
+      "area": "skills",
+      "observation": "move-worker skill guidance lacks a test-time note that timestamp::set_time_has_started_for_testing requires a @0x1 signer; worker explicitly hit this and suggested updating the skill.",
+      "evidence": "handoffs/2026-03-30T23-06-51-434Z__contract-order-placement__50a920f2-a8a4-455e-a01a-2f827474933a.json -> handoff.skillFeedback.suggestedChanges"
+    },
+    {
+      "area": "skills",
+      "observation": "Skill procedure says \"Write tests FIRST (TDD)\" but transcript shows implementation and compile iterations before any red-stage failing tests, suggesting either procedure drift or unenforced guidance.",
+      "evidence": "worker-transcripts.jsonl entry for workerSessionId 50a920f2-a8a4-455e-a01a-2f827474933a shows module creation/compilation before test execution."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review failed. The commit adds order placement scaffolding and tests, but IOC/FOK/market semantics do not implement the required fill behavior, and order_type boundary validation is missing."
+}

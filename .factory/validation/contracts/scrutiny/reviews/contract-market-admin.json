@@ -1,0 +1,34 @@
+{
+  "featureId": "contract-market-admin",
+  "reviewedAt": "2026-03-30T23:49:27Z",
+  "commitId": "c1046f1",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature adds admin-gated market registration and pause/unpause flows with solid test coverage, but two blocking gaps remain against the feature contract: registry storage shape differs from spec and register_market does not create a new orderbook per market registration.",
+    "issues": [
+      {
+        "file": "contracts/sources/market.move",
+        "line": 23,
+        "severity": "blocking",
+        "description": "Feature description requires markets to be stored in ProtocolState as Table<u64, address> (pair_id -> market object address), but implementation introduces a separate MarketRegistry with Table<u64, Market>. This diverges from the required storage contract for this feature."
+      },
+      {
+        "file": "contracts/sources/market.move",
+        "line": 115,
+        "severity": "blocking",
+        "description": "register_market only creates OrderBook when one does not already exist, so subsequent market registrations do not get a fresh orderbook. This violates the requirement that register_market creates a new Market + OrderBook and breaks multi-market isolation."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The move-worker skill omits a practical Move constraint encountered by workers: references borrowed from global storage cannot be returned directly, requiring wrapper helper functions around borrow/mutation logic.",
+      "evidence": "Handoff skillFeedback suggestedChanges notes this gap: /Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/handoffs/2026-03-30T22-42-10-950Z__contract-market-admin__f350cdc2-c790-4647-a901-4aa0dcb15f6b.json lines 134-136"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed commit c1046f1 and associated transcript/handoff for contract-market-admin. Admin permissioning and pause/unpause behavior are implemented and tested, but the implementation fails the feature contract due to incorrect market registry shape and lack of per-market orderbook creation on repeated register_market calls."
+}

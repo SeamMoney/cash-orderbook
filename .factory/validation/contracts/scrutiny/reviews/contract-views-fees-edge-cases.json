@@ -1,0 +1,51 @@
+{
+  "featureId": "contract-views-fees-edge-cases",
+  "reviewedAt": "2026-03-30T23:49:56Z",
+  "commitId": "114f195",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The commit adds new modules and substantial tests, but key required behaviors are not fully implemented: fee collection is not integrated into live trade settlement, delegated subaccounts are not wired into order placement/cancellation entry paths, and the get_user_balances view API does not match the feature contract signature.",
+    "issues": [
+      {
+        "file": "contracts/sources/settlement.move",
+        "line": 96,
+        "severity": "blocking",
+        "description": "Trades settle by transferring full quote amount directly between buyer/seller (lines 96-106) with no fee calculation or vault collection calls. This misses the required behavior that non-zero maker/taker fees are collected on trades."
+      },
+      {
+        "file": "contracts/sources/order_placement.move",
+        "line": 83,
+        "severity": "blocking",
+        "description": "Order entry functions are signer-only and operate on signer::address_of(user), with no delegation/owner resolution via subaccounts::assert_authorized_trader. Required behavior says delegated addresses can place orders on behalf of owner."
+      },
+      {
+        "file": "contracts/sources/cancel.move",
+        "line": 56,
+        "severity": "blocking",
+        "description": "cancel_order authorizes strictly by order owner == signer::address_of(user). There is no delegated-caller path, so delegated addresses cannot cancel on behalf of owner as required."
+      },
+      {
+        "file": "contracts/sources/views.move",
+        "line": 36,
+        "severity": "blocking",
+        "description": "get_user_balances signature requires (user_addr, base_asset_addr, quote_asset_addr). The feature contract specifies get_user_balances(user_addr) returning available/locked per asset, so the public interface does not match the required API."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The move-worker procedure appears to lack an explicit integration checkpoint for cross-module features (e.g., ensuring new authorization/fee modules are actually invoked from existing entry/settlement flows), which allowed implementation to stop at module creation plus unit tests.",
+      "evidence": "In commit 114f195, subaccounts defines assert_authorized_trader (contracts/sources/subaccounts.move:140) but there are no subaccounts:: call sites in contract entry modules; settlement has no fees:: usage while feature required fee collection on trades."
+    },
+    {
+      "area": "skills",
+      "observation": "The worker reported recurring friend-declaration friction while integrating new modules; documenting this explicitly in move-worker could reduce avoidable compile-debug cycles.",
+      "evidence": "handoff.skillFeedback.suggestedChanges in /Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/handoffs/2026-03-30T23-39-09-136Z__contract-views-fees-edge-cases__f682084a-2090-4ec6-96b1-f5fc26b7b45b.json requests adding guidance on friend declarations."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed feature contract-views-fees-edge-cases using features.json, handoff, transcript skeleton, and commit 114f195 diff. Despite extensive new code/tests, the implementation does not satisfy critical expected behaviors for trade-fee integration and delegated trading/cancellation, and the balances view API shape diverges from the specified contract, so the review result is fail."
+}
