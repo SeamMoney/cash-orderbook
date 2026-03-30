@@ -2,6 +2,7 @@
 /// Handles creation of new trading markets (pairs) and the OrderBook resource.
 /// Markets are stored in a MarketRegistry resource at the resource account address.
 module cash_orderbook::market {
+    use std::vector;
     use aptos_framework::event;
     use aptos_framework::object::{Self, Object};
     use aptos_framework::fungible_asset::Metadata;
@@ -312,6 +313,8 @@ module cash_orderbook::market {
     friend cash_orderbook::order_placement;
     friend cash_orderbook::matching;
     friend cash_orderbook::settlement;
+    friend cash_orderbook::views;
+    friend cash_orderbook::cancel;
 
     /// Get market base and quote asset addresses (friend access).
     public(friend) fun get_market_assets(pair_id: u64): (address, address) acquires MarketRegistry {
@@ -369,6 +372,70 @@ module cash_orderbook::market {
         let resource_addr = types::get_resource_account_address();
         let order_book = borrow_global_mut<OrderBook>(resource_addr);
         big_ordered_map::add(&mut order_book.bids, key, order);
+    }
+
+    /// Remove a specific bid from the book by key. Returns the Order.
+    public(friend) fun remove_bid(key: OrderKey): Order acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global_mut<OrderBook>(resource_addr);
+        big_ordered_map::remove(&mut order_book.bids, &key)
+    }
+
+    /// Remove a specific ask from the book by key. Returns the Order.
+    public(friend) fun remove_ask(key: OrderKey): Order acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global_mut<OrderBook>(resource_addr);
+        big_ordered_map::remove(&mut order_book.asks, &key)
+    }
+
+    /// Check if a bid exists at the given key.
+    public(friend) fun contains_bid(key: &OrderKey): bool acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global<OrderBook>(resource_addr);
+        big_ordered_map::contains(&order_book.bids, key)
+    }
+
+    /// Check if an ask exists at the given key.
+    public(friend) fun contains_ask(key: &OrderKey): bool acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global<OrderBook>(resource_addr);
+        big_ordered_map::contains(&order_book.asks, key)
+    }
+
+    /// Get all bid orders as a vector (bids are stored with inverted price keys).
+    /// Returns orders in descending price order (highest price first).
+    public(friend) fun get_all_bids(): vector<Order> acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global<OrderBook>(resource_addr);
+        let result = vector::empty<Order>();
+        if (big_ordered_map::is_empty(&order_book.bids)) {
+            return result
+        };
+        let iter = big_ordered_map::internal_new_begin_iter(&order_book.bids);
+        while (!big_ordered_map::iter_is_end(&iter, &order_book.bids)) {
+            let order = big_ordered_map::iter_borrow(iter, &order_book.bids);
+            vector::push_back(&mut result, *order);
+            iter = big_ordered_map::iter_next(iter, &order_book.bids);
+        };
+        result
+    }
+
+    /// Get all ask orders as a vector.
+    /// Returns orders in ascending price order (lowest price first).
+    public(friend) fun get_all_asks(): vector<Order> acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global<OrderBook>(resource_addr);
+        let result = vector::empty<Order>();
+        if (big_ordered_map::is_empty(&order_book.asks)) {
+            return result
+        };
+        let iter = big_ordered_map::internal_new_begin_iter(&order_book.asks);
+        while (!big_ordered_map::iter_is_end(&iter, &order_book.asks)) {
+            let order = big_ordered_map::iter_borrow(iter, &order_book.asks);
+            vector::push_back(&mut result, *order);
+            iter = big_ordered_map::iter_next(iter, &order_book.asks);
+        };
+        result
     }
 
     // ========== Test Helpers ==========

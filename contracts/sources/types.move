@@ -294,6 +294,9 @@ module cash_orderbook::types {
     friend cash_orderbook::order_placement;
     friend cash_orderbook::matching;
     friend cash_orderbook::settlement;
+    friend cash_orderbook::fees;
+    friend cash_orderbook::views;
+    friend cash_orderbook::cancel;
 
     // ========== Test-Only Helpers ==========
 
