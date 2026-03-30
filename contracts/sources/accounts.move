@@ -196,6 +196,9 @@ module cash_orderbook::accounts {
         smart_table::upsert(&mut user_balance.available, asset_addr, available + amount);
     }
 
+    // ========== Friend Declarations ==========
+    friend cash_orderbook::order_placement;
+
     // ========== View Functions ==========
 
     // Get available balance for a user and asset

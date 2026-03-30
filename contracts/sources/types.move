@@ -286,6 +286,7 @@ module cash_orderbook::types {
     friend cash_orderbook::accounts;
     friend cash_orderbook::market;
     friend cash_orderbook::admin;
+    friend cash_orderbook::order_placement;
 
     // ========== Test-Only Helpers ==========
 

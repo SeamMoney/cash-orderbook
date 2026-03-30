@@ -209,8 +209,107 @@ module cash_orderbook::market {
         types::set_market_status(market, status);
     }
 
+    /// Add an order to the bids side of the order book.
+    public(friend) fun add_bid(key: OrderKey, order: Order) acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global_mut<OrderBook>(resource_addr);
+        big_ordered_map::add(&mut order_book.bids, key, order);
+    }
+
+    /// Add an order to the asks side of the order book.
+    public(friend) fun add_ask(key: OrderKey, order: Order) acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global_mut<OrderBook>(resource_addr);
+        big_ordered_map::add(&mut order_book.asks, key, order);
+    }
+
+    /// Check if the bids side is empty.
+    public(friend) fun bids_is_empty(): bool acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global<OrderBook>(resource_addr);
+        big_ordered_map::is_empty(&order_book.bids)
+    }
+
+    /// Check if the asks side is empty.
+    public(friend) fun asks_is_empty(): bool acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global<OrderBook>(resource_addr);
+        big_ordered_map::is_empty(&order_book.asks)
+    }
+
+    /// Get the best (highest) bid price. Returns 0 if no bids.
+    /// Bids use inverted price keys, so the begin iterator (lowest key) = highest price.
+    public(friend) fun get_best_bid_price(): u64 acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global<OrderBook>(resource_addr);
+        if (big_ordered_map::is_empty(&order_book.bids)) {
+            return 0
+        };
+        let iter = big_ordered_map::internal_new_begin_iter(&order_book.bids);
+        let best_bid = big_ordered_map::iter_borrow(iter, &order_book.bids);
+        types::order_price(best_bid)
+    }
+
+    /// Get the best (lowest) ask price. Returns 0 if no asks.
+    public(friend) fun get_best_ask_price(): u64 acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global<OrderBook>(resource_addr);
+        if (big_ordered_map::is_empty(&order_book.asks)) {
+            return 0
+        };
+        let iter = big_ordered_map::internal_new_begin_iter(&order_book.asks);
+        let best_ask = big_ordered_map::iter_borrow(iter, &order_book.asks);
+        types::order_price(best_ask)
+    }
+
+    /// Calculate the total fillable quantity on the asks side at or below the given price.
+    /// Used for FOK buy order validation.
+    public(friend) fun get_fillable_ask_quantity(max_price: u64): u64 acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global<OrderBook>(resource_addr);
+        if (big_ordered_map::is_empty(&order_book.asks)) {
+            return 0
+        };
+        let fillable: u64 = 0;
+        let iter = big_ordered_map::internal_new_begin_iter(&order_book.asks);
+        while (!big_ordered_map::iter_is_end(&iter, &order_book.asks)) {
+            let ask_order = big_ordered_map::iter_borrow(iter, &order_book.asks);
+            let ask_price = types::order_price(ask_order);
+            if (ask_price > max_price) {
+                break
+            };
+            fillable = fillable + types::order_remaining_quantity(ask_order);
+            iter = big_ordered_map::iter_next(iter, &order_book.asks);
+        };
+        fillable
+    }
+
+    /// Calculate the total fillable quantity on the bids side at or above the given price.
+    /// Used for FOK sell order validation.
+    public(friend) fun get_fillable_bid_quantity(min_price: u64): u64 acquires OrderBook {
+        let resource_addr = types::get_resource_account_address();
+        let order_book = borrow_global<OrderBook>(resource_addr);
+        if (big_ordered_map::is_empty(&order_book.bids)) {
+            return 0
+        };
+        let fillable: u64 = 0;
+        // Bids use inverted price keys: begin iterator = highest price
+        let iter = big_ordered_map::internal_new_begin_iter(&order_book.bids);
+        while (!big_ordered_map::iter_is_end(&iter, &order_book.bids)) {
+            let bid_order = big_ordered_map::iter_borrow(iter, &order_book.bids);
+            let bid_price = types::order_price(bid_order);
+            if (bid_price < min_price) {
+                break
+            };
+            fillable = fillable + types::order_remaining_quantity(bid_order);
+            iter = big_ordered_map::iter_next(iter, &order_book.bids);
+        };
+        fillable
+    }
+
     // ========== Friend Declarations ==========
     friend cash_orderbook::admin;
+    friend cash_orderbook::order_placement;
 
     // ========== Test Helpers ==========
 
