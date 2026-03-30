@@ -1,0 +1,9 @@
+{
+  "model": "opus",
+  "autonomyMode": "auto-high",
+  "reasoningEffort": "high",
+  "diffMode": "github",
+  "includeCoAuthoredByDroid": true,
+  "enableDroidShield": true,
+  "completionSound": "fx-ok01"
+}
