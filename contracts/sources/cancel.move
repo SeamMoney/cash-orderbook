@@ -12,6 +12,7 @@ module cash_orderbook::cancel {
     use cash_orderbook::accounts;
     use cash_orderbook::market;
     use cash_orderbook::subaccounts;
+    use cash_orderbook::fees;
 
     // ========== Error Codes ==========
     const E_UNAUTHORIZED: u64 = 1;
@@ -115,9 +116,13 @@ module cash_orderbook::cancel {
                 let key = types::new_order_key(inverted_price, timestamp, order_id);
                 market::remove_bid(key);
 
-                // Unlock quote funds: (price * remaining) / PRICE_SCALE
+                // Unlock quote funds: principal + fee reserve
+                // At placement, bid orders lock: quote_principal + max_fee_reserve
+                // We must unlock the full amount to avoid stranding the fee reserve.
                 let price_scale = types::price_scale();
-                let quote_unlock = (((price as u128) * (remaining_qty as u128)) / (price_scale as u128) as u64);
+                let quote_principal = (((price as u128) * (remaining_qty as u128)) / (price_scale as u128) as u64);
+                let fee_reserve = fees::calculate_max_fee(quote_principal);
+                let quote_unlock = quote_principal + fee_reserve;
                 if (quote_unlock > 0) {
                     accounts::unlock_balance(user_addr, quote_asset, quote_unlock);
                 };
@@ -528,5 +533,317 @@ module cash_orderbook::cancel {
 
         assert!(market::asks_is_empty(), 602);
         assert!(accounts::get_locked_balance(owner_addr, base_addr) == 0, 603);
+    }
+
+    // ========== Fee Reserve Cancel Regression Tests ==========
+
+    #[test(deployer = @cash_orderbook, user = @0xBEEF)]
+    /// REGRESSION: Cancel bid order with non-zero fees unlocks full amount (principal + fee reserve).
+    /// Previously, cancel only unlocked quote_principal, leaving fee reserve stranded.
+    ///
+    /// Setup: 30 bps taker, 10 bps maker. Bid: 100 CASH at 2.0 USDC.
+    /// quote_principal = 200 USDC = 200_000_000
+    /// max_fee = max(30,10) bps of 200 = 200 * 30/10000 = 0.6 USDC = 600_000
+    /// Total locked at placement = 200_600_000
+    /// On cancel, must unlock exactly 200_600_000 (not just 200_000_000).
+    fun test_cancel_bid_with_nonzero_fees_full_unlock(deployer: &signer, user: &signer) {
+        let (_base_metadata, quote_metadata, pair_id) = setup_cancel_test_env(deployer, user);
+        let user_addr = signer::address_of(user);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Set fees: 10 bps maker, 30 bps taker
+        fees::update_fee_config(deployer, 10, 30);
+
+        let available_before = accounts::get_available_balance(user_addr, quote_addr);
+        assert!(available_before == 5_000_000_000, 800);
+
+        // Place a buy order: 100 CASH at 2.0 USDC
+        // quote_principal = (2_000_000 * 100_000_000) / 1_000_000 = 200_000_000
+        // max_fee = 200_000_000 * 30 / 10_000 = 600_000
+        // Total locked = 200_600_000
+        cash_orderbook::order_placement::place_limit_order(
+            user, pair_id, 2_000_000, 100_000_000, true, types::order_type_gtc()
+        );
+
+        // Verify locked includes fee reserve
+        let locked_after_place = accounts::get_locked_balance(user_addr, quote_addr);
+        assert!(locked_after_place == 200_600_000, 801); // 200_000_000 + 600_000
+
+        let available_after_place = accounts::get_available_balance(user_addr, quote_addr);
+        assert!(available_after_place == 5_000_000_000 - 200_600_000, 802);
+
+        // Cancel the order
+        cancel_order(user, pair_id, 0);
+
+        // Verify: book is empty
+        assert!(market::bids_is_empty(), 803);
+
+        // Verify: ALL locked funds unlocked (including fee reserve)
+        let locked_after_cancel = accounts::get_locked_balance(user_addr, quote_addr);
+        assert!(locked_after_cancel == 0, 804);
+
+        // Verify: full available balance restored (no stranded funds)
+        let available_after_cancel = accounts::get_available_balance(user_addr, quote_addr);
+        assert!(available_after_cancel == 5_000_000_000, 805);
+    }
+
+    #[test(deployer = @cash_orderbook, user = @0xBEEF)]
+    /// REGRESSION: Cancel bid with high fees — verify no stranded funds.
+    /// Uses 500 bps (5%) taker fee to make the fee reserve very visible.
+    ///
+    /// Bid: 50 CASH at 1.0 USDC. quote_principal = 50 USDC.
+    /// max_fee = 50 * 500/10000 = 2.5 USDC = 2_500_000.
+    /// Total locked = 52_500_000.
+    /// After cancel: locked = 0, available = initial.
+    fun test_cancel_bid_with_high_fees_no_stranded_funds(deployer: &signer, user: &signer) {
+        let (_base_metadata, quote_metadata, pair_id) = setup_cancel_test_env(deployer, user);
+        let user_addr = signer::address_of(user);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Set high fees: 100 bps maker, 500 bps taker
+        fees::update_fee_config(deployer, 100, 500);
+
+        let initial_available = accounts::get_available_balance(user_addr, quote_addr);
+
+        // Place bid: 50 CASH at 1.0 USDC
+        // quote_principal = 50_000_000
+        // max_fee = 50_000_000 * 500 / 10_000 = 2_500_000
+        // Total locked = 52_500_000
+        cash_orderbook::order_placement::place_limit_order(
+            user, pair_id, 1_000_000, 50_000_000, true, types::order_type_gtc()
+        );
+
+        assert!(accounts::get_locked_balance(user_addr, quote_addr) == 52_500_000, 900);
+
+        // Cancel
+        cancel_order(user, pair_id, 0);
+
+        // All funds restored
+        assert!(accounts::get_locked_balance(user_addr, quote_addr) == 0, 901);
+        assert!(accounts::get_available_balance(user_addr, quote_addr) == initial_available, 902);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// REGRESSION: Cancel after partial fill with non-zero fees.
+    /// Verify remaining locked includes proportional fee reserve.
+    ///
+    /// Setup: 30 bps taker, 10 bps maker.
+    /// Buyer places bid: 100 CASH at 2.0 USDC (GTC).
+    ///   quote_principal = 200 USDC, max_fee = 600_000, total locked = 200_600_000.
+    /// Seller fills 40 CASH at 2.0.
+    ///   Fill: quote = 80 USDC, taker_fee = 80*30/10000 = 24_000
+    ///   Settlement debits: 80_000_000 + 24_000 = 80_024_000 from locked.
+    ///   Remaining on book: 60 CASH at 2.0.
+    ///   Remaining locked includes proportional fee reserve for 60 CASH.
+    /// Cancel remaining 60 CASH.
+    ///   quote_principal_remaining = 120 USDC, fee_reserve_remaining = 120*30/10000 = 360_000
+    ///   Unlock: 120_360_000
+    /// After cancel: locked = 0, no stranded funds.
+    fun test_cancel_after_partial_fill_with_fees(deployer: &signer, maker: &signer, taker: &signer) {
+        let (_base_metadata, quote_metadata, pair_id) = setup_cancel_test_env_two_users(deployer, maker, taker);
+        let maker_addr = signer::address_of(maker);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Set fees: 10 bps maker, 30 bps taker
+        fees::update_fee_config(deployer, 10, 30);
+
+        // Maker (buyer) places bid: 100 CASH at 2.0 USDC
+        // quote_principal = 200_000_000, max_fee = 600_000, total locked = 200_600_000
+        cash_orderbook::order_placement::place_limit_order(
+            maker, pair_id, 2_000_000, 100_000_000, true, types::order_type_gtc()
+        );
+
+        let locked_after_place = accounts::get_locked_balance(maker_addr, quote_addr);
+        assert!(locked_after_place == 200_600_000, 1000);
+
+        // Taker (seller) sells 40 CASH at 2.0 — partial fill of maker's bid
+        cash_orderbook::order_placement::place_limit_order(
+            taker, pair_id, 2_000_000, 40_000_000, false, types::order_type_gtc()
+        );
+
+        // After partial fill: 60 CASH remaining on book for maker.
+        // Settlement debited quote_amount + taker_fee from maker's locked:
+        //   quote_amount = 80_000_000, taker_fee(maker is NOT taker here; maker is the resting bid)
+        //   Actually, the taker is the SELLER here, so the BUYER (maker) is the resting order.
+        //   In settlement with taker_is_bid=false: buyer(maker) pays quote_amount + maker_fee from locked.
+        //   maker_fee = 80_000_000 * 10 / 10_000 = 80_000
+        //   Settlement also unlocks excess fee reserve: max_fee - maker_fee = 240_000 - 80_000 = 160_000
+        //   So net: debit_locked(80_000_000 + 80_000), unlock_balance(160_000)
+        //   locked before: 200_600_000
+        //   after debit: 200_600_000 - 80_080_000 = 120_520_000
+        //   after unlock excess: 120_520_000 - 160_000 = 120_360_000
+        let locked_after_fill = accounts::get_locked_balance(maker_addr, quote_addr);
+        assert!(locked_after_fill == 120_360_000, 1001); // 120 USDC principal + 360_000 fee reserve
+
+        // Cancel remaining 60 CASH order (order_id = 0)
+        cancel_order(maker, pair_id, 0);
+
+        // Verify: book is empty
+        assert!(market::bids_is_empty(), 1002);
+
+        // Verify: ALL locked funds unlocked
+        assert!(accounts::get_locked_balance(maker_addr, quote_addr) == 0, 1003);
+
+        // Verify: available balance = initial - quote_spent - fees_paid
+        // Initial: 5_000_000_000
+        // Spent on fill: 80_000_000 (quote) + 80_000 (maker_fee) = 80_080_000
+        // Available: 5_000_000_000 - 80_080_000 = 4_919_920_000
+        // BUT: the excess fee that was unlocked during settlement goes back to available.
+        // Wait: let me recalculate from scratch.
+        //
+        // Initial available: 5_000_000_000
+        // After placing bid: available = 5_000_000_000 - 200_600_000 = 4_799_400_000
+        // After fill (settlement credits seller's USDC as available, not buyer's — buyer's
+        // quote is debited from locked). But the excess unlock adds to available:
+        //   unlock_balance(160_000) -> available += 160_000 = 4_799_560_000
+        // After cancel: unlock_balance(120_360_000) -> available += 120_360_000 = 4_919_920_000
+        let available_after = accounts::get_available_balance(maker_addr, quote_addr);
+        assert!(available_after == 4_919_920_000, 1004);
+    }
+
+    #[test(deployer = @cash_orderbook, user = @0xBEEF)]
+    /// REGRESSION: Cancel multiple bid orders with non-zero fees — all balances recoverable.
+    /// Place 3 bids at different prices with fees, cancel all, verify no stranded funds.
+    fun test_cancel_multiple_bids_with_fees_all_recoverable(deployer: &signer, user: &signer) {
+        let (_base_metadata, quote_metadata, pair_id) = setup_cancel_test_env(deployer, user);
+        let user_addr = signer::address_of(user);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Set fees: 10 bps maker, 30 bps taker
+        fees::update_fee_config(deployer, 10, 30);
+
+        let initial_available = accounts::get_available_balance(user_addr, quote_addr);
+        assert!(initial_available == 5_000_000_000, 1100);
+
+        // Place 3 bids at different prices:
+        // Order 0: 10 CASH at 1.0 -> principal=10_000_000, fee=30_000, total=10_030_000
+        cash_orderbook::order_placement::place_limit_order(
+            user, pair_id, 1_000_000, 10_000_000, true, types::order_type_gtc()
+        );
+        // Order 1: 20 CASH at 2.0 -> principal=40_000_000, fee=120_000, total=40_120_000
+        cash_orderbook::order_placement::place_limit_order(
+            user, pair_id, 2_000_000, 20_000_000, true, types::order_type_gtc()
+        );
+        // Order 2: 30 CASH at 3.0 -> principal=90_000_000, fee=270_000, total=90_270_000
+        cash_orderbook::order_placement::place_limit_order(
+            user, pair_id, 3_000_000, 30_000_000, true, types::order_type_gtc()
+        );
+
+        // Total locked = 10_030_000 + 40_120_000 + 90_270_000 = 140_420_000
+        let total_locked = accounts::get_locked_balance(user_addr, quote_addr);
+        assert!(total_locked == 140_420_000, 1101);
+
+        // Cancel all orders
+        cancel_order(user, pair_id, 0);
+        cancel_order(user, pair_id, 1);
+        cancel_order(user, pair_id, 2);
+
+        // Verify: all locked funds released
+        assert!(accounts::get_locked_balance(user_addr, quote_addr) == 0, 1102);
+
+        // Verify: full available balance restored
+        assert!(accounts::get_available_balance(user_addr, quote_addr) == initial_available, 1103);
+    }
+
+    #[test(deployer = @cash_orderbook, user = @0xBEEF)]
+    /// Verify sell order cancellation is unaffected by fee changes
+    /// (sell orders lock base, not quote, so fee reserve doesn't apply).
+    fun test_cancel_sell_order_unaffected_by_fees(deployer: &signer, user: &signer) {
+        let (base_metadata, _quote_metadata, pair_id) = setup_cancel_test_env(deployer, user);
+        let user_addr = signer::address_of(user);
+        let base_addr = object::object_address(&base_metadata);
+
+        // Set fees: 100 bps maker, 500 bps taker
+        fees::update_fee_config(deployer, 100, 500);
+
+        let initial_available = accounts::get_available_balance(user_addr, base_addr);
+
+        // Place sell order: 50 CASH at 2.0 USDC — locks 50 CASH (no fee reserve for sells)
+        cash_orderbook::order_placement::place_limit_order(
+            user, pair_id, 2_000_000, 50_000_000, false, types::order_type_gtc()
+        );
+
+        assert!(accounts::get_locked_balance(user_addr, base_addr) == 50_000_000, 1200);
+
+        // Cancel
+        cancel_order(user, pair_id, 0);
+
+        // Full balance restored
+        assert!(accounts::get_locked_balance(user_addr, base_addr) == 0, 1201);
+        assert!(accounts::get_available_balance(user_addr, base_addr) == initial_available, 1202);
+    }
+
+    // ========== Two-User Cancel Test Helper ==========
+
+    #[test_only]
+    /// Setup two users for cancel tests involving partial fills.
+    fun setup_cancel_test_env_two_users(
+        deployer: &signer,
+        maker: &signer,
+        taker: &signer,
+    ): (Object<Metadata>, Object<Metadata>, u64) {
+        let deployer_addr = signer::address_of(deployer);
+        let maker_addr = signer::address_of(maker);
+        let taker_addr = signer::address_of(taker);
+        test_account::create_account_for_test(deployer_addr);
+        test_account::create_account_for_test(maker_addr);
+        test_account::create_account_for_test(taker_addr);
+
+        types::init_module_for_test(deployer);
+        let resource_signer = types::get_resource_signer();
+        let resource_addr = signer::address_of(&resource_signer);
+        test_account::create_account_for_test(resource_addr);
+
+        let aptos_framework = test_account::create_signer_for_test(@0x1);
+        timestamp::set_time_has_started_for_testing(&aptos_framework);
+
+        // Create base asset
+        let base_constructor_ref = object::create_named_object(deployer, b"TEST_CASH");
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            &base_constructor_ref,
+            std::option::none(),
+            string::utf8(b"Test CASH"),
+            string::utf8(b"CASH"),
+            6,
+            string::utf8(b""),
+            string::utf8(b""),
+        );
+        let base_metadata = object::object_from_constructor_ref<Metadata>(&base_constructor_ref);
+        let base_mint_ref = fungible_asset::generate_mint_ref(&base_constructor_ref);
+
+        // Create quote asset
+        let quote_constructor_ref = object::create_named_object(deployer, b"TEST_USDC");
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            &quote_constructor_ref,
+            std::option::none(),
+            string::utf8(b"Test USDC"),
+            string::utf8(b"USDC"),
+            6,
+            string::utf8(b""),
+            string::utf8(b""),
+        );
+        let quote_metadata = object::object_from_constructor_ref<Metadata>(&quote_constructor_ref);
+        let quote_mint_ref = fungible_asset::generate_mint_ref(&quote_constructor_ref);
+
+        // Mint and deposit for maker
+        let base_fa = fungible_asset::mint(&base_mint_ref, 10_000_000_000);
+        primary_fungible_store::deposit(maker_addr, base_fa);
+        let quote_fa = fungible_asset::mint(&quote_mint_ref, 10_000_000_000);
+        primary_fungible_store::deposit(maker_addr, quote_fa);
+        accounts::deposit(maker, base_metadata, 5_000_000_000);
+        accounts::deposit(maker, quote_metadata, 5_000_000_000);
+
+        // Mint and deposit for taker
+        let base_fa2 = fungible_asset::mint(&base_mint_ref, 10_000_000_000);
+        primary_fungible_store::deposit(taker_addr, base_fa2);
+        let quote_fa2 = fungible_asset::mint(&quote_mint_ref, 10_000_000_000);
+        primary_fungible_store::deposit(taker_addr, quote_fa2);
+        accounts::deposit(taker, base_metadata, 5_000_000_000);
+        accounts::deposit(taker, quote_metadata, 5_000_000_000);
+
+        // Register market
+        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+
+        (base_metadata, quote_metadata, 0)
     }
 }
