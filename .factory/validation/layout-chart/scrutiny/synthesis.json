@@ -1,7 +1,7 @@
 {
   "milestone": "layout-chart",
-  "round": 1,
-  "status": "fail",
+  "round": 2,
+  "status": "pass",
   "validatorsRun": {
     "test": {
       "passed": true,
@@ -21,67 +21,35 @@
   },
   "reviewsSummary": {
     "total": 3,
-    "passed": 1,
-    "failed": 2,
-    "failedFeatures": [
-      "token-header-chart",
-      "stats-grid-error-states"
-    ]
+    "passed": 3,
+    "failed": 0,
+    "failedFeatures": []
   },
-  "blockingIssues": [
-    {
-      "featureId": "token-header-chart",
-      "severity": "blocking",
-      "description": "web/app/page.tsx hardcodes 24h change to 0, so the token header never shows true positive/negative 24h movement."
-    },
-    {
-      "featureId": "stats-grid-error-states",
-      "severity": "blocking",
-      "description": "API-down flow still surfaces browser console ERR_CONNECTION_REFUSED errors, conflicting with the feature's no-console-error expectation."
-    }
-  ],
-  "appliedUpdates": [
-    {
-      "target": "library",
-      "description": "Added factual API contract clarifications for /market and /candles to prevent future frontend assumptions about change24h/limit params.",
-      "sourceFeature": "token-header-chart"
-    }
-  ],
+  "blockingIssues": [],
+  "appliedUpdates": [],
   "suggestedGuidanceUpdates": [
     {
       "target": "AGENTS.md",
-      "suggestion": "Align mission API reference with real contracts: remove `change24h` from `/market` docs (or implement it backend-side), and document current `/candles` query support accurately.",
-      "evidence": "Both failed reviews tied implementation confusion to API documentation mismatch: reviewers found `/market` type lacks `change24h` and `/candles` accepts only `interval`.",
+      "suggestion": "Align API-down console-error expectations across artifacts: keep the AGENTS clarification that browser-level ERR_CONNECTION_REFUSED/Failed-to-fetch is expected when API is intentionally offline, and update feature wording to avoid contradictory validator outcomes.",
+      "evidence": "Rerun review for stats-grid-error-states found features metadata still says 'No JavaScript console errors when API is down' while mission AGENTS explicitly exempts browser-level network errors.",
       "isSystemic": true
     },
     {
       "target": "AGENTS.md",
-      "suggestion": "Ensure feature `skillName` values map to actually invokable skills (or add alias mapping) to avoid worker startup failures.",
-      "evidence": "Multiple reviews observed `frontend-ui-worker` in feature metadata but runtime reported skill-not-found before fallback.",
+      "suggestion": "Resolve skill-name mapping mismatch by standardizing feature `skillName` values to invokable names (or adding alias support) for `frontend-ui-worker`.",
+      "evidence": "All layout-chart implementation transcripts reviewed in this round still show `frontend-ui-worker` lookup failures with fallback to `frontend-worker`.",
       "isSystemic": true
-    },
-    {
-      "target": "skills",
-      "suggestion": "Add concrete agent-browser command examples for viewport changes and console-error checks to reduce trial-and-error during visual validation.",
-      "evidence": "Review of theme-globals-layout transcript showed repeated unsupported command attempts before successful alternatives were discovered.",
-      "isSystemic": false
-    },
-    {
-      "target": "AGENTS.md",
-      "suggestion": "Reinforce scope boundary that feature commits should avoid unrelated `.factory/` edits unless explicitly requested by mission-level validation tasks.",
-      "evidence": "token-header-chart review found shared-state file edits in a frontend implementation commit, reducing review isolation.",
-      "isSystemic": false
     }
   ],
   "rejectedObservations": [
     {
-      "observation": "Duplicate skill-resolution mismatch reports across multiple feature reviews.",
+      "observation": "Repeated skill-name mismatch reports across multiple feature reviews.",
       "reason": "duplicate"
     },
     {
-      "observation": "Hardcoded-color convention drift in layout feature components.",
-      "reason": "already captured as a non-blocking code review issue in feature-level review; no additional shared-state action applied in this synthesis."
+      "observation": "Hardcoded color usage in layout components.",
+      "reason": "already represented as a non-blocking code review issue; no factual services/library state update required in scrutiny synthesis."
     }
   ],
-  "previousRound": null
+  "previousRound": ".factory/validation/layout-chart/scrutiny/synthesis.round1.json"
 }

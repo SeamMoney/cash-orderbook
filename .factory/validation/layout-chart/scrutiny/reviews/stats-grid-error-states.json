@@ -1,39 +1,33 @@
 {
   "featureId": "stats-grid-error-states",
-  "reviewedAt": "2026-03-31T07:52:58Z",
+  "reviewedAt": "2026-03-31T08:01:08Z",
   "commitId": "6ec2a37",
   "transcriptSkeletonReviewed": true,
   "diffReviewed": true,
-  "status": "fail",
+  "status": "pass",
   "codeReview": {
-    "summary": "The stats grid and candle-based 24h change hook are implemented and wired correctly, but the feature does not meet its own API-down console-error expectation, and the 24h change hook has an edge-case calculation drift.",
+    "summary": "Implementation covers the feature requirements: the stats grid is wired to /market, token header 24h change is computed from candles, and API-offline states degrade gracefully without application-level JavaScript failures. The prior blocking console finding is resolved for rerun criteria because mission guidance explicitly treats offline ERR_CONNECTION_REFUSED/Failed-to-fetch entries as expected browser network diagnostics.",
     "issues": [
       {
-        "file": "web/hooks/use-market.ts",
-        "line": 37,
-        "severity": "blocking",
-        "description": "API-down behavior still emits console error entries (ERR_CONNECTION_REFUSED) from repeated fetches, which conflicts with the feature expectedBehavior 'No JavaScript console errors when API is down'. Evidence from transcript: worker-transcripts.jsonl line 41 notes unavoidable ERR_CONNECTION_REFUSED console logs during API-down verification; additional fetch sources are web/hooks/use-candles.ts:40 and web/hooks/use-price-change.ts:19 (extra polling path)."
-      },
-      {
         "file": "web/hooks/use-price-change.ts",
-        "line": 33,
+        "line": 34,
         "severity": "non_blocking",
-        "description": "When there are fewer than 2 candles in the last 24h, the hook falls back to all available candles (`recentCandles.length >= 2 ? recentCandles : candles`), which can compute a non-24h change and diverges from the requirement to compute first-vs-last close over a 24h window."
+        "description": "When fewer than two candles exist inside the 24h window, the hook falls back to all candles (`recentCandles.length >= 2 ? recentCandles : candles`), which can display a non-24h percentage while labeled as 24h change."
       }
     ]
   },
   "sharedStateObservations": [
     {
-      "area": "skills",
-      "observation": "Skill resolution appears inconsistent: feature metadata targets frontend-ui-worker and the skill file exists, but runtime reported that skill as unavailable and the worker switched to frontend-worker.",
-      "evidence": "Mission features.json entry for stats-grid-error-states has `skillName: frontend-ui-worker`; repo contains .factory/skills/frontend-ui-worker/SKILL.md; transcript (worker-transcripts.jsonl line 41) contains 'The skill `frontend-ui-worker` doesn't exist' followed by invocation of frontend-worker."
+      "area": "conventions",
+      "observation": "Validation wording is split across artifacts: feature expectedBehavior requires no JavaScript console errors during API-down, while mission AGENTS clarifies browser-level network errors are expected and non-blocking when API is intentionally offline.",
+      "evidence": "features.json expectedBehavior for stats-grid-error-states includes 'No JavaScript console errors when API is down'; mission AGENTS.md line 94 states ERR_CONNECTION_REFUSED/Failed-to-fetch are expected and should not count as violations."
     },
     {
-      "area": "knowledge",
-      "observation": "Mission API reference is out of sync with actual API schema, which can mislead frontend implementations.",
-      "evidence": "Mission AGENTS.md claims /market includes change24h and /candles supports limit, but current contract used by frontend is MarketData { ... lastPrice, volume24h } in web/hooks/use-market.ts and candles route validates only `interval` in api/src/routes/candles.ts."
+      "area": "skills",
+      "observation": "Feature metadata still points to `frontend-ui-worker`, but runtime skill resolution used `frontend-worker`.",
+      "evidence": "features.json skillName is frontend-ui-worker; worker transcript line 41 contains 'The skill `frontend-ui-worker` doesn't exist' followed by invocation of frontend-worker."
     }
   ],
-  "addressesFailureFrom": null,
-  "summary": "Review result: fail. Feature implementation is close, but strict API-down console-error acceptance is not satisfied per transcript evidence, and there is a non-blocking 24h-window edge-case in the change calculation."
+  "addressesFailureFrom": ".factory/validation/layout-chart/scrutiny/reviews/stats-grid-error-states.json",
+  "summary": "Pass. The feature satisfies stats-grid/error-state behavior under rerun criteria, with only a minor non-blocking edge-case in 24h-window fallback logic."
 }

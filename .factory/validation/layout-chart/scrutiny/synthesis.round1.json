@@ -1,0 +1,87 @@
+{
+  "milestone": "layout-chart",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "pnpm --dir \"/Users/maxmohammadi/cash-orderbook\" -r test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm --dir \"/Users/maxmohammadi/cash-orderbook\" -r typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm --dir \"/Users/maxmohammadi/cash-orderbook\" -r lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 3,
+    "passed": 1,
+    "failed": 2,
+    "failedFeatures": [
+      "token-header-chart",
+      "stats-grid-error-states"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "token-header-chart",
+      "severity": "blocking",
+      "description": "web/app/page.tsx hardcodes 24h change to 0, so the token header never shows true positive/negative 24h movement."
+    },
+    {
+      "featureId": "stats-grid-error-states",
+      "severity": "blocking",
+      "description": "API-down flow still surfaces browser console ERR_CONNECTION_REFUSED errors, conflicting with the feature's no-console-error expectation."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "library",
+      "description": "Added factual API contract clarifications for /market and /candles to prevent future frontend assumptions about change24h/limit params.",
+      "sourceFeature": "token-header-chart"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Align mission API reference with real contracts: remove `change24h` from `/market` docs (or implement it backend-side), and document current `/candles` query support accurately.",
+      "evidence": "Both failed reviews tied implementation confusion to API documentation mismatch: reviewers found `/market` type lacks `change24h` and `/candles` accepts only `interval`.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Ensure feature `skillName` values map to actually invokable skills (or add alias mapping) to avoid worker startup failures.",
+      "evidence": "Multiple reviews observed `frontend-ui-worker` in feature metadata but runtime reported skill-not-found before fallback.",
+      "isSystemic": true
+    },
+    {
+      "target": "skills",
+      "suggestion": "Add concrete agent-browser command examples for viewport changes and console-error checks to reduce trial-and-error during visual validation.",
+      "evidence": "Review of theme-globals-layout transcript showed repeated unsupported command attempts before successful alternatives were discovered.",
+      "isSystemic": false
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Reinforce scope boundary that feature commits should avoid unrelated `.factory/` edits unless explicitly requested by mission-level validation tasks.",
+      "evidence": "token-header-chart review found shared-state file edits in a frontend implementation commit, reducing review isolation.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Duplicate skill-resolution mismatch reports across multiple feature reviews.",
+      "reason": "duplicate"
+    },
+    {
+      "observation": "Hardcoded-color convention drift in layout feature components.",
+      "reason": "already captured as a non-blocking code review issue in feature-level review; no additional shared-state action applied in this synthesis."
+    }
+  ],
+  "previousRound": null
+}
