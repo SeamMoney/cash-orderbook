@@ -31,6 +31,7 @@ module cash_orderbook::order_placement {
     const E_INVALID_PRICE: u64 = 5;
     const E_FOK_NOT_FILLED: u64 = 9;
     const E_POST_ONLY_WOULD_MATCH: u64 = 10;
+    const E_INVALID_ORDER_TYPE: u64 = 12;
 
     // ========== Constants ==========
 
@@ -91,6 +92,7 @@ module cash_orderbook::order_placement {
         // 1. Validate inputs
         assert!(price > 0, E_INVALID_PRICE);
         assert!(quantity > 0, E_INVALID_AMOUNT);
+        assert!(order_type <= 3, E_INVALID_ORDER_TYPE);
 
         // 2. Assert market exists and is active
         market::assert_market_active(pair_id);
@@ -213,17 +215,9 @@ module cash_orderbook::order_placement {
                 accounts::unlock_balance(user_addr, base_asset, remaining);
             };
         } else if (order_type == types::order_type_fok()) {
-            // FOK: should be fully filled (pre-validated). If not, this is a logic error.
-            // In practice, self-trade prevention could cause partial fill despite sufficient liquidity,
-            // so we just unlock any remainder.
-            if (remaining > 0) {
-                if (is_bid) {
-                    let remaining_lock = calculate_quote_amount(price, remaining);
-                    accounts::unlock_balance(user_addr, quote_asset, remaining_lock);
-                } else {
-                    accounts::unlock_balance(user_addr, base_asset, remaining);
-                };
-            };
+            // FOK: must be fully filled. Self-trade prevention may cause partial fill
+            // despite sufficient nominal liquidity — abort in that case.
+            assert!(remaining == 0, E_FOK_NOT_FILLED);
         } else {
             // GTC or PostOnly: rest the remaining order on the book
             if (remaining > 0) {
@@ -1481,5 +1475,36 @@ module cash_orderbook::order_placement {
         // Base: 5000 - 50 (sell locked) + 50 (buy filled) = 5000 available
         assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_000_000_000, 3602);
         assert!(accounts::get_locked_balance(taker_addr, base_addr) == 50_000_000, 3603);
+    }
+
+    // ===== FOK Self-Trade Abort Test =====
+
+    #[test(deployer = @cash_orderbook, user = @0xBEEF)]
+    #[expected_failure(abort_code = 9, location = cash_orderbook::order_placement)]
+    /// FOK order that partially fills due to self-trade prevention must abort E_FOK_NOT_FILLED.
+    /// Setup: user places a sell for 100 CASH at 1.0. The book has enough nominal liquidity.
+    /// User then places a FOK buy for 100 CASH at 1.0, but self-trade prevention skips
+    /// their own sell, so the FOK cannot fill and must abort.
+    fun test_fok_aborts_on_self_trade_partial_fill(deployer: &signer, user: &signer) {
+        let (_base_metadata, _quote_metadata, pair_id) = setup_order_test_env(deployer, user);
+
+        // User places a sell: 100 CASH at 1.0 USDC
+        place_limit_order(user, pair_id, 1_000_000, 100_000_000, false, types::order_type_gtc());
+
+        // User now places FOK buy: 100 CASH at 1.0 USDC
+        // Self-trade prevention will skip the user's own sell, so 0 fills.
+        // FOK requires full fill → must abort with E_FOK_NOT_FILLED (9).
+        place_limit_order(user, pair_id, 1_000_000, 100_000_000, true, types::order_type_fok());
+    }
+
+    // ===== Invalid Order Type Test =====
+
+    #[test(deployer = @cash_orderbook, user = @0xBEEF)]
+    #[expected_failure(abort_code = 12, location = cash_orderbook::order_placement)]
+    /// order_type = 5 (invalid, > 3) must abort with E_INVALID_ORDER_TYPE (12).
+    fun test_invalid_order_type_aborts(deployer: &signer, user: &signer) {
+        let (_base_metadata, _quote_metadata, pair_id) = setup_order_test_env(deployer, user);
+        // order_type = 5 is out of range [0..3]
+        place_limit_order(user, pair_id, 1_000_000, 100_000_000, true, 5);
     }
 }

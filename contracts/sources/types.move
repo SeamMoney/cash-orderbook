@@ -16,6 +16,7 @@ module cash_orderbook::types {
     const E_FOK_NOT_FILLED: u64 = 9;
     const E_POST_ONLY_WOULD_MATCH: u64 = 10;
     const E_ALREADY_EXISTS: u64 = 11;
+    const E_INVALID_ORDER_TYPE: u64 = 12;
 
     // ========== Constants ==========
     /// Price scale factor: all prices are expressed as fixed-point with 6 decimal places.
@@ -286,6 +287,7 @@ module cash_orderbook::types {
     public fun e_fok_not_filled(): u64 { E_FOK_NOT_FILLED }
     public fun e_post_only_would_match(): u64 { E_POST_ONLY_WOULD_MATCH }
     public fun e_already_exists(): u64 { E_ALREADY_EXISTS }
+    public fun e_invalid_order_type(): u64 { E_INVALID_ORDER_TYPE }
 
     // ========== Friend Declarations ==========
     friend cash_orderbook::accounts;
@@ -423,6 +425,7 @@ module cash_orderbook::types {
         assert!(e_fok_not_filled() == 9, 708);
         assert!(e_post_only_would_match() == 10, 709);
         assert!(e_already_exists() == 11, 710);
+        assert!(e_invalid_order_type() == 12, 711);
     }
 
     #[test(deployer = @cash_orderbook)]
