@@ -54,7 +54,7 @@ export function TokenHeader({
           </>
         ) : (
           <>
-            <span className="font-mono text-3xl font-bold tracking-tight text-white">
+            <span className="font-mono text-2xl sm:text-3xl font-bold tracking-tight text-white">
               {price !== null
                 ? `$${formatBalance(price, price < 1 ? 6 : 2)}`
                 : "$--"}

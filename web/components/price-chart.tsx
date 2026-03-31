@@ -65,12 +65,12 @@ export function PriceChart({
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       {/* Time range tabs */}
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-4 flex items-center gap-1 sm:gap-2">
         {TIME_RANGES.map((range, idx) => (
           <button
             key={range.label}
             onClick={() => setActiveRange(idx)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+            className={`rounded-full px-3 py-1.5 min-h-[44px] min-w-[44px] text-xs font-medium transition-colors ${
               idx === activeRange
                 ? "bg-secondary text-white"
                 : "text-text-muted hover:text-muted-foreground cursor-pointer"
@@ -84,7 +84,7 @@ export function PriceChart({
       </div>
 
       {/* Chart area */}
-      <div className="relative h-[300px] w-full overflow-hidden rounded-lg">
+      <div className="relative h-[220px] sm:h-[300px] w-full overflow-hidden rounded-lg">
         {loading ? (
           <ChartSkeleton />
         ) : isEmpty ? (
@@ -187,7 +187,7 @@ function LightweightChart({
 
       const chart = createChart(chartContainerRef.current, {
         width: chartContainerRef.current.clientWidth,
-        height: 300,
+        height: chartContainerRef.current.clientHeight || 300,
         layout: {
           background: { color: "transparent" },
           textColor: "#888888",
@@ -288,6 +288,7 @@ function LightweightChart({
         if (chartContainerRef.current && chart) {
           chart.applyOptions({
             width: chartContainerRef.current.clientWidth,
+            height: chartContainerRef.current.clientHeight || 300,
           });
         }
       };

@@ -397,7 +397,7 @@ export function SwapWidget(): React.ReactElement {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`relative flex-1 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+            className={`relative flex-1 rounded-full px-4 py-2 min-h-[44px] text-sm font-medium transition-colors ${
               activeTab === tab ? "text-white" : "text-text-muted hover:text-text-secondary"
             }`}
           >
@@ -519,7 +519,7 @@ export function SwapWidget(): React.ReactElement {
             <button
               onClick={swapCta.connectWallet ? () => setWalletSelectorOpen(true) : handleSwap}
               disabled={swapCta.disabled}
-              className="mt-4 w-full rounded-2xl py-3.5 text-base font-semibold transition-all
+              className="mt-4 w-full rounded-2xl py-3.5 min-h-[44px] text-base font-semibold transition-all
                 bg-primary text-primary-foreground hover:brightness-110
                 disabled:bg-secondary disabled:text-text-muted disabled:cursor-not-allowed"
             >
@@ -554,7 +554,7 @@ export function SwapWidget(): React.ReactElement {
                 <button
                   key={side}
                   onClick={() => setLimitSide(side)}
-                  className={`relative flex-1 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
+                  className={`relative flex-1 rounded-full px-4 py-2 min-h-[44px] text-sm font-semibold transition-colors ${
                     limitSide === side
                       ? side === "buy"
                         ? "text-primary-foreground"
@@ -640,7 +640,7 @@ export function SwapWidget(): React.ReactElement {
             <button
               onClick={limitCta.connectWallet ? () => setWalletSelectorOpen(true) : handlePlaceLimitOrder}
               disabled={limitCta.disabled}
-              className={`mt-1 w-full rounded-2xl py-3.5 text-base font-semibold transition-all
+              className={`mt-1 w-full rounded-2xl py-3.5 min-h-[44px] text-base font-semibold transition-all
                 disabled:bg-secondary disabled:text-text-muted disabled:cursor-not-allowed
                 ${
                   !limitCta.disabled
@@ -705,7 +705,7 @@ const TokenSelectorButton = forwardRef<
       ref={ref}
       type="button"
       onClick={onClick}
-      className="flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 shrink-0 hover:bg-surface-hover transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card"
+      className="flex items-center gap-2 rounded-full bg-secondary px-3 py-2 min-h-[44px] shrink-0 hover:bg-surface-hover transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card"
     >
       <div
         className={`h-5 w-5 rounded-full bg-gradient-to-br ${token.gradient} flex items-center justify-center`}

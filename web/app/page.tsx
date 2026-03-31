@@ -51,10 +51,10 @@ export default function Home(): React.ReactElement {
       />
 
       {/* Main Content — Two Column Layout */}
-      <main className="mx-auto w-full max-w-[1280px] flex-1 px-4 py-6 sm:px-6">
+      <main className="mx-auto w-full max-w-[1280px] flex-1 px-3 py-4 sm:px-4 md:px-6 md:py-6">
         <div className="flex flex-col md:flex-row md:gap-6 lg:gap-8">
           {/* Left Column (~65%) — Token Info + Chart + Stats + Transactions */}
-          <div className="w-full md:w-[65%] space-y-6">
+          <div className="w-full md:w-[65%] space-y-4 md:space-y-6">
             {/* Token Header */}
             <TokenHeader
               price={displayPrice}
@@ -69,6 +69,11 @@ export default function Home(): React.ReactElement {
             {/* Token Stats Grid */}
             <TokenStatsGrid market={market} loading={marketLoading} />
 
+            {/* Swap Widget — shown inline on mobile, hidden on desktop (shown in right column) */}
+            <div className="md:hidden">
+              <SwapWidget />
+            </div>
+
             {/* Transactions Table */}
             <TransactionsTable trades={trades} loading={tradesLoading} />
 
@@ -76,8 +81,8 @@ export default function Home(): React.ReactElement {
             <TokenInfo />
           </div>
 
-          {/* Right Column (~35%) — Sticky Swap Widget */}
-          <div className="w-full md:w-[35%] mt-6 md:mt-0">
+          {/* Right Column (~35%) — Sticky Swap Widget (desktop only) */}
+          <div className="hidden md:block md:w-[35%]">
             <div className="md:sticky md:top-[72px]">
               <SwapWidget />
             </div>

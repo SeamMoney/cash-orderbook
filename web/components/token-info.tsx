@@ -49,7 +49,7 @@ export function TokenInfo(): React.ReactElement {
     <div className="rounded-2xl border border-border bg-card p-4">
       <h3 className="mb-3 text-sm font-medium text-white">Token Info</h3>
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
         {/* Contract Address */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-text-muted">Contract</span>
@@ -61,7 +61,7 @@ export function TokenInfo(): React.ReactElement {
           {/* Copy Button */}
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text-secondary"
+            className="flex items-center gap-1 rounded-lg px-2 py-2 min-h-[44px] text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text-secondary"
             title="Copy contract address"
           >
             {copied ? (
@@ -82,7 +82,7 @@ export function TokenInfo(): React.ReactElement {
             href={explorerUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text-secondary"
+            className="flex items-center gap-1 rounded-lg px-2 py-2 min-h-[44px] text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text-secondary"
             title="View on Aptos Explorer"
           >
             <ExternalLink className="h-3 w-3" />

@@ -40,7 +40,7 @@ export function SwapPriceDetails({
         {/* Expandable placeholder — interactive even without data */}
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex w-full items-center justify-between rounded-xl bg-background border border-border px-3 py-2.5 text-xs transition-colors hover:border-surface-hover"
+          className="flex w-full items-center justify-between rounded-xl bg-background border border-border px-3 py-2.5 min-h-[44px] text-xs transition-colors hover:border-surface-hover"
         >
           <span className="text-text-muted">
             Enter an amount to see price details
@@ -93,7 +93,7 @@ export function SwapPriceDetails({
       {/* Summary row — always visible */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center justify-between rounded-xl bg-background border border-border px-3 py-2.5 text-xs transition-colors hover:border-surface-hover"
+        className="flex w-full items-center justify-between rounded-xl bg-background border border-border px-3 py-2.5 min-h-[44px] text-xs transition-colors hover:border-surface-hover"
       >
         <span className="font-mono text-text-secondary">{rateLabel}</span>
         <motion.div

@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useEffect,
+  useSyncExternalStore,
   type CSSProperties,
   type ReactElement,
 } from "react";
@@ -23,6 +24,19 @@ export interface TokenInfo {
   name: string;
   decimals: number;
   gradient: string;
+}
+
+/** Hook to detect if viewport is at least 640px wide (sm breakpoint) */
+function useIsDesktop(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      const mql = window.matchMedia("(min-width: 640px)");
+      mql.addEventListener("change", cb);
+      return () => mql.removeEventListener("change", cb);
+    },
+    () => window.matchMedia("(min-width: 640px)").matches,
+    () => true, // SSR default: treat as desktop
+  );
 }
 
 /** All supported tokens */
@@ -92,7 +106,7 @@ function TokenRow({
           if (!isCurrentSide) onSelect(token);
         }}
         disabled={isCurrentSide}
-        className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card ${
+        className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 min-h-[44px] transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card ${
           isCurrentSide
             ? "opacity-40 cursor-not-allowed"
             : "hover:bg-surface-hover"
@@ -132,6 +146,7 @@ export function TokenSelectorModal({
 }: TokenSelectorModalProps): React.ReactElement {
   const [search, setSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const isDesktop = useIsDesktop();
 
   // Reset search when modal opens
   useEffect(() => {
@@ -221,8 +236,8 @@ export function TokenSelectorModal({
               }}
             >
               <motion.div
-                className="fixed left-1/2 top-1/2 z-50 w-[90vw] max-w-[420px] rounded-2xl border border-border bg-card shadow-2xl outline-none"
-                style={{ x: "-50%", y: "-50%" }}
+                className="token-selector-dialog fixed z-50 border border-border bg-card shadow-2xl outline-none"
+                style={isDesktop ? { x: "-50%", y: "-50%" } : undefined}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
@@ -238,7 +253,7 @@ export function TokenSelectorModal({
                   <DialogPrimitive.Title className="text-base font-semibold text-white">
                     Select a token
                   </DialogPrimitive.Title>
-                  <DialogPrimitive.Close className="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-surface-hover hover:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card">
+                  <DialogPrimitive.Close className="rounded-lg p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-text-muted transition-colors hover:bg-surface-hover hover:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card">
                     <X className="h-4 w-4" />
                     <span className="sr-only">Close</span>
                   </DialogPrimitive.Close>
@@ -254,7 +269,7 @@ export function TokenSelectorModal({
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="Search by name or ticker"
-                      className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-text-muted outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
+                      className="w-full rounded-xl border border-border bg-background py-3 min-h-[44px] pl-10 pr-4 text-sm text-white placeholder:text-text-muted outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
                     />
                   </div>
                 </div>
@@ -273,7 +288,7 @@ export function TokenSelectorModal({
                               if (!isCurrentSide) handleSelect(token);
                             }}
                             disabled={isCurrentSide}
-                            className={`flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card ${
+                            className={`flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2 min-h-[44px] text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card ${
                               isCurrentSide
                                 ? "opacity-40 cursor-not-allowed"
                                 : "hover:border-primary hover:bg-surface-hover"
@@ -294,7 +309,7 @@ export function TokenSelectorModal({
                 <div className="mx-5 border-t border-border" />
 
                 {/* Token List */}
-                <div className="h-[300px]">
+                <div className="h-[300px] sm:h-[300px] flex-1 sm:flex-initial">
                   {filteredTokens.length === 0 ? (
                     <div className="flex h-full flex-col items-center justify-center gap-2 text-text-muted">
                       <Search className="h-8 w-8 opacity-40" />

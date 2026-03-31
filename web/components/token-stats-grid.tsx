@@ -72,7 +72,7 @@ export function TokenStatsGrid({
   const totalSupply: string | null = null;
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:gap-4 sm:grid-cols-4">
       <StatItem label="Market cap" value={marketCap} loading={loading} />
       <StatItem label="24H volume" value={volume24h} loading={loading} />
       <StatItem label="FDV" value={fdv} loading={loading} />

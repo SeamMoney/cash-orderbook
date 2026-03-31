@@ -160,7 +160,7 @@ export function TransactionsTable({
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full text-xs">
+        <table className="w-full min-w-[400px] text-xs">
           {/* Column Headers */}
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
