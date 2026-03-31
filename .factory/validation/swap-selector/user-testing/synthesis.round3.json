@@ -1,0 +1,23 @@
+{
+  "milestone": "swap-selector",
+  "round": 3,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 2,
+    "passed": 1,
+    "failed": 1,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-SWAP-004"
+  ],
+  "failedAssertions": [
+    {
+      "id": "VAL-SWAP-010",
+      "reason": "Price details placeholder renders, but the section does not expand to expose exchange rate, price impact, and minimum received rows."
+    }
+  ],
+  "blockedAssertions": [],
+  "appliedUpdates": [],
+  "previousRound": ".factory/validation/swap-selector/user-testing/synthesis.round2.json"
+}
