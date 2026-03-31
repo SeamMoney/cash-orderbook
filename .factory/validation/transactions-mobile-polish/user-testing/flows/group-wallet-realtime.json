@@ -1,0 +1,243 @@
+{
+  "groupId": "group-wallet-realtime",
+  "testedAt": "2026-03-31T13:44:25.219407Z",
+  "isolation": {
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "appUrl": "http://localhost:3102",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "browserSession": "wallet-realtime-79476079",
+    "surface": "agent-browser"
+  },
+  "toolsUsed": [
+    "agent-browser",
+    "curl"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-SWAP-005",
+      "title": "Amount input and quote",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Open swap tab and enter 10 in 'You pay' amount input",
+          "expected": "Estimated output and USD equivalents update as user types",
+          "observed": "Amount input accepted '10', but 'You receive' remained 0 and no visible quote update."
+        },
+        {
+          "action": "Check backend market endpoints",
+          "expected": "Quote dependencies available",
+          "observed": "API returned HTTP 429 RATE_LIMITED for /market, /trades, and /candles during test window."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "transactions-mobile-polish/group-wallet-realtime/VAL-SWAP-005-amount-entered-no-quote-update.png"
+        ],
+        "consoleErrors": "agent-browser errors: none (no uncaught JS errors). Browser console showed repeated network 429 responses.",
+        "network": "curl http://localhost:3100/market -> 429; /trades?limit=5 -> 429; /candles?interval=1m&limit=5 -> 429"
+      },
+      "issues": "Cannot validate quote behavior under sustained API rate limiting; prerequisite quote data path unavailable."
+    },
+    {
+      "id": "VAL-SWAP-007",
+      "title": "Swap CTA button states",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Load page while disconnected",
+          "expected": "CTA shows 'Connect Wallet'",
+          "observed": "CTA displayed 'Connect Wallet' in swap widget."
+        },
+        {
+          "action": "Attempt wallet connect via modal",
+          "expected": "Connect and verify connected CTA states ('Enter an amount'/'Swap'/'Insufficient balance')",
+          "observed": "Wallet modal opened, but available Aptos wallets were install-only and Google path redirected to external Google sign-in requiring credentials not provided in isolation context."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "transactions-mobile-polish/group-wallet-realtime/VAL-SWAP-007-disconnected-state.png",
+          "transactions-mobile-polish/group-wallet-realtime/VAL-SWAP-007-wallet-connect-modal.png",
+          "transactions-mobile-polish/group-wallet-realtime/VAL-CROSS-UI-002-google-auth-required.png"
+        ],
+        "consoleErrors": "agent-browser errors: none",
+        "network": "Connect flow redirected to accounts.google.com OAuth page"
+      },
+      "issues": "Connected CTA states are untestable without a provisioned wallet or auth credentials in this isolated run."
+    },
+    {
+      "id": "VAL-SWAP-008",
+      "title": "Swap execution with toast",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Attempt to reach connected swap state",
+          "expected": "Wallet connects and Swap button becomes actionable",
+          "observed": "Could not establish connected wallet session (wallet extension absent, OAuth requires external credentials)."
+        },
+        {
+          "action": "Attempt execution path",
+          "expected": "Click Swap and observe success/error toast",
+          "observed": "Swap execution path unreachable because app remained disconnected."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "transactions-mobile-polish/group-wallet-realtime/VAL-SWAP-007-wallet-connect-modal.png",
+          "transactions-mobile-polish/group-wallet-realtime/VAL-CROSS-UI-002-google-auth-required.png"
+        ],
+        "consoleErrors": "agent-browser errors: none",
+        "network": "OAuth redirect attempted; no signed swap transaction submitted"
+      },
+      "issues": "Requires connected/signing-capable wallet not available in assigned environment."
+    },
+    {
+      "id": "VAL-SWAP-009",
+      "title": "Limit order form",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Switch to Limit tab",
+          "expected": "Price + amount inputs and buy/sell selector are available",
+          "observed": "Limit tab rendered with buy/sell toggle and two inputs; values entered (price 1.25, amount 5) and side switched to sell."
+        },
+        {
+          "action": "Submit place order flow",
+          "expected": "Place Order submits via SDK",
+          "observed": "CTA remained wallet-connect gated; submission path blocked without connected wallet."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "transactions-mobile-polish/group-wallet-realtime/VAL-SWAP-009-limit-form-filled.png"
+        ],
+        "consoleErrors": "agent-browser errors: none",
+        "network": "No place-order transaction request observed; form remained auth-gated"
+      },
+      "issues": "Form UI is present, but order submission cannot be validated without wallet connection."
+    },
+    {
+      "id": "VAL-CROSS-UI-002",
+      "title": "Connect wallet and see balances",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Click Connect Wallet",
+          "expected": "Wallet modal opens",
+          "observed": "Wallet modal opened with Google/Apple options and Aptos wallet install links."
+        },
+        {
+          "action": "Complete connection",
+          "expected": "Navbar shows connected address, swap shows balances, CTA changes from Connect Wallet to Swap",
+          "observed": "Connection could not be completed in isolation: Aptos wallets were not installed and Google path required external account login."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "transactions-mobile-polish/group-wallet-realtime/VAL-CROSS-UI-002-wallet-modal.png",
+          "transactions-mobile-polish/group-wallet-realtime/VAL-CROSS-UI-002-google-auth-required.png"
+        ],
+        "consoleErrors": "agent-browser errors: none",
+        "network": "OAuth redirect to accounts.google.com observed; no return to connected app state"
+      },
+      "issues": "No test credentials/provisioned wallet in boundary, so balance-visible connected state is untestable."
+    },
+    {
+      "id": "VAL-POLISH-007",
+      "title": "Real-time price updates",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Capture displayed price and wait 30s",
+          "expected": "Header price updates on incoming trade and flashes green/red; chart receives new point",
+          "observed": "Displayed values remained unchanged before/after wait ($0.000000, $0.00); no visible flash/update observed."
+        },
+        {
+          "action": "Check API health during observation",
+          "expected": "Data services available for realtime pipeline",
+          "observed": "API endpoints were rate-limited (429), and console continuously logged failed resource loads (429)."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "transactions-mobile-polish/group-wallet-realtime/VAL-POLISH-007-price-before-wait.png",
+          "transactions-mobile-polish/group-wallet-realtime/VAL-POLISH-007-price-after-wait.png"
+        ],
+        "consoleErrors": "agent-browser errors: none (no uncaught JS errors); console showed repeated HTTP 429 resource errors",
+        "network": "curl /market, /trades, /candles all returned 429 during the same test window"
+      },
+      "issues": "Realtime behavior could not be validated with backend data path under sustained rate limiting and no observable incoming trade updates."
+    },
+    {
+      "id": "VAL-POLISH-008",
+      "title": "Wallet disconnect returns to connect state",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Attempt wallet connect",
+          "expected": "Reach connected wallet state first",
+          "observed": "Unable to complete wallet connection in isolated run (no installed Aptos wallet, OAuth requires external credentials)."
+        },
+        {
+          "action": "Attempt disconnect flow",
+          "expected": "Swap CTA and navbar return to disconnected 'Connect Wallet' state; balances disappear",
+          "observed": "Disconnect flow unreachable because connected precondition was not met."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "transactions-mobile-polish/group-wallet-realtime/VAL-SWAP-007-disconnected-state.png",
+          "transactions-mobile-polish/group-wallet-realtime/VAL-SWAP-007-wallet-connect-modal.png"
+        ],
+        "consoleErrors": "agent-browser errors: none",
+        "network": "No authenticated wallet session established"
+      },
+      "issues": "Cannot validate disconnect behavior without a connected wallet session."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Choosing 'Continue with Google' for wallet connect navigates away to Google OAuth in the same tab, requiring manual return to app URL for further testing.",
+      "resolved": true,
+      "resolution": "Reopened http://localhost:3102 in the same isolated agent-browser session after each OAuth redirect.",
+      "affectedAssertions": [
+        "VAL-SWAP-007",
+        "VAL-SWAP-008",
+        "VAL-CROSS-UI-002",
+        "VAL-POLISH-008"
+      ]
+    },
+    {
+      "description": "Console was saturated with repeated HTTP 429 errors from local API during UI interactions.",
+      "resolved": false,
+      "resolution": "Retried requests and waited; 429 persisted during this validation window.",
+      "affectedAssertions": [
+        "VAL-SWAP-005",
+        "VAL-POLISH-007"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "No provisioned connectable wallet within isolation boundary (Aptos wallets shown as install-only; OAuth connect requires external credentials).",
+      "affectedAssertions": [
+        "VAL-SWAP-007",
+        "VAL-SWAP-008",
+        "VAL-SWAP-009",
+        "VAL-CROSS-UI-002",
+        "VAL-POLISH-008"
+      ],
+      "quickFixAttempted": "Opened wallet modal, attempted Google connect path, confirmed redirect to external login requirement; retried flow and returned to app."
+    },
+    {
+      "description": "Local API endpoints were persistently rate-limited (HTTP 429), preventing reliable quote/realtime verification.",
+      "affectedAssertions": [
+        "VAL-SWAP-005",
+        "VAL-POLISH-007"
+      ],
+      "quickFixAttempted": "Retried /market, /trades, and /candles requests and waited 30s; responses remained 429 with retryAfter hints."
+    }
+  ],
+  "summary": "Tested 7 assigned assertions: 0 passed, 0 failed, 7 blocked due wallet-auth prerequisites and sustained API 429 rate limiting during the validation window."
+}

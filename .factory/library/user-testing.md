@@ -44,3 +44,6 @@
 - In development mode, the frontend now falls back to deterministic mock candles when `/candles` is empty, so line-render/crosshair assertions are testable without seeding; in non-development builds, seed candle data if the API returns empty arrays.
 - Observed valid candle intervals from API: `1m`, `5m`, `15m`, `1h`, `1d`; `4h` returned HTTP 400 in this environment.
 - For API-unavailable assertions, prefer browser-level request blocking (`http://localhost:3100/**`) instead of stopping shared services, so parallel validators remain isolated.
+
+- During this milestone validation, local API endpoints (`/market`, `/trades`, `/candles`) repeatedly returned `HTTP 429 RATE_LIMITED`; assertions requiring populated trade data, quotes, or realtime deltas should be marked blocked if retries/backoff do not recover.
+- Wallet-dependent assertions (connect, swap execution, limit submission, disconnect-after-connect) require a provisioned connectable wallet (extension or test credentials). If unavailable, mark these as blocked with explicit prerequisite notes.

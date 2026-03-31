@@ -1,0 +1,186 @@
+{
+  "groupId": "group-mobile-transactions",
+  "testedAt": "2026-03-31T13:42:31.188514+00:00",
+  "isolation": {
+    "milestone": "transactions-mobile-polish",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "appUrl": "http://localhost:3102",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "browserSession": "flow-mobile-transactions"
+  },
+  "toolsUsed": [
+    "agent-browser",
+    "curl"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-POLISH-001",
+      "title": "Transactions table",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Open app at 1280px viewport and inspect Transactions section",
+          "expected": "Recent trades table populated from /trades with Time/Type/Price/Amount/Address and live updates",
+          "observed": "Table headers render and section is visible, but only empty row shown: 'No recent transactions'."
+        },
+        {
+          "action": "Inspect network traffic for trades endpoint",
+          "expected": "Successful /trades responses with trade rows available for render/update validation",
+          "observed": "Browser requested GET /trades?limit=10 and GET /trades?limit=50, but external verification attempts repeatedly returned 429 RATE_LIMITED, preventing populated-row/auto-update confirmation."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "transactions-mobile-polish/group-mobile-transactions/VAL-POLISH-001-transactions-table.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /trades?limit=10, GET /trades?limit=50 observed; follow-up curl checks to /trades returned 429 RATE_LIMITED"
+      },
+      "issues": "Unable to validate non-empty recent-trades rendering and auto-update behavior due API rate limiting and lack of available trade payload during session."
+    },
+    {
+      "id": "VAL-POLISH-002",
+      "title": "Token info section",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Scroll to Token Info section below transactions",
+          "expected": "Section shows truncated contract address with copy button and Aptos explorer link",
+          "observed": "Token Info section displayed with contract '0xCAFE', Copy button, and Explorer link."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "transactions-mobile-polish/group-mobile-transactions/VAL-POLISH-002-token-info.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Explorer link points to https://explorer.aptoslabs.com/account/0xCAFE?network=mainnet"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-ERROR-002",
+      "title": "Transactions table empty state",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect transactions row state when no trades are rendered",
+          "expected": "Graceful empty-state message instead of broken/invisible table",
+          "observed": "Table remains visible and shows 'No recent transactions' and 'Trades will appear here in real-time'."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "transactions-mobile-polish/group-mobile-transactions/VAL-ERROR-002-empty-transactions.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /trades endpoint calls observed during page load"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-POLISH-003",
+      "title": "Mobile single-column layout",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Resize viewport to 375x812 and reload",
+          "expected": "Single-column layout with simplified/hamburger navbar and scrollable access to all sections",
+          "observed": "Navbar collapses to 'Open menu' icon, content stacks vertically (chart -> stats -> swap -> transactions -> token info), and sections are reachable by scrolling."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "transactions-mobile-polish/group-mobile-transactions/VAL-POLISH-003-mobile-layout-375.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Standard market/candles/depth/trades fetches continue on mobile viewport"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-POLISH-004",
+      "title": "Mobile swap widget",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect swap widget at 375x812 viewport",
+          "expected": "Swap widget is full-width/easily accessible with mobile-friendly controls",
+          "observed": "Swap card spans mobile content width and remains reachable with scroll; primary CTA is prominent."
+        },
+        {
+          "action": "Open token selector modal from mobile swap",
+          "expected": "Token selector opens as full-screen modal",
+          "observed": "Modal occupies full viewport (375x812) and includes search + token list."
+        },
+        {
+          "action": "Check touch target sizes for key controls",
+          "expected": "Touch targets are at least 44px",
+          "observed": "Measured controls include Open menu 44x44, range buttons 44x44, swap/limit tabs 149x44, token buttons 110x44, and CTA 309x52."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "transactions-mobile-polish/group-mobile-transactions/VAL-POLISH-004-mobile-swap-widget.png",
+          "transactions-mobile-polish/group-mobile-transactions/VAL-POLISH-004-mobile-swap-modal.png"
+        ],
+        "consoleErrors": "none",
+        "network": "No modal-specific API failure observed; local UI interactions succeeded"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-UI-004",
+      "title": "Responsive resize flow",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Capture layout at 1280px",
+          "expected": "Desktop two-column layout",
+          "observed": "Two-column layout rendered: left content column and right swap widget column."
+        },
+        {
+          "action": "Resize to 768px and reload",
+          "expected": "Responsive intermediate tablet layout without overlap/breakage",
+          "observed": "Layout remains stable in compact two-column/tablet form with no overlap."
+        },
+        {
+          "action": "Resize to 375px and reload",
+          "expected": "Mobile single-column layout",
+          "observed": "Layout transitions to stacked single column with hamburger navbar and no broken sections."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "transactions-mobile-polish/group-mobile-transactions/VAL-CROSS-UI-004-1280.png",
+          "transactions-mobile-polish/group-mobile-transactions/VAL-CROSS-UI-004-768.png",
+          "transactions-mobile-polish/group-mobile-transactions/VAL-CROSS-UI-004-375.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /market, /candles, /depth, /trades observed across viewport changes"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "The app polls market/trades endpoints aggressively during validation; /trades frequently returned RATE_LIMITED (429) during follow-up checks.",
+      "resolved": false,
+      "resolution": "Wait-and-retry attempts (5s, 6s, 15s) still returned 429; continued with observable UI assertions and marked trade-population validation blocked.",
+      "affectedAssertions": [
+        "VAL-POLISH-001"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Local API /trades endpoint was rate-limited (429 RATE_LIMITED) throughout post-check attempts, preventing confirmation of non-empty recent-trade rows and live row updates.",
+      "affectedAssertions": [
+        "VAL-POLISH-001"
+      ],
+      "quickFixAttempted": "Closed browser session to reduce request load and retried curl after 5s/6s/15s delays; response remained 429."
+    }
+  ],
+  "summary": "Tested 6 assigned assertions: 5 passed and 1 blocked (VAL-POLISH-001 blocked by persistent /trades API rate limiting)."
+}
