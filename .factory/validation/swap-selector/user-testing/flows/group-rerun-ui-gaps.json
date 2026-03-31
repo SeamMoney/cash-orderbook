@@ -1,0 +1,112 @@
+{
+  "groupId": "group-rerun-ui-gaps",
+  "testedAt": "2026-03-31T12:15:48Z",
+  "isolation": {
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "appUrl": "http://localhost:3102",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "browserSession": "group-rerun-ui-gaps"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-SWAP-004",
+      "title": "Token selector modal shows balances and selection behavior",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Open swap page and click token selector trigger (from-token button)",
+          "expected": "Token selector modal opens with search and token list including balances",
+          "observed": "Modal opened with search input and token list entries for CASH and USDC."
+        },
+        {
+          "action": "Inspect token rows in modal",
+          "expected": "Each token row shows icon, name, ticker, and user balance",
+          "observed": "Token rows showed icon/name/ticker only (no balance text/value shown)."
+        },
+        {
+          "action": "Select USDC from modal",
+          "expected": "Modal closes and selected token updates in swap input",
+          "observed": "Modal closed and from-token updated to USDC."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "swap-selector/group-rerun-ui-gaps/VAL-SWAP-004-modal-open.png",
+          "swap-selector/group-rerun-ui-gaps/VAL-SWAP-004-after-selection.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET http://localhost:3100/depth (fetch); no /balances request captured during token-modal interaction."
+      },
+      "issues": "Selection behavior works, but modal does not display per-token user balances."
+    },
+    {
+      "id": "VAL-SWAP-010",
+      "title": "Price details expandable section exists and expands with expected fields",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Inspect swap card in default state",
+          "expected": "Collapsed price-details section is visible",
+          "observed": "No price-details expandable control/section was visible."
+        },
+        {
+          "action": "Enter amount and re-check swap card for expandable details",
+          "expected": "Expandable details can be opened to show exchange rate, price impact, minimum received",
+          "observed": "No expandable section appeared; fields for exchange rate/price impact/minimum received were not found."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "swap-selector/group-rerun-ui-gaps/VAL-SWAP-010-after-amount.png"
+        ],
+        "consoleErrors": "none",
+        "network": "No additional relevant requests observed for price-details expansion behavior."
+      },
+      "issues": "Required expandable price-details section is missing."
+    },
+    {
+      "id": "VAL-A11Y-002",
+      "title": "Escape closes modal and focus returns to trigger element",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Open token selector modal from the USDC token selector button",
+          "expected": "Modal opens and focus is inside modal",
+          "observed": "Modal opened and focus was on the search input (placeholder: \"Search by name or ticker\")."
+        },
+        {
+          "action": "Press Escape key",
+          "expected": "Modal closes",
+          "observed": "Modal closed immediately."
+        },
+        {
+          "action": "Check post-close focus target",
+          "expected": "Focus returns to the same trigger element",
+          "observed": "Focus returned to the same stored trigger button (USDC token selector). Identity check: activeIsStoredTrigger=true."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "swap-selector/group-rerun-ui-gaps/VAL-A11Y-002-modal-before-escape.png",
+          "swap-selector/group-rerun-ui-gaps/VAL-A11Y-002-after-escape.png"
+        ],
+        "consoleErrors": "none",
+        "network": "No network dependency for Escape/focus behavior.",
+        "focusTargetAfterEscape": {
+          "tag": "BUTTON",
+          "text": "UUSDC",
+          "className": "flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 shrink-0 hover:bg-surface-hover transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card",
+          "activeIsStoredTrigger": true
+        }
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Revalidated 3 assertions: 1 passed (VAL-A11Y-002) and 2 failed (VAL-SWAP-004 missing balances in token modal; VAL-SWAP-010 missing price-details expandable section)."
+}

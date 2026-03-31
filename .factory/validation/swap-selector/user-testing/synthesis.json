@@ -1,62 +1,27 @@
 {
   "milestone": "swap-selector",
-  "round": 1,
+  "round": 2,
   "status": "fail",
   "assertionsSummary": {
-    "total": 16,
-    "passed": 7,
-    "failed": 3,
-    "blocked": 6
+    "total": 3,
+    "passed": 1,
+    "failed": 2,
+    "blocked": 0
   },
   "passedAssertions": [
-    "VAL-A11Y-001",
-    "VAL-CROSS-UI-003",
-    "VAL-ERROR-005",
-    "VAL-SWAP-001",
-    "VAL-SWAP-002",
-    "VAL-SWAP-003",
-    "VAL-SWAP-006"
+    "VAL-A11Y-002"
   ],
   "failedAssertions": [
     {
-      "id": "VAL-A11Y-002",
-      "reason": "Escape closes the token selector modal, but focus does not return to the trigger element; focus lands on BODY instead."
-    },
-    {
       "id": "VAL-SWAP-004",
-      "reason": "Token selector modal opens with search and token list (CASH/USDC), and selecting USDC updates the input and closes modal, but per-token user balances are not shown in the modal."
+      "reason": "Re-validation confirms the token selector modal opens and selection works, but per-token user balances are still not rendered in token rows."
     },
     {
       "id": "VAL-SWAP-010",
-      "reason": "No expandable price-details section is visible; no exchange-rate, price-impact, or minimum-received fields were found in the swap card."
+      "reason": "Re-validation confirms there is still no expandable price details section (exchange rate, price impact, minimum received) in the swap card."
     }
   ],
-  "blockedAssertions": [
-    {
-      "id": "VAL-CROSS-UI-002",
-      "blockedBy": "Wallet extension integration is unavailable in this environment (wallet modal shows install links for Petra/Nightly/Backpack, with no connected wallet extension available). Fallback disconnected state is observable and stable."
-    },
-    {
-      "id": "VAL-POLISH-008",
-      "blockedBy": "Could not validate disconnect-after-connect behavior because no wallet extension could be connected in this environment. Observable fallback disconnected state is correct."
-    },
-    {
-      "id": "VAL-SWAP-005",
-      "blockedBy": "Could not validate quote-updates-as-you-type behavior because environment data appears unseeded (no chart data, 24H volume $0.00) and receive quote stayed 0 across multiple input changes; USD equivalents were not visible."
-    },
-    {
-      "id": "VAL-SWAP-007",
-      "blockedBy": "Disconnected CTA state is visible, but connected CTA states (Swap / Enter an amount / Insufficient balance) could not be validated because no local Aptos wallet extension is installed and social login requires external account credentials."
-    },
-    {
-      "id": "VAL-SWAP-008",
-      "blockedBy": "Swap execution could not be attempted because wallet connection/signing is unavailable in this isolated run; CTA remains Connect Wallet and no signed transaction path is reachable."
-    },
-    {
-      "id": "VAL-SWAP-009",
-      "blockedBy": "Limit form UI is present (buy/sell toggle, price and amount fields) and can be filled, but Place Order submission via SDK could not be validated without a connected/signing wallet."
-    }
-  ],
+  "blockedAssertions": [],
   "appliedUpdates": [],
-  "previousRound": null
+  "previousRound": ".factory/validation/swap-selector/user-testing/synthesis.round1.json"
 }
