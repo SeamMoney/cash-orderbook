@@ -199,7 +199,9 @@ export function useRealtimeOrderbook(): {
           setLoading(false);
 
           // Show error toast with retry action (only once to avoid spam)
-          if (!errorToastShownRef.current) {
+          // Suppress toast entirely for connection refused (API not running)
+          const isConnectionRefused = message.includes("Failed to fetch") || message.includes("fetch");
+          if (!errorToastShownRef.current && !isConnectionRefused) {
             errorToastShownRef.current = true;
             toast.error("Network error", {
               description: `Failed to load orderbook: ${message}`,

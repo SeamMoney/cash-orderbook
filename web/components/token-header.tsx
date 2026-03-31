@@ -1,7 +1,9 @@
 "use client";
 
+import { useRef, useEffect, useState, useCallback } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatBalance } from "@/lib/utils";
+import type { PriceFlashDirection } from "@/hooks/use-realtime-price";
 
 interface TokenHeaderProps {
   /** Current price to display (from API or chart hover). */
@@ -12,21 +14,46 @@ interface TokenHeaderProps {
   loading: boolean;
   /** Optional: the date/time label shown when hovering the chart. */
   hoverTimestamp?: string | null;
+  /** Optional: flash direction for price change animation ("up" = green, "down" = red). */
+  flashDirection?: PriceFlashDirection;
 }
 
 /**
  * TokenHeader — displays CASH token icon, name, ticker, live price, and 24h change.
  * When hovering the chart, the price updates to the hovered value and a timestamp is shown.
+ * When a WebSocket trade arrives, flashes green (price up) or red (price down).
  */
 export function TokenHeader({
   price,
   change24h,
   loading,
   hoverTimestamp,
+  flashDirection,
 }: TokenHeaderProps): React.ReactElement {
   const isPositive = change24h !== null && change24h >= 0;
   const changeColor = isPositive ? "text-cash-green" : "text-cash-red";
   const changePrefix = isPositive ? "+" : "";
+
+  // Manage flash CSS class on price element
+  const priceRef = useRef<HTMLSpanElement>(null);
+  const [flashClass, setFlashClass] = useState("");
+
+  const applyFlash = useCallback((direction: PriceFlashDirection): void => {
+    if (!direction) {
+      setFlashClass("");
+      return;
+    }
+    // Remove any existing flash class, then re-apply after a frame
+    // to restart the CSS animation
+    setFlashClass("");
+    requestAnimationFrame(() => {
+      setFlashClass(direction === "up" ? "animate-flash-green" : "animate-flash-red");
+    });
+  }, []);
+
+  useEffect(() => {
+    applyFlash(flashDirection ?? null);
+  }, [flashDirection, applyFlash]);
 
   return (
     <div className="flex flex-col gap-1">
@@ -54,7 +81,10 @@ export function TokenHeader({
           </>
         ) : (
           <>
-            <span className="font-mono text-2xl sm:text-3xl font-bold tracking-tight text-white">
+            <span
+              ref={priceRef}
+              className={`font-mono text-2xl sm:text-3xl font-bold tracking-tight text-white rounded-md px-1 -mx-1 ${flashClass}`}
+            >
               {price !== null
                 ? `$${formatBalance(price, price < 1 ? 6 : 2)}`
                 : "$--"}

@@ -42,18 +42,33 @@ export function useMarket(pollIntervalMs = 5000): {
         setMarket(data);
         setError(null);
       }
-    } catch (err) {
+    } catch {
       if (mountedRef.current) {
-        setError(
-          err instanceof Error ? err.message : "Failed to fetch market data",
-        );
+        // In dev mode, fall back to mock market data
+        if (process.env.NODE_ENV === "development" && !market) {
+          setMarket({
+            pairId: 0,
+            pair: "CASH/USDC",
+            baseAsset: "CASH",
+            quoteAsset: "USDC",
+            lotSize: 1,
+            tickSize: 0.000001,
+            minSize: 1,
+            status: "active",
+            lastPrice: 0.25,
+            volume24h: 142_350.75,
+          });
+          setError(null);
+        } else {
+          setError("Failed to fetch market data");
+        }
       }
     } finally {
       if (mountedRef.current) {
         setLoading(false);
       }
     }
-  }, []);
+  }, [market]);
 
   useEffect(() => {
     mountedRef.current = true;

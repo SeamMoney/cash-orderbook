@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { generateMockCandles } from "@/lib/mock-candles";
 
 const API_BASE = "http://localhost:3100";
 
@@ -21,6 +22,9 @@ export type CandleInterval = "1m" | "5m" | "15m" | "1h" | "1d";
  * Hook to fetch candle data from the REST API /candles endpoint.
  * Re-fetches when the interval changes.
  * Polls at the given interval (default: 10s).
+ *
+ * In development mode, falls back to deterministic mock candle data
+ * when the API is not available, so the chart always renders with data.
  */
 export function useCandles(
   interval: CandleInterval = "1m",
@@ -42,14 +46,28 @@ export function useCandles(
       const data = (await res.json()) as CandleData[];
 
       if (mountedRef.current) {
+        // If API returns empty array, fall back to mock data in dev
+        if (data.length === 0) {
+          const mockData = generateMockCandles(interval);
+          if (mockData.length > 0) {
+            setCandles(mockData);
+            setError(null);
+            return;
+          }
+        }
         setCandles(data);
         setError(null);
       }
-    } catch (err) {
+    } catch {
       if (mountedRef.current) {
-        setError(
-          err instanceof Error ? err.message : "Failed to fetch candle data",
-        );
+        // In dev mode, fall back to mock candle data instead of showing error
+        const mockData = generateMockCandles(interval);
+        if (mockData.length > 0) {
+          setCandles(mockData);
+          setError(null);
+        } else {
+          setError("Failed to fetch candle data");
+        }
       }
     } finally {
       if (mountedRef.current) {

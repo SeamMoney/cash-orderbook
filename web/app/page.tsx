@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { motion } from "framer-motion";
 import { Nav, type NavTab } from "@/components/nav";
 import { Toaster } from "sonner";
 import { TokenHeader } from "@/components/token-header";
@@ -13,12 +14,14 @@ import { useMarket } from "@/hooks/use-market";
 import { usePriceChange } from "@/hooks/use-price-change";
 import { useMinDuration } from "@/hooks/use-min-duration";
 import { useRealtimeTrades } from "@/hooks/use-realtime-trades";
+import { useRealtimePrice } from "@/hooks/use-realtime-price";
 
 export default function Home(): React.ReactElement {
   const [activeTab, setActiveTab] = useState<NavTab>("trade");
   const { market, loading: rawMarketLoading } = useMarket();
   const { change24h } = usePriceChange();
   const { trades, loading: tradesLoading } = useRealtimeTrades(50);
+  const { realtimePrice, flashDirection } = useRealtimePrice();
 
   // Ensure stats skeleton is visible for at least 300ms on initial page load
   const marketLoading = useMinDuration(rawMarketLoading, 300);
@@ -32,8 +35,8 @@ export default function Home(): React.ReactElement {
     setHoverTimestamp(data.timestamp);
   }, []);
 
-  // Derive display values
-  const displayPrice = hoverPrice ?? market?.lastPrice ?? null;
+  // Derive display values — prefer hover price, then realtime WS price, then API price
+  const displayPrice = hoverPrice ?? realtimePrice ?? market?.lastPrice ?? null;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -50,8 +53,13 @@ export default function Home(): React.ReactElement {
         }}
       />
 
-      {/* Main Content — Two Column Layout */}
-      <main className="mx-auto w-full max-w-[1280px] flex-1 px-3 py-4 sm:px-4 md:px-6 md:py-6">
+      {/* Main Content — Two Column Layout with page transition */}
+      <motion.main
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className="mx-auto w-full max-w-[1280px] flex-1 px-3 py-4 sm:px-4 md:px-6 md:py-6"
+      >
         <div className="flex flex-col md:flex-row md:gap-6 lg:gap-8">
           {/* Left Column (~65%) — Token Info + Chart + Stats + Transactions */}
           <div className="w-full md:w-[65%] space-y-4 md:space-y-6">
@@ -61,6 +69,7 @@ export default function Home(): React.ReactElement {
               change24h={change24h}
               loading={marketLoading}
               hoverTimestamp={hoverTimestamp}
+              flashDirection={flashDirection}
             />
 
             {/* Price Chart */}
@@ -88,7 +97,7 @@ export default function Home(): React.ReactElement {
             </div>
           </div>
         </div>
-      </main>
+      </motion.main>
     </div>
   );
 }
