@@ -14,6 +14,12 @@ import {
   type SwapDirection,
   type SwapQuote,
 } from "@/lib/swap-quote";
+import {
+  getPanoraQuote,
+  getPanoraSwapPayload,
+  PanoraError,
+  type PanoraQuote,
+} from "@/lib/panora";
 import { SwapPriceDetails } from "@/components/swap/swap-price-details";
 import {
   TokenSelectorModal,
@@ -37,6 +43,18 @@ const TOKENS: Record<string, TokenInfo> = Object.fromEntries(
 /** Default tokens */
 const DEFAULT_FROM_TOKEN = TOKENS["USD1"] ?? SUPPORTED_TOKENS[1];
 const DEFAULT_TO_TOKEN = TOKENS["CASH"] ?? SUPPORTED_TOKENS[0];
+
+/**
+ * Determine if a swap pair should be routed through Panora rather than the
+ * native CASH/USD1 orderbook. Only CASH↔USD1 uses the orderbook; all other
+ * combinations (e.g. USDT→CASH, CASH→USDC) go through Panora.
+ */
+function isPanoraPair(from: TokenInfo, to: TokenInfo): boolean {
+  const isCashUsd1 =
+    (from.symbol === "CASH" && to.symbol === "USD1") ||
+    (from.symbol === "USD1" && to.symbol === "CASH");
+  return !isCashUsd1;
+}
 
 /**
  * SwapWidget — Uniswap-style swap card with Swap and Limit tabs.
@@ -72,11 +90,16 @@ export function SwapWidget(): React.ReactElement {
   const [toToken, setToToken] = useState<TokenInfo>(DEFAULT_TO_TOKEN);
   const [inputAmount, setInputAmount] = useState("");
   const [quote, setQuote] = useState<SwapQuote | null>(null);
+  const [panoraQuote, setPanoraQuote] = useState<PanoraQuote | null>(null);
+  const [panoraError, setPanoraError] = useState<string | null>(null);
   const [isSwapping, setIsSwapping] = useState(false);
   const [directionRotation, setDirectionRotation] = useState(0);
 
   // Derived direction for orderbook swap-quote compatibility
   const direction: SwapDirection = toToken.symbol === "CASH" ? "buy" : "sell";
+
+  // Whether this pair should be routed through Panora
+  const usePanora = isPanoraPair(fromToken, toToken);
 
   // --- Token selector modal state ---
   const [selectorOpen, setSelectorOpen] = useState<SelectorSlot>(null);
@@ -115,34 +138,78 @@ export function SwapWidget(): React.ReactElement {
     inputNum > 0 &&
     inputNum > fromBalance;
 
-  // Calculate quote with debounce
+  // Calculate quote with debounce — branches between orderbook and Panora
   useEffect(() => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
 
     const amount = parseFloat(inputAmount);
-    if (isNaN(amount) || amount <= 0 || !depth) {
+    if (isNaN(amount) || amount <= 0) {
       setQuote(null);
+      setPanoraQuote(null);
+      setPanoraError(null);
       return;
     }
 
+    // Orderbook path: CASH/USD1 only
+    if (!usePanora) {
+      setPanoraQuote(null);
+      setPanoraError(null);
+
+      if (!depth) {
+        setQuote(null);
+        return;
+      }
+
+      debounceRef.current = setTimeout(() => {
+        const result = calculateSwapQuote(
+          amount,
+          direction,
+          depth.bids,
+          depth.asks,
+        );
+        setQuote(result);
+      }, 300);
+
+      return () => {
+        if (debounceRef.current) {
+          clearTimeout(debounceRef.current);
+        }
+      };
+    }
+
+    // Panora path: non-USD1 pairs
+    setQuote(null);
+    let cancelled = false;
+
     debounceRef.current = setTimeout(() => {
-      const result = calculateSwapQuote(
-        amount,
-        direction,
-        depth.bids,
-        depth.asks,
-      );
-      setQuote(result);
-    }, 300);
+      setPanoraError(null);
+      getPanoraQuote(fromToken.symbol, toToken.symbol, amount, 0.5)
+        .then((result) => {
+          if (!cancelled) {
+            setPanoraQuote(result);
+          }
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            setPanoraQuote(null);
+            setPanoraError(
+              err instanceof PanoraError
+                ? err.message
+                : "Route unavailable",
+            );
+          }
+        });
+    }, 500);
 
     return () => {
+      cancelled = true;
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
       }
     };
-  }, [inputAmount, direction, depth]);
+  }, [inputAmount, direction, depth, usePanora, fromToken.symbol, toToken.symbol]);
 
   const handleDirectionToggle = useCallback((): void => {
     setFromToken((prev) => {
@@ -152,6 +219,8 @@ export function SwapWidget(): React.ReactElement {
     });
     setInputAmount("");
     setQuote(null);
+    setPanoraQuote(null);
+    setPanoraError(null);
     setDirectionRotation((prev) => prev + 180);
   }, [toToken]);
 
@@ -173,6 +242,8 @@ export function SwapWidget(): React.ReactElement {
       }
       setInputAmount("");
       setQuote(null);
+      setPanoraQuote(null);
+      setPanoraError(null);
       setSelectorOpen(null);
     },
     [selectorOpen, fromToken, toToken],
@@ -208,17 +279,25 @@ export function SwapWidget(): React.ReactElement {
     [],
   );
 
+  // Active quote — either orderbook or Panora (for display output)
+  const activeOutputAmount = usePanora
+    ? panoraQuote?.outputAmount ?? null
+    : quote?.outputAmount ?? null;
+
   // Compute USD equivalent for the "from" input
   const fromUsdEquivalent =
-    quote && inputNum > 0
+    (quote || panoraQuote) && inputNum > 0
       ? direction === "sell"
-        ? quote.outputAmount
+        ? activeOutputAmount
         : inputNum
       : null;
 
   // Compute USD equivalent for the "to" output
-  const toUsdEquivalent =
-    quote
+  const toUsdEquivalent = usePanora
+    ? panoraQuote
+      ? panoraQuote.outputAmount
+      : null
+    : quote
       ? direction === "sell"
         ? quote.outputAmount
         : quote.outputAmount * (quote.effectivePrice || 1)
@@ -236,7 +315,11 @@ export function SwapWidget(): React.ReactElement {
       return;
     }
 
-    if (!quote) {
+    if (!usePanora && !quote) {
+      toast.error("No price quote available");
+      return;
+    }
+    if (usePanora && !panoraQuote) {
       toast.error("No price quote available");
       return;
     }
@@ -244,36 +327,60 @@ export function SwapWidget(): React.ReactElement {
     setIsSwapping(true);
 
     try {
-      // For sell-side, the user enters CASH amount → pass directly as quantity.
-      // For buy-side, the user enters USDC amount, but the contract expects
-      // base-asset (CASH) quantity. Use the quote's outputAmount which is the
-      // estimated CASH the user will receive (computed by walking asks).
-      const baseQuantity = direction === "buy" ? quote.outputAmount : amount;
+      if (usePanora) {
+        // Panora-routed swap: fetch transaction payload with real sender
+        const txData = await getPanoraSwapPayload(
+          fromToken.symbol,
+          toToken.symbol,
+          amount,
+          0.5,
+          account.address.toString(),
+        );
 
-      const payload = buildPlaceOrderPayload({
-        pairId: 0,
-        price: 0,
-        quantity: baseQuantity,
-        side: direction === "buy" ? "buy" : "sell",
-        orderType: "Market",
-      });
+        const response = await signAndSubmitTransaction({
+          data: txData as Parameters<typeof signAndSubmitTransaction>[0]["data"],
+        });
 
-      const response = await signAndSubmitTransaction({
-        data: payload,
-      });
+        const txHash =
+          typeof response === "object" && response !== null && "hash" in response
+            ? (response as { hash: string }).hash
+            : String(response);
 
-      const txHash =
-        typeof response === "object" && response !== null && "hash" in response
-          ? (response as { hash: string }).hash
-          : String(response);
+        toast.success("Swap successful", {
+          description: `Tx: ${txHash.slice(0, 10)}...${txHash.slice(-8)}`,
+          duration: 6000,
+        });
+      } else {
+        // Direct orderbook swap: CASH/USD1 only
+        const baseQuantity = direction === "buy" ? quote!.outputAmount : amount;
 
-      toast.success("Swap successful", {
-        description: `Tx: ${txHash.slice(0, 10)}...${txHash.slice(-8)}`,
-        duration: 6000,
-      });
+        const payload = buildPlaceOrderPayload({
+          pairId: 0,
+          price: 0,
+          quantity: baseQuantity,
+          side: direction === "buy" ? "buy" : "sell",
+          orderType: "Market",
+        });
+
+        const response = await signAndSubmitTransaction({
+          data: payload,
+        });
+
+        const txHash =
+          typeof response === "object" && response !== null && "hash" in response
+            ? (response as { hash: string }).hash
+            : String(response);
+
+        toast.success("Swap successful", {
+          description: `Tx: ${txHash.slice(0, 10)}...${txHash.slice(-8)}`,
+          duration: 6000,
+        });
+      }
 
       setInputAmount("");
       setQuote(null);
+      setPanoraQuote(null);
+      setPanoraError(null);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Transaction failed";
@@ -294,7 +401,11 @@ export function SwapWidget(): React.ReactElement {
     signAndSubmitTransaction,
     inputAmount,
     quote,
+    panoraQuote,
     direction,
+    usePanora,
+    fromToken.symbol,
+    toToken.symbol,
   ]);
 
   const handlePlaceLimitOrder = useCallback(async (): Promise<void> => {
@@ -372,9 +483,18 @@ export function SwapWidget(): React.ReactElement {
       return { label: "Enter an amount", disabled: true, connectWallet: false };
     if (insufficientBalance)
       return { label: "Insufficient balance", disabled: true, connectWallet: false };
-    if (!quote) return { label: "Fetching quote...", disabled: true, connectWallet: false };
-    if (!quote.sufficientLiquidity)
-      return { label: "Insufficient liquidity", disabled: true, connectWallet: false };
+
+    if (usePanora) {
+      // Panora route
+      if (panoraError) return { label: "Route unavailable", disabled: true, connectWallet: false };
+      if (!panoraQuote) return { label: "Fetching quote...", disabled: true, connectWallet: false };
+    } else {
+      // Orderbook route
+      if (!quote) return { label: "Fetching quote...", disabled: true, connectWallet: false };
+      if (!quote.sufficientLiquidity)
+        return { label: "Insufficient liquidity", disabled: true, connectWallet: false };
+    }
+
     if (isSwapping) return { label: "Swapping...", disabled: true, connectWallet: false };
     return { label: "Swap", disabled: false, connectWallet: false };
   };
@@ -503,7 +623,9 @@ export function SwapWidget(): React.ReactElement {
                     transition={{ duration: 0.15 }}
                     className="flex-1 text-2xl font-mono text-white min-w-0"
                   >
-                    {quote ? formatBalance(quote.outputAmount, 6) : "0"}
+                    {activeOutputAmount !== null
+                      ? formatBalance(activeOutputAmount, 6)
+                      : "0"}
                   </motion.p>
                 </AnimatePresence>
                 <TokenSelectorButton
@@ -518,6 +640,15 @@ export function SwapWidget(): React.ReactElement {
                 </p>
               )}
             </div>
+
+            {/* Panora route error banner */}
+            {usePanora && panoraError && (
+              <div className="mt-3 rounded-xl bg-cash-red/10 border border-cash-red/20 px-3 py-2.5">
+                <p className="text-xs text-cash-red">
+                  ⚠ {panoraError}
+                </p>
+              </div>
+            )}
 
             {/* CTA Button */}
             <button
@@ -544,6 +675,11 @@ export function SwapWidget(): React.ReactElement {
               loading={depthLoading}
               baseSymbol={direction === "sell" ? fromToken.symbol : toToken.symbol}
               quoteSymbol={direction === "sell" ? toToken.symbol : fromToken.symbol}
+              panoraQuote={panoraQuote}
+              panoraError={panoraError}
+              usePanora={usePanora}
+              fromSymbol={fromToken.symbol}
+              toSymbol={toToken.symbol}
             />
           </motion.div>
         ) : (
