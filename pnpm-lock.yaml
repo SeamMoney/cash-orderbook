@@ -64,6 +64,9 @@ importers:
       '@aptos-labs/ts-sdk':
         specifier: ^1.33.0
         version: 1.39.0(axios@1.14.0)(got@11.8.6)
+      '@cash/shared':
+        specifier: workspace:*
+        version: link:../shared
     devDependencies:
       typescript:
         specifier: ^5.7.0
