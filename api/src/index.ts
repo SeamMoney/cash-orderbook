@@ -17,6 +17,10 @@ export { createApp } from "./server.js";
 export { OrderbookState } from "./state/orderbook-state.js";
 export { EventIndexer } from "./indexer/event-indexer.js";
 export type { EventIndexerConfig } from "./indexer/event-indexer.js";
+export { WsServer } from "./websocket/ws-server.js";
+export type { WsServerOptions, ServerMessage, WsClient } from "./websocket/ws-server.js";
+export { rateLimit, RateLimiter, createRateLimiter } from "./middleware/rate-limit.js";
+export type { RateLimitOptions } from "./middleware/rate-limit.js";
 
 /**
  * Start the API server with event indexer.

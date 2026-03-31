@@ -15,12 +15,16 @@ import { ordersRoute } from "./routes/orders.js";
 import { candlesRoute } from "./routes/candles.js";
 import { marketRoute } from "./routes/market.js";
 import { balancesRoute } from "./routes/balances.js";
+import { rateLimit } from "./middleware/rate-limit.js";
+import type { RateLimitOptions } from "./middleware/rate-limit.js";
 
 export interface CreateAppOptions {
   /** Shared in-memory state (injected for testability) */
   state?: OrderbookState;
   /** Server start time for uptime calculation */
   startTime?: number;
+  /** Rate limit options (set to false to disable) */
+  rateLimitOptions?: RateLimitOptions | false;
 }
 
 /**
@@ -37,6 +41,11 @@ export function createApp(options: CreateAppOptions = {}): {
 
   // Middleware
   app.use("*", cors());
+
+  // Rate limiting (100 req / 10s per IP, configurable)
+  if (options.rateLimitOptions !== false) {
+    app.use("*", rateLimit(options.rateLimitOptions ?? { maxRequests: 100, windowMs: 10_000 }));
+  }
 
   // Mount routes
   app.route("/", healthRoute(state, startTime));

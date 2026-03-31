@@ -15,7 +15,7 @@ describe("REST API Routes", () => {
   let state: OrderbookState;
 
   beforeEach(() => {
-    const result = createApp({ startTime: Date.now() - 5000 });
+    const result = createApp({ startTime: Date.now() - 5000, rateLimitOptions: false });
     app = result.app;
     state = result.state;
   });
