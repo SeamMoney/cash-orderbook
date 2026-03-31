@@ -1,0 +1,33 @@
+{
+  "milestone": "candlestick-chart",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 6,
+    "passed": 5,
+    "failed": 0,
+    "blocked": 1
+  },
+  "passedAssertions": [
+    "VAL-CANDLE-001",
+    "VAL-CANDLE-002",
+    "VAL-CANDLE-003",
+    "VAL-CANDLE-004",
+    "VAL-CANDLE-005"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [
+    {
+      "id": "VAL-CANDLE-006",
+      "blockedBy": "No live trade feed activity observed during validation window; realtime rightmost-candle OHLC updates could not be observed."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Documented Aptos indexer events-v1 deprecation errors impacting realtime trade availability and guidance for realtime candle assertions.",
+      "source": "setup"
+    }
+  ],
+  "previousRound": null
+}

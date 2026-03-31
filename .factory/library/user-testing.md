@@ -46,4 +46,6 @@
 - For API-unavailable assertions, prefer browser-level request blocking (`http://localhost:3100/**`) instead of stopping shared services, so parallel validators remain isolated.
 
 - During this milestone validation, local API endpoints (`/market`, `/trades`, `/candles`) repeatedly returned `HTTP 429 RATE_LIMITED`; assertions requiring populated trade data, quotes, or realtime deltas should be marked blocked if retries/backoff do not recover.
+- During candlestick-chart validation, API/WS logs repeatedly showed Aptos indexer `events` v1 deprecation errors from `https://api.mainnet.aptoslabs.com/v1/graphql`; this can leave realtime trade streams empty even when services are healthy.
+- If validating realtime candle mutation (e.g., `VAL-CANDLE-006`), require observable live trades (or an approved deterministic trade generator) before deciding pass/fail.
 - Wallet-dependent assertions (connect, swap execution, limit submission, disconnect-after-connect) require a provisioned connectable wallet (extension or test credentials). If unavailable, mark these as blocked with explicit prerequisite notes.

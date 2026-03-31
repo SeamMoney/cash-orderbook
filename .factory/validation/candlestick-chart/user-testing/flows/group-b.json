@@ -1,0 +1,103 @@
+{
+  "groupId": "group-b",
+  "testedAt": "2026-03-31T22:10:18.878679+00:00",
+  "isolation": {
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "appUrl": "http://localhost:3102",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "browserSession": "group-b-79476079",
+    "scope": [
+      "VAL-CANDLE-004",
+      "VAL-CANDLE-005",
+      "VAL-CANDLE-006"
+    ]
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertionResults": [
+    {
+      "id": "VAL-CANDLE-004",
+      "status": "pass",
+      "reason": "A distinct transition annotation is visible on the 1Y candlestick view (\"New V...\" marker area), indicating the historical-to-new-venue boundary.",
+      "reproductionNotes": [
+        "Open app at http://localhost:3102 in Candle mode.",
+        "Switch to 1Y timeframe.",
+        "Observe transition annotation near the right side of the chart."
+      ],
+      "evidence": {
+        "paths": [
+          "candlestick-chart/group-b/VAL-CANDLE-004-transition-marker.png",
+          "candlestick-chart/group-b/VAL-CANDLE-004-transition-marker-1Y.png",
+          "candlestick-chart/group-b/VAL-CANDLE-004-transition-marker-annotated.png"
+        ],
+        "consoleErrors": "none"
+      }
+    },
+    {
+      "id": "VAL-CANDLE-005",
+      "status": "pass",
+      "reason": "1H and 1Y tabs both update candlestick rendering with different candle density/time scale appropriate to timeframe.",
+      "reproductionNotes": [
+        "Ensure Candle mode is active.",
+        "Click 1H and observe dense short-interval candles.",
+        "Click 1Y and observe compressed long-range candles/time axis."
+      ],
+      "evidence": {
+        "paths": [
+          "candlestick-chart/group-b/VAL-CANDLE-005-timeframe-1H-candle.png",
+          "candlestick-chart/group-b/VAL-CANDLE-005-timeframe-1Y-candle.png"
+        ],
+        "consoleErrors": "none"
+      }
+    },
+    {
+      "id": "VAL-CANDLE-006",
+      "status": "blocked",
+      "reason": "No live trade events were observed during the validation window, so rightmost-candle OHLC mutation behavior could not be confirmed.",
+      "reproductionNotes": [
+        "Open 1H candlestick view and capture baseline screenshot.",
+        "Wait ~65 seconds for potential real-time trade updates.",
+        "Capture follow-up screenshot and check Transactions table/network logs.",
+        "Observed no recent transactions and no captured trades/WS activity for validation."
+      ],
+      "evidence": {
+        "paths": [
+          "candlestick-chart/group-b/VAL-CANDLE-006-before.png",
+          "candlestick-chart/group-b/VAL-CANDLE-006-after.png"
+        ],
+        "consoleErrors": "none",
+        "network": "No captured requests for filters 'trades' or '3101' during observation window"
+      }
+    }
+  ],
+  "frictions": [
+    {
+      "description": "agent-browser daemon returned a transient busy error during a long wait step.",
+      "resolved": true,
+      "resolution": "Retried in the same isolated session and continued evidence capture.",
+      "affectedAssertions": [
+        "VAL-CANDLE-006"
+      ]
+    },
+    {
+      "description": "Transition marker label appears partially clipped in viewport (\"New V...\"), making it subtle to visually parse at first glance.",
+      "resolved": true,
+      "resolution": "Validated using 1Y screenshot plus annotated capture for context.",
+      "affectedAssertions": [
+        "VAL-CANDLE-004"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "No live trade feed activity observed in the UI during the test window, preventing confirmation of real-time candle OHLC updates.",
+      "affectedAssertions": [
+        "VAL-CANDLE-006"
+      ],
+      "quickFixAttempted": "Waited ~65s, compared before/after screenshots, checked Transactions section and network request logs for trade/WS activity."
+    }
+  ],
+  "summary": "Validated 3 assertions: 2 passed (VAL-CANDLE-004, VAL-CANDLE-005), 1 blocked (VAL-CANDLE-006 due to missing live trade events)."
+}

@@ -1,0 +1,63 @@
+{
+  "groupId": "group-a",
+  "testedAt": "2026-03-31T22:06:25.240165+00:00",
+  "isolation": {
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "appUrl": "http://localhost:3102",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "browserSession": "flow-group-a-79476079",
+    "surface": "agent-browser"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertionResults": [
+    {
+      "id": "VAL-CANDLE-001",
+      "status": "pass",
+      "reason": "Candlestick mode rendered with visible green/red candle bodies and wicks on the chart.",
+      "evidence": [
+        "candlestick-chart/group-a/VAL-CANDLE-001-candlestick.png"
+      ],
+      "reproductionNotes": "Open http://localhost:3102 with Candle mode active and observe OHLC candlestick bars (green/red) with wicks.",
+      "consoleErrors": "none",
+      "network": "not required for this assertion"
+    },
+    {
+      "id": "VAL-CANDLE-002",
+      "status": "pass",
+      "reason": "Both Candle and Line toggle buttons were visible; clicking Line switched mode and active state, then clicking Candle switched back and restored active state.",
+      "evidence": [
+        "candlestick-chart/group-a/VAL-CANDLE-002-line-mode.png",
+        "candlestick-chart/group-a/VAL-CANDLE-002-candle-mode-return.png"
+      ],
+      "reproductionNotes": "Click Line chart toggle, confirm Line is active; click Candlestick chart toggle, confirm Candle is active again.",
+      "consoleErrors": "none",
+      "network": "not required for this assertion"
+    },
+    {
+      "id": "VAL-CANDLE-003",
+      "status": "pass",
+      "reason": "In 1Y view, historical candlestick data spans multiple months (including dates before current live venue period), indicating historical OHLCV is displayed with USD price scale values.",
+      "evidence": [
+        "candlestick-chart/group-a/VAL-CANDLE-003-historical-1y.png"
+      ],
+      "reproductionNotes": "Select 1Y range in Candle mode and observe long-span historical candles from prior months through current period.",
+      "consoleErrors": "none",
+      "network": "agent-browser network log returned no captured request entries during this run"
+    }
+  ],
+  "frictions": [
+    {
+      "description": "agent-browser network request inspection returned no captured entries in this session, limiting direct request/response evidence.",
+      "resolved": false,
+      "resolution": "Used UI-visible chart timespan and mode behavior as primary evidence.",
+      "affectedAssertions": [
+        "VAL-CANDLE-003"
+      ]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 3 assertions in group A: 3 passed, 0 failed, 0 blocked."
+}
