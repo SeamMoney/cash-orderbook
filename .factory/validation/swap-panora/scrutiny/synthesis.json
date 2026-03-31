@@ -1,0 +1,68 @@
+{
+  "milestone": "swap-panora",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "pnpm -r test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm -r typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm -r lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 3,
+    "passed": 2,
+    "failed": 1,
+    "failedFeatures": [
+      "panora-swap-routing"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "panora-swap-routing",
+      "severity": "blocking",
+      "description": "getPanoraQuote() does not implement the required quote contract; feature requires a quote endpoint/shape but implementation posts to /swap and reuses swap payload semantics."
+    },
+    {
+      "featureId": "panora-swap-routing",
+      "severity": "blocking",
+      "description": "Routing path is synthesized as `${from} → ${to} via Panora` instead of parsing and displaying actual Panora route path details."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Align mission feature skillName values with actually available runtime skills (e.g., avoid assigning `frontend-ui-worker` when only `frontend-worker` is installed in worker runtime).",
+      "evidence": "shared-constants-usd1, multi-stablecoin-selector, and panora-swap-routing review artifacts all recorded runtime fallback from unavailable `frontend-ui-worker` to `frontend-worker`.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Clarify and pin the Panora quote API contract in mission guidance/validation contract (endpoint, method, expected response fields, and when API key is required).",
+      "evidence": "Review for panora-swap-routing found contract mismatch between mission expectations and implementation choices, including endpoint/method ambiguity and route-path extraction expectations.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Duplicate reports of the same frontend skill-name mismatch across multiple feature reviews.",
+      "reason": "duplicate"
+    },
+    {
+      "observation": "Claim that a hardcoded Panora API key alone constitutes a shared-state update candidate.",
+      "reason": "ambiguous"
+    }
+  ],
+  "previousRound": null
+}

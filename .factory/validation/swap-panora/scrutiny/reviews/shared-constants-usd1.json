@@ -1,0 +1,26 @@
+{
+  "featureId": "shared-constants-usd1",
+  "reviewedAt": "2026-03-31T22:56:09Z",
+  "commitId": "9741ea0",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Reviewed commit 9741ea0 and confirmed the feature requirements are implemented in shared/src/index.ts: USD1 mainnet/testnet constants and 8 decimals, USDT mainnet/testnet constants, USDe and GHO constants, StablecoinInfo export, STABLECOINS registry (5 entries), backward-compatible USDC exports, and quote-decimal support via QUOTE_DECIMALS + quoteDecimalsFor(). No functional or compatibility issues were identified in scope.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Mission feature metadata references skillName frontend-ui-worker, but the worker runtime could not invoke it and had to switch skills.",
+      "evidence": "features.json:331 sets skillName to \"frontend-ui-worker\" for shared-constants-usd1; worker-transcripts.jsonl (session 311a5425-09e6-496d-bba8-a5d8c028b266) records `Error: Skill \"frontend-ui-worker\" not found` followed by fallback skill invocation."
+    },
+    {
+      "area": "skills",
+      "observation": "Assigned frontend skill procedures are UI/web-oriented and do not match this shared-package constants feature, causing justified process deviations.",
+      "evidence": "Feature scope is shared/src/index.ts (features.json:330), while .factory/skills/frontend-worker/SKILL.md procedure centers on web/ implementation and visual checks; handoff skillFeedback explicitly documents skipping visual verification for this constants-only change."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature shared-constants-usd1 passes review. Implementation in commit 9741ea0 matches the described behavior and preserves backward compatibility. Two skill/state alignment observations were recorded for validator triage."
+}

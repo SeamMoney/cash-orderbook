@@ -1,0 +1,51 @@
+{
+  "featureId": "panora-swap-routing",
+  "reviewedAt": "2026-03-31T22:57:25Z",
+  "commitId": "5d3b7c3",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "Panora routing integration is partially implemented, but it does not fully satisfy the feature contract: quote fetching does not use the specified quote endpoint/shape, and routing path details are synthesized rather than parsed from API route data.",
+    "issues": [
+      {
+        "file": "web/lib/panora.ts",
+        "line": 122,
+        "severity": "blocking",
+        "description": "getPanoraQuote() does not implement the requested quote contract. The feature/mission requires a quote call to GET /swap/quote with quote fields (including route data), but the implementation posts to /swap (line 122, method at line 129) and reuses swap payload response semantics. This fails the specified API integration behavior."
+      },
+      {
+        "file": "web/lib/panora.ts",
+        "line": 83,
+        "severity": "blocking",
+        "description": "Routing path is not parsed from Panora route data. buildRouteDescription() hardcodes `${from} → ${to} via Panora` (line 83) and that synthetic string is returned (line 164) and displayed (web/components/swap/swap-price-details.tsx:348). This does not satisfy the requirement to show routing path details for routed swaps."
+      },
+      {
+        "file": "web/components/swap/swap-price-details.tsx",
+        "line": 305,
+        "severity": "non_blocking",
+        "description": "Panora exchange-rate label is mathematically incorrect: it renders `1 {fromSymbol} ≈ {outputAmount} {toSymbol}` even though outputAmount is the total quote for the full input amount, not a per-1-unit rate."
+      },
+      {
+        "file": "web/components/swap/swap-widget.tsx",
+        "line": 298,
+        "severity": "non_blocking",
+        "description": "Panora `toUsdEquivalent` is set to `panoraQuote.outputAmount`, which treats output token quantity as USD value. For volatile/non-USD tokens (e.g., CASH), this produces misleading USD-equivalent display."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Feature metadata and runtime skill availability were inconsistent during implementation, causing a documented procedure deviation.",
+      "evidence": "features.json sets skillName to `frontend-ui-worker`; handoff.skillFeedback.deviations says worker invoked `frontend-worker` instead because the requested skill was not available in runtime skill registry."
+    },
+    {
+      "area": "knowledge",
+      "observation": "Mission/API guidance appears inconsistent with implementation choices; this likely indicates stale or unclear shared API contract documentation for Panora usage.",
+      "evidence": "Mission docs (mission.md, validation-contract.md, mission AGENTS.md) describe GET /swap/quote for quoting, while implementation uses POST /swap for quotes (web/lib/panora.ts:122,129) and introduces a hardcoded API key despite AGENTS stating no key is needed for basic usage."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review failed due blocking contract mismatches in Panora quote integration and routing-path handling; additional non-blocking display correctness issues were also identified."
+}

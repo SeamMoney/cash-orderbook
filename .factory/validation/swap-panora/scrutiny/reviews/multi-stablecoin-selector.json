@@ -1,0 +1,21 @@
+{
+  "featureId": "multi-stablecoin-selector",
+  "reviewedAt": "2026-03-31T22:56:33Z",
+  "commitId": "8f875886450fce6eb9c83462819f61e18e501a37",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Implementation matches the feature scope: selector expanded to CASH+5 stablecoins via shared STABLECOINS, default pair state updated to CASH/USD1 with token-object state tracking, popular row updated to top 4, and balances for unsupported endpoints correctly render as '—'.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Feature metadata uses skillName 'frontend-ui-worker', but the worker reports this skill was unavailable in-session and used 'frontend-worker' instead; this can cause skill-procedure drift during execution.",
+      "evidence": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/features.json:363 sets skillName to frontend-ui-worker; handoff skillFeedback deviation in /Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/handoffs/2026-03-31T22-23-47-254Z__multi-stablecoin-selector__c485f4be-1587-46be-8e16-0fe5e08f0e7c.json records fallback to frontend-worker."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed feature multi-stablecoin-selector (commit 8f87588). Diff and transcript skeleton were examined and the feature passes with no code-level blocking or non-blocking issues identified. One shared-state skill-metadata mismatch observation was recorded."
+}
