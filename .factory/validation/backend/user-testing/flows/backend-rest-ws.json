@@ -1,0 +1,171 @@
+{
+  "groupId": "backend-rest-ws",
+  "milestone": "backend",
+  "testedAt": "2026-03-31T03:14:47Z",
+  "isolation": {
+    "restBaseUrl": "http://localhost:3100",
+    "wsBaseUrl": "ws://localhost:3101"
+  },
+  "toolsUsed": ["curl", "node-ws-client"],
+  "assertions": [
+    {
+      "id": "VAL-BACKEND-006",
+      "status": "pass",
+      "reason": "GET /health returned HTTP 200 with JSON body containing status=ok and uptime.",
+      "evidence": [
+        "backend/rest-ws/VAL-BACKEND-006-health.raw"
+      ]
+    },
+    {
+      "id": "VAL-BACKEND-007",
+      "status": "blocked",
+      "reason": "GET /depth returned 200 with bids/asks arrays, but both arrays were empty and no local order-placement surface exists to produce price levels needed to verify per-level fields and bid/ask sorting under real data.",
+      "evidence": [
+        "backend/rest-ws/VAL-BACKEND-007-depth.raw",
+        "backend/rest-ws/event-trigger-attempt-post-orders.raw"
+      ]
+    },
+    {
+      "id": "VAL-BACKEND-008",
+      "status": "blocked",
+      "reason": "GET /trades and GET /trades?limit=5 both returned 200 but empty arrays; no local trade-generation surface exists, so trade field validation and most-recent-first ordering could not be confirmed with real events.",
+      "evidence": [
+        "backend/rest-ws/VAL-BACKEND-008-trades.raw",
+        "backend/rest-ws/VAL-BACKEND-008-trades-limit-5.raw",
+        "backend/rest-ws/event-trigger-attempt-post-trades.raw"
+      ]
+    },
+    {
+      "id": "VAL-BACKEND-009",
+      "status": "blocked",
+      "reason": "GET /orders/:address returned 200 with an empty array, but no local order-creation endpoint is available to produce open orders and validate required order object fields.",
+      "evidence": [
+        "backend/rest-ws/VAL-BACKEND-009-orders-0x1234abcd.raw",
+        "backend/rest-ws/event-trigger-attempt-post-orders.raw"
+      ]
+    },
+    {
+      "id": "VAL-BACKEND-010",
+      "status": "blocked",
+      "reason": "Interval endpoints (1m/5m/15m/1h/1d) returned 200, but candle arrays were empty because no trades could be produced from available local surfaces, so OHLCV field correctness could not be validated.",
+      "evidence": [
+        "backend/rest-ws/VAL-BACKEND-010-candles-1m.raw",
+        "backend/rest-ws/VAL-BACKEND-010-candles-5m.raw",
+        "backend/rest-ws/VAL-BACKEND-010-candles-15m.raw",
+        "backend/rest-ws/VAL-BACKEND-010-candles-1h.raw",
+        "backend/rest-ws/VAL-BACKEND-010-candles-1d.raw",
+        "backend/rest-ws/event-trigger-attempt-post-trades.raw"
+      ]
+    },
+    {
+      "id": "VAL-BACKEND-011",
+      "status": "pass",
+      "reason": "GET /market returned HTTP 200 with market metadata including pair/base/quote, lot/tick/min size, status, last price, and 24h volume fields.",
+      "evidence": [
+        "backend/rest-ws/VAL-BACKEND-011-market.raw"
+      ]
+    },
+    {
+      "id": "VAL-BACKEND-012",
+      "status": "pass",
+      "reason": "GET /balances/:address returned HTTP 200 with CASH and USDC balances in available/locked form.",
+      "evidence": [
+        "backend/rest-ws/VAL-BACKEND-012-balances-0x1234abcd.raw"
+      ]
+    },
+    {
+      "id": "VAL-BACKEND-013",
+      "status": "pass",
+      "reason": "GET /orders/invalid-address returned 400 and GET /nonexistent returned 404; both responses used consistent {error,message} structure.",
+      "evidence": [
+        "backend/rest-ws/VAL-BACKEND-013-orders-invalid-address.raw",
+        "backend/rest-ws/VAL-BACKEND-013-nonexistent.raw"
+      ]
+    },
+    {
+      "id": "VAL-BACKEND-014",
+      "status": "blocked",
+      "reason": "WS subscription to orderbook succeeded and initial snapshot was received, but no order-placement mechanism is exposed on local REST/WS surfaces to generate the required delta update event.",
+      "evidence": [
+        "backend/rest-ws/VAL-BACKEND-014-016-ws-subscriptions.log",
+        "backend/rest-ws/event-trigger-attempt-post-orders.raw"
+      ]
+    },
+    {
+      "id": "VAL-BACKEND-015",
+      "status": "blocked",
+      "reason": "WS subscription to trades succeeded, but no trade event was emitted during observation and no local mechanism exists to execute a trade from available REST/WS surfaces.",
+      "evidence": [
+        "backend/rest-ws/VAL-BACKEND-014-016-ws-subscriptions.log",
+        "backend/rest-ws/event-trigger-attempt-post-trades.raw"
+      ]
+    },
+    {
+      "id": "VAL-BACKEND-016",
+      "status": "blocked",
+      "reason": "WS subscription to account:{address} succeeded, but no balance update was emitted and no local deposit/withdraw/fill trigger endpoint exists on REST/WS surfaces.",
+      "evidence": [
+        "backend/rest-ws/VAL-BACKEND-014-016-ws-subscriptions.log",
+        "backend/rest-ws/event-trigger-attempt-post-deposit.raw"
+      ]
+    },
+    {
+      "id": "VAL-BACKEND-017",
+      "status": "pass",
+      "reason": "A serialized 130-request burst triggered HTTP 429 from request 101 onward, and a follow-up response included Retry-After header.",
+      "evidence": [
+        "backend/rest-ws/VAL-BACKEND-017-rate-limit-burst.log",
+        "backend/rest-ws/VAL-BACKEND-017-rate-limit-post-burst.raw"
+      ]
+    },
+    {
+      "id": "VAL-BACKEND-018",
+      "status": "blocked",
+      "reason": "Indexer/event-processing parity could not be validated because no local order placement path was available and health polling showed lastIndexedVersion stayed at 0 throughout checks.",
+      "evidence": [
+        "backend/rest-ws/VAL-BACKEND-007-depth.raw",
+        "backend/rest-ws/event-trigger-attempt-post-orders.raw",
+        "backend/rest-ws/event-trigger-attempt-health-poll.log"
+      ]
+    },
+    {
+      "id": "VAL-BACKEND-019",
+      "status": "blocked",
+      "reason": "Candle aggregation after multiple trades could not be validated because no local trade execution surface exists; candle endpoints remained empty.",
+      "evidence": [
+        "backend/rest-ws/VAL-BACKEND-010-candles-1m.raw",
+        "backend/rest-ws/event-trigger-attempt-post-trades.raw"
+      ]
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Root-level Node resolution did not include ws; the WS client had to import ws from api/node_modules path.",
+      "resolved": true,
+      "resolution": "Used require('/Users/maxmohammadi/cash-orderbook/api/node_modules/ws') for the websocket evidence script.",
+      "affectedAssertions": ["VAL-BACKEND-014", "VAL-BACKEND-015", "VAL-BACKEND-016"]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "No state-mutating REST/WS endpoints were exposed locally for placing orders, executing trades, or applying deposits/withdrawals (POST attempts returned 404).",
+      "affectedAssertions": [
+        "VAL-BACKEND-007",
+        "VAL-BACKEND-008",
+        "VAL-BACKEND-009",
+        "VAL-BACKEND-010",
+        "VAL-BACKEND-014",
+        "VAL-BACKEND-015",
+        "VAL-BACKEND-016",
+        "VAL-BACKEND-018",
+        "VAL-BACKEND-019"
+      ],
+      "quickFixAttempted": "Attempted POST /orders, POST /trades, and POST /balances/:address/deposit; all returned 404 NOT_FOUND."
+    },
+    {
+      "description": "No indexer progression observed during test window (lastIndexedVersion remained 0), preventing event-driven parity checks.",
+      "affectedAssertions": ["VAL-BACKEND-018", "VAL-BACKEND-019"],
+      "quickFixAttempted": "Polled /health over multiple seconds; lastIndexedVersion stayed 0 each time."
+    }
+  ]
+}

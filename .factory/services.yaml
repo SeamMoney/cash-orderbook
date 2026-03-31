@@ -7,6 +7,11 @@ commands:
   move-compile: cd contracts && aptos move compile --named-addresses cash_orderbook=0xCAFE
   move-test: cd contracts && aptos move test --named-addresses cash_orderbook=0xCAFE --coverage
   deploy-testnet: bash scripts/deploy-testnet.sh
+  deploy-mainnet: bash scripts/deploy-mainnet.sh
+  register-market: pnpm --filter @cash/scripts register-market
+  seed-orderbook: pnpm --filter @cash/scripts seed-orderbook
+  integration-test: pnpm --filter @cash/scripts integration-test
+  dev-all: pnpm dev
 
 services:
   api:

@@ -1,0 +1,84 @@
+{
+  "milestone": "backend",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 19,
+    "passed": 7,
+    "failed": 0,
+    "blocked": 12
+  },
+  "passedAssertions": [
+    "VAL-BACKEND-004",
+    "VAL-BACKEND-005",
+    "VAL-BACKEND-006",
+    "VAL-BACKEND-011",
+    "VAL-BACKEND-012",
+    "VAL-BACKEND-013",
+    "VAL-BACKEND-017"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [
+    {
+      "id": "VAL-BACKEND-001",
+      "blockedBy": "Scoped vitest run confirms placeOrder returns txHash and calls waitForTransaction, but tests are fully mocked (vi.mock on @aptos-labs/ts-sdk), so live on-chain confirmation of the returned hash is not observable in this surface."
+    },
+    {
+      "id": "VAL-BACKEND-002",
+      "blockedBy": "Vitest output shows cancelOrder payload/txHash behavior passes, but there is no non-mocked on-chain book verification after cancellation; assertion requires proving order absence in on-chain state."
+    },
+    {
+      "id": "VAL-BACKEND-003",
+      "blockedBy": "Deposit/withdraw vitest checks pass for transaction construction and txHash return, but tests do not verify real on-chain balance deltas (all Aptos calls are mocked)."
+    },
+    {
+      "id": "VAL-BACKEND-007",
+      "blockedBy": "GET /depth returned 200 with bids/asks arrays, but both arrays were empty and no local order-placement surface exists to produce price levels needed to verify per-level fields and bid/ask sorting under real data."
+    },
+    {
+      "id": "VAL-BACKEND-008",
+      "blockedBy": "GET /trades and GET /trades?limit=5 both returned 200 but empty arrays; no local trade-generation surface exists, so trade field validation and most-recent-first ordering could not be confirmed with real events."
+    },
+    {
+      "id": "VAL-BACKEND-009",
+      "blockedBy": "GET /orders/:address returned 200 with an empty array, but no local order-creation endpoint is available to produce open orders and validate required order object fields."
+    },
+    {
+      "id": "VAL-BACKEND-010",
+      "blockedBy": "Interval endpoints (1m/5m/15m/1h/1d) returned 200, but candle arrays were empty because no trades could be produced from available local surfaces, so OHLCV field correctness could not be validated."
+    },
+    {
+      "id": "VAL-BACKEND-014",
+      "blockedBy": "WS subscription to orderbook succeeded and initial snapshot was received, but no order-placement mechanism is exposed on local REST/WS surfaces to generate the required delta update event."
+    },
+    {
+      "id": "VAL-BACKEND-015",
+      "blockedBy": "WS subscription to trades succeeded, but no trade event was emitted during observation and no local mechanism exists to execute a trade from available REST/WS surfaces."
+    },
+    {
+      "id": "VAL-BACKEND-016",
+      "blockedBy": "WS subscription to account:{address} succeeded, but no balance update was emitted and no local deposit/withdraw/fill trigger endpoint exists on REST/WS surfaces."
+    },
+    {
+      "id": "VAL-BACKEND-018",
+      "blockedBy": "Indexer/event-processing parity could not be validated because no local order placement path was available and health polling showed lastIndexedVersion stayed at 0 throughout checks."
+    },
+    {
+      "id": "VAL-BACKEND-019",
+      "blockedBy": "Candle aggregation after multiple trades could not be validated because no local trade execution surface exists; candle endpoints remained empty."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added backend validation concurrency/flow-isolation guidance for vitest and curl-ws surfaces.",
+      "source": "setup"
+    },
+    {
+      "target": "user-testing.md",
+      "description": "Documented ws client module-resolution friction and event-generation prerequisites discovered during backend REST/WS flow validation.",
+      "source": "flow-report"
+    }
+  ],
+  "previousRound": null
+}

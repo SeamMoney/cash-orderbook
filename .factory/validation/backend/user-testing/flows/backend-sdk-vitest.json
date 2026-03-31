@@ -1,0 +1,69 @@
+{
+  "groupId": "backend-sdk-vitest",
+  "testedAt": "2026-03-31T03:11:29Z",
+  "toolsUsed": [
+    "vitest"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-BACKEND-001",
+      "status": "blocked",
+      "reason": "Scoped vitest run confirms placeOrder returns txHash and calls waitForTransaction, but tests are fully mocked (vi.mock on @aptos-labs/ts-sdk), so live on-chain confirmation of the returned hash is not observable in this surface.",
+      "evidence": [
+        "backend/sdk-vitest/VAL-BACKEND-001-placeOrder.txt",
+        "backend/sdk-vitest/SDK-test-mocking-context.txt",
+        "backend/sdk-vitest/sdk-vitest-full-suite.txt"
+      ]
+    },
+    {
+      "id": "VAL-BACKEND-002",
+      "status": "blocked",
+      "reason": "Vitest output shows cancelOrder payload/txHash behavior passes, but there is no non-mocked on-chain book verification after cancellation; assertion requires proving order absence in on-chain state.",
+      "evidence": [
+        "backend/sdk-vitest/VAL-BACKEND-002-cancelOrder.txt",
+        "backend/sdk-vitest/SDK-test-mocking-context.txt",
+        "backend/sdk-vitest/sdk-vitest-full-suite.txt"
+      ]
+    },
+    {
+      "id": "VAL-BACKEND-003",
+      "status": "blocked",
+      "reason": "Deposit/withdraw vitest checks pass for transaction construction and txHash return, but tests do not verify real on-chain balance deltas (all Aptos calls are mocked).",
+      "evidence": [
+        "backend/sdk-vitest/VAL-BACKEND-003-deposit-withdraw.txt",
+        "backend/sdk-vitest/SDK-test-mocking-context.txt",
+        "backend/sdk-vitest/sdk-vitest-full-suite.txt"
+      ]
+    },
+    {
+      "id": "VAL-BACKEND-004",
+      "status": "pass",
+      "reason": "getOrderbook vitest tests passed, verifying typed bid/ask arrays with price, quantity, and cumulative total depth plus same-price aggregation behavior.",
+      "evidence": [
+        "backend/sdk-vitest/VAL-BACKEND-004-getOrderbook.txt",
+        "backend/sdk-vitest/sdk-vitest-full-suite.txt"
+      ]
+    },
+    {
+      "id": "VAL-BACKEND-005",
+      "status": "pass",
+      "reason": "getBalances vitest tests passed, verifying available/locked CASH and USDC values are returned as typed human-readable balance fields.",
+      "evidence": [
+        "backend/sdk-vitest/VAL-BACKEND-005-getBalances.txt",
+        "backend/sdk-vitest/sdk-vitest-full-suite.txt"
+      ]
+    }
+  ],
+  "frictions": [],
+  "blockers": [
+    {
+      "description": "Assigned SDK tests are unit-level with mocked @aptos-labs/ts-sdk calls, which prevents proving live on-chain confirmation/state outcomes required by VAL-BACKEND-001/002/003.",
+      "affectedAssertions": [
+        "VAL-BACKEND-001",
+        "VAL-BACKEND-002",
+        "VAL-BACKEND-003"
+      ],
+      "quickFixAttempted": "Ran assertion-focused and full-suite vitest commands and inspected test mock structure evidence; no integration/live-chain assertions exist in current SDK test surface."
+    }
+  ]
+}
