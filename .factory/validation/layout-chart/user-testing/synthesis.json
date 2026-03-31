@@ -41,5 +41,11 @@
       "source": "flow-report"
     }
   ],
-  "previousRound": ".factory/validation/layout-chart/user-testing/synthesis.round1.json"
+  "previousRound": ".factory/validation/layout-chart/user-testing/synthesis.round1.json",
+  "orchestratorOverride": {
+    "timestamp": "2026-03-31T11:10:00Z",
+    "justification": "3 non-passed assertions (VAL-LAYOUT-004, VAL-CHART-001, VAL-CHART-003) are all data-dependent requiring candle data seeding. These assertions have been moved from layout-chart features' fulfills to animations-realtime-polish feature in transactions-mobile-polish milestone, where dev data seeding will be implemented. Assertions reset to pending in validation-state.json for re-validation at that milestone.",
+    "deferredAssertions": ["VAL-LAYOUT-004", "VAL-CHART-001", "VAL-CHART-003"],
+    "deferredTo": "transactions-mobile-polish"
+  }
 }
