@@ -1,7 +1,7 @@
 {
   "milestone": "swap-selector",
-  "round": 1,
-  "status": "fail",
+  "round": 2,
+  "status": "pass",
   "validatorsRun": {
     "test": {
       "passed": true,
@@ -20,46 +20,21 @@
     }
   },
   "reviewsSummary": {
-    "total": 3,
+    "total": 1,
     "passed": 1,
-    "failed": 2,
-    "failedFeatures": [
-      "swap-widget-redesign",
-      "token-selector-modal"
-    ]
+    "failed": 0,
+    "failedFeatures": []
   },
-  "blockingIssues": [
-    {
-      "featureId": "swap-widget-redesign",
-      "severity": "blocking",
-      "description": "Market buy execution passes `quantity` from the quote-side input amount (USDC) instead of base-asset quantity (CASH), causing incorrect market buy sizing/failures."
-    },
-    {
-      "featureId": "token-selector-modal",
-      "severity": "blocking",
-      "description": "Token selector excludes `excludeSymbol` from both list and popular row; with only CASH/USDC this leaves one selectable token and prevents selecting the opposite token."
-    }
-  ],
+  "blockingIssues": [],
   "appliedUpdates": [],
   "suggestedGuidanceUpdates": [
     {
       "target": "skills",
       "suggestion": "Ensure mission feature `skillName` values always map to actually installed/invokable skills (or provide a stable alias).",
-      "evidence": "All three reviewed swap-selector features were assigned `frontend-ui-worker`, but worker transcripts show `Skill \"frontend-ui-worker\" not found` and fallback to `frontend-worker`.",
-      "isSystemic": true
-    },
-    {
-      "target": "AGENTS.md and skill docs",
-      "suggestion": "Align validator expectations between mission guidance and frontend worker skills (whether `pnpm build` is mandatory for this mission phase).",
-      "evidence": "frontend-ui-worker guidance requires build, while mission AGENTS.md validation guidance lists typecheck/lint; this mismatch caused procedural deviations in reviewed work.",
+      "evidence": "The rerun fix feature still specifies `frontend-ui-worker` in features metadata, while the worker transcript shows the skill is unavailable and falls back to `frontend-worker`.",
       "isSystemic": true
     }
   ],
-  "rejectedObservations": [
-    {
-      "observation": "Add shared library note for react-window/react-virtualized-auto-sizer v2 API differences.",
-      "reason": "ambiguous scope for this scrutiny pass; recommendation captured but not applied directly."
-    }
-  ],
-  "previousRound": null
+  "rejectedObservations": [],
+  "previousRound": ".factory/validation/swap-selector/scrutiny/synthesis.round1.json"
 }

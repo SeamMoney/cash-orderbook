@@ -1,0 +1,24 @@
+{
+  "featureId": "fix-swap-buy-quantity-and-selector",
+  "reviewedAt": "2026-03-31T11:45:08Z",
+  "commitId": "dc8f5ce",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Both previously blocking findings are resolved. In swap-widget, buy-side market orders now send base quantity via `quote.outputAmount` (CASH) instead of raw USDC input, matching `place_market_order`'s base-quantity contract/API semantics. In token-selector-modal, list and popular tokens now show both CASH and USDC while preventing same-side re-selection by disabling the current-side token.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Feature metadata and runtime skill availability are still inconsistent for this milestone's frontend features.",
+      "evidence": "features.json sets `skillName` to `frontend-ui-worker` for fix-swap-buy-quantity-and-selector, but the transcript skeleton shows `Skill frontend-ui-worker` failed (`not found`) and the worker switched to `frontend-worker`; handoff.skillFeedback.deviations records the same mismatch."
+    }
+  ],
+  "addressesFailureFrom": [
+    "swap-widget-redesign",
+    "token-selector-modal"
+  ],
+  "summary": "Reviewed handoff, commit diff, transcript skeleton, and prior failure reports. The rerun fix fully addresses both original blocking issues with no new blocking regressions in the touched swap quantity and token selector logic."
+}
