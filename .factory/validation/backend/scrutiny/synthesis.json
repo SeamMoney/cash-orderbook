@@ -1,7 +1,7 @@
 {
   "milestone": "backend",
-  "round": 2,
-  "status": "fail",
+  "round": 3,
+  "status": "pass",
   "validatorsRun": {
     "test": {
       "passed": true,
@@ -20,50 +20,23 @@
     }
   },
   "reviewsSummary": {
-    "total": 2,
-    "passed": 0,
-    "failed": 2,
-    "failedFeatures": [
-      "fix-sdk-build-api",
-      "fix-indexer-ws-live"
-    ]
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "failedFeatures": []
   },
-  "blockingIssues": [
-    {
-      "featureId": "fix-sdk-build-api",
-      "severity": "blocking",
-      "description": "SDK dual-module packaging is still broken for CommonJS consumers: package is `type: module` while `exports.require` points to `dist/cjs/index.js`, and `require('/Users/maxmohammadi/cash-orderbook/sdk')` fails at runtime."
-    },
-    {
-      "featureId": "fix-indexer-ws-live",
-      "severity": "blocking",
-      "description": "Indexer applies event types in fixed order with `OrderFilled` before `TradeEvent`; full-fill maker orders can be deleted before trade reconciliation, causing stale depth and missed orderbook deltas."
-    }
-  ],
-  "appliedUpdates": [
-    {
-      "target": "library",
-      "description": "Added `.factory/library/backend-event-ordering.md` documenting the cross-event ordering invariant for per-type Aptos polling and why OrderFilled-before-TradeEvent can corrupt depth reconciliation.",
-      "sourceFeature": "fix-indexer-ws-live"
-    }
-  ],
-  "suggestedGuidanceUpdates": [
-    {
-      "target": "validation-contract.md",
-      "suggestion": "When feature scope includes dual ESM/CJS packaging, add an explicit runtime compatibility check for both `import` and `require` (not just build artifact presence).",
-      "evidence": "Round-2 review of fix-sdk-build-api still found `require` failure despite passing test/typecheck/lint and dual-output build commands.",
-      "isSystemic": true
-    }
-  ],
+  "blockingIssues": [],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [],
   "rejectedObservations": [
     {
-      "observation": "backend-worker tests-first deviation noted in fix-sdk-build-api review",
+      "observation": "The backend-worker skill mandates TDD red-phase ('Write tests FIRST' then run failing tests), but this worker session ran baseline passing tests and performed implementation edits before adding the new ordering tests.",
       "reason": "duplicate"
     },
     {
-      "observation": "backend-worker tests-first/manual-runtime verification deviation noted in fix-indexer-ws-live review",
-      "reason": "duplicate"
+      "observation": "Feature expected behavior references `node -e require('@cash/orderbook-sdk')`, but practical verification in this repo used path-based checks (`require('./dist')` and requiring sdk by absolute package directory). The local validation convention for package-name runtime checks is still unclear in shared guidance.",
+      "reason": "ambiguous"
     }
   ],
-  "previousRound": ".factory/validation/backend/scrutiny/synthesis.round1.json"
+  "previousRound": ".factory/validation/backend/scrutiny/synthesis.round2.json"
 }

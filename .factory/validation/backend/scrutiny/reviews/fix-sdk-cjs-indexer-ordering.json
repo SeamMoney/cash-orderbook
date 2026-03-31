@@ -1,0 +1,33 @@
+{
+  "featureId": "fix-sdk-cjs-indexer-ordering",
+  "reviewedAt": "2026-03-31T03:04:01Z",
+  "commitId": "55f9530aba103de7a1f6a9b52499725fe6a204d6",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix addresses both prior blockers: SDK packaging now emits and exports true CJS/ESM entrypoints (including @cash/shared for CJS dependency resolution), and EventIndexer.poll now merges cross-type events and sorts by (transaction_version, event_index) before processing, which resolves the stale-depth ordering path identified in the prior review.",
+    "issues": [
+      {
+        "file": "api/src/indexer/event-indexer.test.ts",
+        "line": 336,
+        "severity": "non_blocking",
+        "description": "New ordering tests do not exercise EventIndexer.poll() (the path that merges and sorts RPC events); they call processEvent directly, so regressions in fetch/merge/sort logic could still pass tests. Coverage proves order-dependent state behavior, but not the poll-level ordering implementation itself."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The backend-worker skill mandates TDD red-phase ('Write tests FIRST' then run failing tests), but this worker session ran baseline passing tests and performed implementation edits before adding the new ordering tests.",
+      "evidence": "worker-transcripts.jsonl:26 shows `cd .../sdk && pnpm test` and `cd .../api && pnpm test` before edits, then later edits to api/src/indexer/event-indexer.ts before adding new tests in api/src/indexer/event-indexer.test.ts."
+    },
+    {
+      "area": "conventions",
+      "observation": "Feature expected behavior references `node -e require('@cash/orderbook-sdk')`, but practical verification in this repo used path-based checks (`require('./dist')` and requiring sdk by absolute package directory). The local validation convention for package-name runtime checks is still unclear in shared guidance.",
+      "evidence": "features.json (fix-sdk-cjs-indexer-ordering expectedBehavior) requires package-name require, while handoff verification commands use `cd sdk && ... require('./dist')`."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/backend/scrutiny/reviews/fix-sdk-build-api.json, .factory/validation/backend/scrutiny/reviews/fix-indexer-ws-live.json",
+  "summary": "Review result: pass. This fix resolves the two original blocking failures (SDK CJS runtime compatibility and cross-type indexer ordering) and includes added regression tests, with one non-blocking test-coverage gap noted for poll-path ordering assertions."
+}

@@ -1,0 +1,69 @@
+{
+  "milestone": "backend",
+  "round": 2,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "pnpm -r test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm -r typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm -r lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 2,
+    "passed": 0,
+    "failed": 2,
+    "failedFeatures": [
+      "fix-sdk-build-api",
+      "fix-indexer-ws-live"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "fix-sdk-build-api",
+      "severity": "blocking",
+      "description": "SDK dual-module packaging is still broken for CommonJS consumers: package is `type: module` while `exports.require` points to `dist/cjs/index.js`, and `require('/Users/maxmohammadi/cash-orderbook/sdk')` fails at runtime."
+    },
+    {
+      "featureId": "fix-indexer-ws-live",
+      "severity": "blocking",
+      "description": "Indexer applies event types in fixed order with `OrderFilled` before `TradeEvent`; full-fill maker orders can be deleted before trade reconciliation, causing stale depth and missed orderbook deltas."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "library",
+      "description": "Added `.factory/library/backend-event-ordering.md` documenting the cross-event ordering invariant for per-type Aptos polling and why OrderFilled-before-TradeEvent can corrupt depth reconciliation.",
+      "sourceFeature": "fix-indexer-ws-live"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "validation-contract.md",
+      "suggestion": "When feature scope includes dual ESM/CJS packaging, add an explicit runtime compatibility check for both `import` and `require` (not just build artifact presence).",
+      "evidence": "Round-2 review of fix-sdk-build-api still found `require` failure despite passing test/typecheck/lint and dual-output build commands.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "backend-worker tests-first deviation noted in fix-sdk-build-api review",
+      "reason": "duplicate"
+    },
+    {
+      "observation": "backend-worker tests-first/manual-runtime verification deviation noted in fix-indexer-ws-live review",
+      "reason": "duplicate"
+    }
+  ],
+  "previousRound": ".factory/validation/backend/scrutiny/synthesis.round1.json"
+}
