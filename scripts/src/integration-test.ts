@@ -12,6 +12,13 @@
  * with funded accounts — those are tested when CONTRACT_ADDRESS and APTOS_PRIVATE_KEY
  * are provided.
  *
+ * NOTE: The on-chain E2E flow (deposit → place order → match → withdraw) requires a
+ * funded Aptos account with sufficient APT for gas, plus CASH and USDC tokens deposited
+ * into the trading account. This is a manual setup step — you must create an Aptos
+ * account, fund it with APT from a faucet (testnet) or purchase (mainnet), and acquire
+ * CASH + USDC tokens before running the full E2E tests. The REST/WS service-level tests
+ * below do NOT require a funded account and should pass against the running services.
+ *
  * Usage:
  *   # Basic service verification (no chain interaction):
  *   npx tsx scripts/src/integration-test.ts

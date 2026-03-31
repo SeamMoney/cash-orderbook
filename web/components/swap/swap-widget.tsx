@@ -6,6 +6,9 @@ import { ArrowDownUp, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDepth } from "@/hooks/use-depth";
+import { useBalances } from "@/hooks/use-balances";
+import { useAccountSubscription } from "@/hooks/use-account-subscription";
+import { buildPlaceOrderPayload } from "@/lib/sdk";
 import {
   calculateSwapQuote,
   type SwapDirection,
@@ -31,6 +34,14 @@ export function SwapWidget(): React.ReactElement {
   const { connected, account, signAndSubmitTransaction } = useWallet();
   const { depth, loading: depthLoading } = useDepth(3000);
 
+  const walletAddress = connected && account?.address
+    ? account.address.toString()
+    : undefined;
+  const { balances, updateBalances } = useBalances(walletAddress);
+
+  // Subscribe to WS account channel for real-time balance updates
+  useAccountSubscription(walletAddress, updateBalances);
+
   // Direction: "sell" = CASH → USDC, "buy" = USDC → CASH
   const [direction, setDirection] = useState<SwapDirection>("sell");
   const [inputAmount, setInputAmount] = useState("");
@@ -42,6 +53,22 @@ export function SwapWidget(): React.ReactElement {
 
   const fromAsset = direction === "sell" ? ASSETS.CASH : ASSETS.USDC;
   const toAsset = direction === "sell" ? ASSETS.USDC : ASSETS.CASH;
+
+  // Determine user's available balance for the "from" asset
+  const fromBalance = balances
+    ? direction === "sell"
+      ? balances.cash.available
+      : balances.usdc.available
+    : null;
+
+  // Check if the input amount exceeds the user's available balance
+  const inputNum = parseFloat(inputAmount);
+  const insufficientBalance =
+    connected &&
+    fromBalance !== null &&
+    !isNaN(inputNum) &&
+    inputNum > 0 &&
+    inputNum > fromBalance;
 
   // Calculate quote with debounce
   useEffect(() => {
@@ -90,10 +117,12 @@ export function SwapWidget(): React.ReactElement {
   );
 
   const handleMaxClick = useCallback((): void => {
-    // Placeholder: in production this would use actual wallet balance
-    // For now we just set a high amount
-    toast.info("Max balance not available — connect wallet first");
-  }, []);
+    if (!connected || fromBalance === null || fromBalance <= 0) {
+      toast.info("Max balance not available — connect wallet first");
+      return;
+    }
+    setInputAmount(fromBalance.toString());
+  }, [connected, fromBalance]);
 
   const handleSwap = useCallback(async (): Promise<void> => {
     if (!connected || !account || !signAndSubmitTransaction) {
@@ -115,21 +144,17 @@ export function SwapWidget(): React.ReactElement {
     setIsSwapping(true);
 
     try {
-      // Build market order transaction
-      // Contract: place_market_order(signer, pair_id, quantity, is_bid)
-      // pair_id = 0 for CASH/USDC
-      const isBid = direction === "buy";
-      const onChainQuantity = Math.round(amount * 1_000_000); // 6 decimals
-
-      const CONTRACT_ADDRESS =
-        process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ??
-        "0xCAFE";
+      // Build market order payload via SDK helper
+      const payload = buildPlaceOrderPayload({
+        pairId: 0,
+        price: 0, // ignored for Market orders
+        quantity: amount,
+        side: direction === "buy" ? "buy" : "sell",
+        orderType: "Market",
+      });
 
       const response = await signAndSubmitTransaction({
-        data: {
-          function: `${CONTRACT_ADDRESS}::order_placement::place_market_order`,
-          functionArguments: [0, onChainQuantity, isBid],
-        },
+        data: payload,
       });
 
       const txHash =
@@ -150,7 +175,11 @@ export function SwapWidget(): React.ReactElement {
         err instanceof Error ? err.message : "Transaction failed";
       toast.error("Swap failed", {
         description: message,
-        duration: 5000,
+        duration: 8000,
+        action: {
+          label: "Retry",
+          onClick: () => void handleSwap(),
+        },
       });
     } finally {
       setIsSwapping(false);
@@ -274,6 +303,7 @@ export function SwapWidget(): React.ReactElement {
           hasQuote={quote !== null}
           hasInput={inputAmount !== "" && parseFloat(inputAmount) > 0}
           sufficientLiquidity={quote?.sufficientLiquidity ?? true}
+          insufficientBalance={!!insufficientBalance}
           isSwapping={isSwapping}
           onSwap={handleSwap}
         />

@@ -105,7 +105,14 @@ export function MyOrders({
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Cancel failed";
-        toast.error("Cancel failed", { description: message });
+        toast.error("Cancel failed", {
+          description: message,
+          duration: 8000,
+          action: {
+            label: "Retry",
+            onClick: () => void handleCancel(orderId),
+          },
+        });
       } finally {
         setCancellingId(null);
       }

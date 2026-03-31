@@ -8,6 +8,7 @@ interface SwapButtonProps {
   hasQuote: boolean;
   hasInput: boolean;
   sufficientLiquidity: boolean;
+  insufficientBalance: boolean;
   isSwapping: boolean;
   onSwap: () => void;
 }
@@ -18,6 +19,7 @@ interface SwapButtonProps {
  * States:
  * - Not connected → "Connect Wallet" (disabled)
  * - No input → "Enter Amount" (disabled)
+ * - Insufficient balance → "Insufficient balance" (disabled)
  * - No quote → "Fetching Quote..." (disabled)
  * - Insufficient liquidity → "Insufficient Liquidity" (disabled)
  * - Swapping → Loading spinner
@@ -28,6 +30,7 @@ export function SwapButton({
   hasQuote,
   hasInput,
   sufficientLiquidity,
+  insufficientBalance,
   isSwapping,
   onSwap,
 }: SwapButtonProps): React.ReactElement {
@@ -40,6 +43,9 @@ export function SwapButton({
     }
     if (!hasInput) {
       return { label: "Enter Amount", disabled: true };
+    }
+    if (insufficientBalance) {
+      return { label: "Insufficient balance", disabled: true };
     }
     if (!hasQuote) {
       return { label: "Fetching Quote...", disabled: true };

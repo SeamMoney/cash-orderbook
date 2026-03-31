@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { toast } from "sonner";
 import type { DepthLevel, OrderbookDepth } from "@/hooks/use-depth";
 import { useWebSocket, type WsMessage, type WsStatus } from "@/hooks/use-websocket";
 
@@ -167,9 +168,15 @@ export function useRealtimeOrderbook(): {
     onMessage: handleWsMessage,
   });
 
+  // Track whether we've shown the error toast to avoid spamming
+  const errorToastShownRef = useRef(false);
+
   // REST fallback when WebSocket is not connected
   useEffect(() => {
-    if (wsStatus === "connected") return;
+    if (wsStatus === "connected") {
+      errorToastShownRef.current = false;
+      return;
+    }
 
     const fetchDepth = async (): Promise<void> => {
       try {
@@ -182,13 +189,30 @@ export function useRealtimeOrderbook(): {
           setDepth(data);
           setError(null);
           setLoading(false);
+          errorToastShownRef.current = false;
         }
       } catch (err) {
         if (mountedRef.current) {
-          setError(
-            err instanceof Error ? err.message : "Failed to fetch depth",
-          );
+          const message =
+            err instanceof Error ? err.message : "Failed to fetch depth";
+          setError(message);
           setLoading(false);
+
+          // Show error toast with retry action (only once to avoid spam)
+          if (!errorToastShownRef.current) {
+            errorToastShownRef.current = true;
+            toast.error("Network error", {
+              description: `Failed to load orderbook: ${message}`,
+              duration: 10000,
+              action: {
+                label: "Retry",
+                onClick: () => {
+                  errorToastShownRef.current = false;
+                  void fetchDepth();
+                },
+              },
+            });
+          }
         }
       }
     };

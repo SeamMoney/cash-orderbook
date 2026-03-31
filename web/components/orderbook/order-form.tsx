@@ -5,6 +5,7 @@ import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { buildPlaceOrderPayload } from "@/lib/sdk";
 
 type OrderSide = "buy" | "sell";
 type OrderType = "market" | "limit";
@@ -90,49 +91,35 @@ export function OrderForm({
     setIsSubmitting(true);
 
     try {
-      const CONTRACT_ADDRESS =
-        process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? "0xCAFE";
+      // Build order payload via SDK helper
+      const sdkOrderType = orderType === "market" ? "Market" : "GTC";
+      const priceNum = orderType === "limit" ? parseFloat(price) : 0;
 
-      const isBid = side === "buy";
-      const onChainQuantity = Math.round(amountNum * 1_000_000);
+      const payload = buildPlaceOrderPayload({
+        pairId: 0,
+        price: priceNum,
+        quantity: amountNum,
+        side,
+        orderType: sdkOrderType,
+      });
+
+      const response = await signAndSubmitTransaction({
+        data: payload,
+      });
+
+      const txHash =
+        typeof response === "object" &&
+        response !== null &&
+        "hash" in response
+          ? (response as { hash: string }).hash
+          : String(response);
 
       if (orderType === "market") {
-        const response = await signAndSubmitTransaction({
-          data: {
-            function: `${CONTRACT_ADDRESS}::order_placement::place_market_order`,
-            functionArguments: [0, onChainQuantity, isBid],
-          },
-        });
-
-        const txHash =
-          typeof response === "object" &&
-          response !== null &&
-          "hash" in response
-            ? (response as { hash: string }).hash
-            : String(response);
-
         toast.success(`Market ${side} order placed`, {
           description: `Tx: ${txHash.slice(0, 10)}...${txHash.slice(-8)}`,
           duration: 6000,
         });
       } else {
-        const priceNum = parseFloat(price);
-        const onChainPrice = Math.round(priceNum * 1_000_000);
-        // GTC = 0
-        const response = await signAndSubmitTransaction({
-          data: {
-            function: `${CONTRACT_ADDRESS}::order_placement::place_limit_order`,
-            functionArguments: [0, onChainPrice, onChainQuantity, isBid, 0],
-          },
-        });
-
-        const txHash =
-          typeof response === "object" &&
-          response !== null &&
-          "hash" in response
-            ? (response as { hash: string }).hash
-            : String(response);
-
         toast.success(`Limit ${side} order placed`, {
           description: `${amount} CASH @ ${price} — Tx: ${txHash.slice(0, 10)}...${txHash.slice(-8)}`,
           duration: 6000,
@@ -147,7 +134,11 @@ export function OrderForm({
         err instanceof Error ? err.message : "Transaction failed";
       toast.error("Order failed", {
         description: message,
-        duration: 5000,
+        duration: 8000,
+        action: {
+          label: "Retry",
+          onClick: () => void handleSubmit(),
+        },
       });
     } finally {
       setIsSubmitting(false);

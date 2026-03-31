@@ -6,12 +6,23 @@ import { Wallet, LogOut, Copy, Check, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WalletSelector } from "@/components/wallet/wallet-selector";
 import { truncateAddress, formatBalance } from "@/lib/utils";
+import { useBalances } from "@/hooks/use-balances";
+import { useAccountSubscription } from "@/hooks/use-account-subscription";
 
 export function ConnectButton(): React.ReactElement {
   const { connected, account, disconnect, wallet } = useWallet();
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const walletAddress = connected && account?.address
+    ? account.address.toString()
+    : undefined;
+
+  const { balances, updateBalances } = useBalances(walletAddress);
+
+  // Subscribe to WS account channel for real-time balance updates
+  useAccountSubscription(walletAddress, updateBalances);
 
   const handleCopyAddress = async (): Promise<void> => {
     if (account?.address) {
@@ -79,6 +90,23 @@ export function ConnectButton(): React.ReactElement {
               <p className="font-mono text-xs text-white">
                 {truncateAddress(account.address.toString(), 8)}
               </p>
+            </div>
+
+            {/* Balances */}
+            <div className="px-3 py-2 border-b border-[#2A2A2A] space-y-1">
+              <p className="text-xs text-[#888888] mb-1">Balances</p>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-[#888888]">CASH</span>
+                <span className="font-mono text-xs text-white">
+                  {balances ? formatBalance(balances.cash.available, 2) : "—"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-[#888888]">USDC</span>
+                <span className="font-mono text-xs text-white">
+                  {balances ? formatBalance(balances.usdc.available, 2) : "—"}
+                </span>
+              </div>
             </div>
 
             {/* Actions */}

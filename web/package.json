@@ -17,6 +17,8 @@
     "@aptos-labs/ts-sdk": "^6.3.1",
     "@aptos-labs/wallet-adapter-core": "^8.5.1",
     "@aptos-labs/wallet-adapter-react": "^8.3.3",
+    "@cash/orderbook-sdk": "workspace:*",
+    "@cash/shared": "workspace:*",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-slot": "^1.2.4",
     "@tailwindcss/postcss": "^4.2.2",
