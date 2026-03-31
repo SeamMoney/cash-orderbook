@@ -300,9 +300,15 @@ function PanoraPriceDetails({
   }
 
   // We have a Panora quote — show full details
+  // Compute per-unit exchange rate: outputAmount / inputAmount
+  const perUnitRate =
+    panoraQuote.inputAmount > 0
+      ? panoraQuote.outputAmount / panoraQuote.inputAmount
+      : 0;
+
   const rateLabel =
-    panoraQuote.outputAmount > 0
-      ? `1 ${fromSymbol} ≈ ${formatBalance(panoraQuote.outputAmount, 6)} ${toSymbol}`
+    perUnitRate > 0
+      ? `1 ${fromSymbol} ≈ ${formatBalance(perUnitRate, 6)} ${toSymbol}`
       : "—";
 
   const impactDisplay =

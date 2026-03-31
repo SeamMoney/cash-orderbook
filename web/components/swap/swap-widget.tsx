@@ -293,9 +293,11 @@ export function SwapWidget(): React.ReactElement {
       : null;
 
   // Compute USD equivalent for the "to" output
+  // For Panora swaps: prefer toTokenAmountUSD from the API (real USD price),
+  // otherwise fall back to the raw output amount.
   const toUsdEquivalent = usePanora
     ? panoraQuote
-      ? panoraQuote.outputAmount
+      ? panoraQuote.toTokenAmountUSD ?? panoraQuote.outputAmount
       : null
     : quote
       ? direction === "sell"

@@ -36,14 +36,16 @@ const REQUEST_TIMEOUT_MS = 5_000;
 export interface PanoraQuote {
   /** Amount the user will receive (human-readable, without decimals). */
   outputAmount: number;
+  /** The original input amount requested (human-readable). */
+  inputAmount: number;
   /** Price impact as a fraction (0.01 = 1%). `null` when unavailable. */
   priceImpact: number | null;
   /** Minimum amount after slippage (human-readable). */
   minReceived: number;
-  /** Routing path description, e.g. "USDT → USDC → CASH via Panora". */
+  /** Routing path description, e.g. "USDT → USDC → CASH via LiquidSwap". */
   routeDescription: string;
-  /** Raw txData from Panora (used for swap execution). */
-  txData: unknown;
+  /** USD equivalent of the output amount from Panora. `null` when unavailable. */
+  toTokenAmountUSD: number | null;
 }
 
 /** Error class for Panora-specific failures. */
@@ -73,13 +75,35 @@ function resolveTokenAddress(symbol: string): string {
   return stablecoin.address;
 }
 
-/** Build a human-readable route description. */
+/**
+ * Build a human-readable route description from the Panora response.
+ *
+ * Attempts to parse actual DEX routing information from the `routes` array
+ * in the quote entry. Falls back to a synthetic description if routes are
+ * unavailable or unparseable.
+ */
 function buildRouteDescription(
   fromSymbol: string,
   toSymbol: string,
+  routes?: PanoraRoute[] | null,
 ): string {
-  // Panora handles multi-hop routing internally — we don't get the exact
-  // intermediate steps from the API. Show a simple label instead.
+  if (routes && routes.length > 0) {
+    try {
+      // Each route has a `path` (token hops) and `dexName` or similar info.
+      // Try to extract DEX names from the routes for a readable label.
+      const dexNames = routes
+        .map((r) => r.dexName ?? r.name ?? null)
+        .filter((n): n is string => n !== null && n.length > 0);
+
+      if (dexNames.length > 0) {
+        const uniqueDexes = [...new Set(dexNames)];
+        return `${fromSymbol} → ${toSymbol} via ${uniqueDexes.join(" + ")}`;
+      }
+    } catch {
+      // Fall through to synthetic description
+    }
+  }
+
   return `${fromSymbol} → ${toSymbol} via Panora`;
 }
 
@@ -88,7 +112,10 @@ function buildRouteDescription(
 // ---------------------------------------------------------------------------
 
 /**
- * Fetch a swap quote from Panora.
+ * Fetch a swap quote from Panora using `GET /swap/quote`.
+ *
+ * This is a **read-only** quote endpoint — it does NOT return a transaction
+ * payload. Use `getPanoraSwapPayload` when executing the swap.
  *
  * @param fromToken - Symbol of the token being swapped from (e.g. "USDT").
  * @param toToken   - Symbol of the token being swapped to (e.g. "CASH").
@@ -109,24 +136,20 @@ export async function getPanoraQuote(
     fromTokenAddress: fromAddress,
     toTokenAddress: toAddress,
     fromTokenAmount: String(amount),
-    // toWalletAddress is required by Panora — use a dummy for quote-only.
-    // The actual sender address is set in getPanoraSwapPayload.
-    toWalletAddress:
-      "0x0000000000000000000000000000000000000000000000000000000000000001",
   });
 
   if (slippage !== undefined) {
     params.set("slippagePercentage", String(slippage));
   }
 
-  const url = `${PANORA_BASE_URL}/swap?${params.toString()}`;
+  const url = `${PANORA_BASE_URL}/swap/quote?${params.toString()}`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
     const response = await fetch(url, {
-      method: "POST",
+      method: "GET",
       headers: { "x-api-key": PANORA_API_KEY },
       signal: controller.signal,
     });
@@ -141,7 +164,7 @@ export async function getPanoraQuote(
       );
     }
 
-    const data: PanoraSwapResponse = await response.json();
+    const data: PanoraQuoteResponse = await response.json();
 
     if (!data.quotes || data.quotes.length === 0) {
       throw new PanoraError("No routes available for this swap");
@@ -157,12 +180,27 @@ export async function getPanoraQuote(
         ? Math.abs(parseFloat(String(rawImpact))) / 100
         : null;
 
+    // Parse USD equivalent from Panora response
+    const rawUSD = bestQuote.toTokenAmountUSD;
+    const toTokenAmountUSD =
+      rawUSD !== null && rawUSD !== undefined
+        ? parseFloat(String(rawUSD))
+        : null;
+
     return {
       outputAmount,
+      inputAmount: amount,
       priceImpact,
       minReceived,
-      routeDescription: buildRouteDescription(fromToken, toToken),
-      txData: bestQuote.txData,
+      routeDescription: buildRouteDescription(
+        fromToken,
+        toToken,
+        bestQuote.routes,
+      ),
+      toTokenAmountUSD:
+        toTokenAmountUSD !== null && !isNaN(toTokenAmountUSD)
+          ? toTokenAmountUSD
+          : null,
     };
   } catch (err) {
     if (err instanceof PanoraError) throw err;
@@ -254,12 +292,20 @@ export async function getPanoraSwapPayload(
 // Internal response types
 // ---------------------------------------------------------------------------
 
-/** Shape of the Panora /swap response (ExactIn scenario). */
-interface PanoraSwapResponse {
+/** Shape of the Panora GET /swap/quote response. */
+interface PanoraQuoteResponse {
   fromToken?: { address: string; decimals: number; current_price: number };
   toToken?: { address: string; decimals: number; current_price: number };
   fromTokenAmount?: string;
   quotes: PanoraQuoteEntry[];
+}
+
+/** Shape of the Panora POST /swap response (includes txData for execution). */
+interface PanoraSwapResponse {
+  fromToken?: { address: string; decimals: number; current_price: number };
+  toToken?: { address: string; decimals: number; current_price: number };
+  fromTokenAmount?: string;
+  quotes: PanoraSwapEntry[];
 }
 
 interface PanoraQuoteEntry {
@@ -268,6 +314,22 @@ interface PanoraQuoteEntry {
   slippagePercentage: string;
   feeTokenAmount: string;
   minToTokenAmount: string;
-  txData: unknown;
   toTokenAmountUSD: string | null;
+  /** Routing path — array of DEX hops used for the swap. */
+  routes?: PanoraRoute[] | null;
+}
+
+interface PanoraSwapEntry extends PanoraQuoteEntry {
+  /** Transaction data payload for signAndSubmitTransaction. */
+  txData: unknown;
+}
+
+/** A single route/hop in the Panora routing path. */
+interface PanoraRoute {
+  /** DEX name (e.g. "LiquidSwap", "PancakeSwap"). */
+  dexName?: string;
+  /** Alternative field name for the DEX identifier. */
+  name?: string;
+  /** Percentage of the swap allocated to this route. */
+  percentage?: number;
 }
