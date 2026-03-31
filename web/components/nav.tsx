@@ -134,8 +134,8 @@ export function Nav({
               {/* Divider */}
               <div className="border-t border-border" />
 
-              {/* Connect Wallet — mobile */}
-              <div className="flex items-center">
+              {/* Connect Wallet — mobile (44px touch target) */}
+              <div className="flex items-center [&_button]:min-h-[44px]">
                 <ConnectButton />
               </div>
             </div>

@@ -10,6 +10,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCandles, type CandleInterval } from "@/hooks/use-candles";
 import { useMinDuration } from "@/hooks/use-min-duration";
+import { useRealtimeTrades } from "@/hooks/use-realtime-trades";
 
 /** Time range tab options shown below the chart. */
 const TIME_RANGES: { label: string; interval: CandleInterval }[] = [
@@ -43,6 +44,7 @@ export function PriceChart({
   const interval = TIME_RANGES[activeRange].interval;
   const { candles, loading: rawLoading, error } = useCandles(interval);
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const { trades: realtimeTrades, wsStatus } = useRealtimeTrades(10);
 
   // Ensure skeleton is visible for at least 300ms on initial page load
   const loading = useMinDuration(rawLoading, 300);
@@ -97,6 +99,8 @@ export function PriceChart({
             topGradient={topGradient}
             bottomGradient={bottomGradient}
             onCrosshairMove={onCrosshairMove}
+            realtimeTrades={realtimeTrades}
+            wsConnected={wsStatus === "connected"}
           />
         )}
       </div>
@@ -137,6 +141,15 @@ function ChartEmptyState({
   );
 }
 
+/** Trade data shape from useRealtimeTrades */
+interface RealtimeTrade {
+  id: string;
+  price: number;
+  quantity: number;
+  side: "buy" | "sell";
+  timestamp: number;
+}
+
 /** The actual lightweight-charts render component. Dynamically imports the library. */
 function LightweightChart({
   containerRef: _externalRef,
@@ -145,6 +158,8 @@ function LightweightChart({
   topGradient,
   bottomGradient,
   onCrosshairMove,
+  realtimeTrades,
+  wsConnected,
 }: {
   containerRef: RefObject<HTMLDivElement | null>;
   candles: { close: number; timestamp: number }[];
@@ -152,11 +167,17 @@ function LightweightChart({
   topGradient: string;
   bottomGradient: string;
   onCrosshairMove?: (data: CrosshairData) => void;
+  realtimeTrades?: RealtimeTrade[];
+  wsConnected?: boolean;
 }): React.ReactElement {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ReturnType<
     typeof import("lightweight-charts").createChart
   > | null>(null);
+  // Store area series ref for WS updates. Uses Record to avoid
+  // importing lightweight-charts types at module level (dynamic import).
+  const areaSeriesRef = useRef<Record<string, unknown> | null>(null);
+  const lastUpdateTimestampRef = useRef<number>(0);
 
   const onCrosshairMoveRef = useRef(onCrosshairMove);
   onCrosshairMoveRef.current = onCrosshairMove;
@@ -257,6 +278,11 @@ function LightweightChart({
         .sort((a, b) => (a.time as number) - (b.time as number));
 
       areaSeries.setData(chartData);
+      areaSeriesRef.current = areaSeries as unknown as Record<string, unknown>;
+      // Track the latest timestamp from historical data to avoid duplicates
+      if (chartData.length > 0) {
+        lastUpdateTimestampRef.current = chartData[chartData.length - 1].time as number;
+      }
       chart.timeScale().fitContent();
 
       // Subscribe to crosshair move for hover tooltip
@@ -304,6 +330,8 @@ function LightweightChart({
 
     return () => {
       disposed = true;
+      areaSeriesRef.current = null;
+      lastUpdateTimestampRef.current = 0;
       if (chartRef.current) {
         const chart = chartRef.current;
         const observer = (chart as unknown as { _observer?: ResizeObserver })
@@ -314,6 +342,40 @@ function LightweightChart({
       }
     };
   }, [candles, lineColor, topGradient, bottomGradient, formatTimestamp]);
+
+  // Append new data points from WebSocket trades to the chart series
+  useEffect(() => {
+    if (!wsConnected || !realtimeTrades || realtimeTrades.length === 0) return;
+    if (!areaSeriesRef.current) return;
+
+    // Process only trades newer than the last update
+    const newTrades = realtimeTrades.filter((t) => {
+      const timeSec = Math.floor(t.timestamp / 1000);
+      return timeSec > lastUpdateTimestampRef.current;
+    });
+
+    if (newTrades.length === 0) return;
+
+    // Sort by timestamp ascending and update the series
+    const sorted = [...newTrades].sort((a, b) => a.timestamp - b.timestamp);
+    const updateFn = areaSeriesRef.current.update as
+      | ((data: { time: number; value: number }) => void)
+      | undefined;
+    if (!updateFn) return;
+
+    for (const trade of sorted) {
+      const timeSec = Math.floor(trade.timestamp / 1000);
+      try {
+        updateFn({
+          time: timeSec,
+          value: trade.price,
+        });
+        lastUpdateTimestampRef.current = timeSec;
+      } catch {
+        // Silently ignore update errors (e.g., invalid time ordering)
+      }
+    }
+  }, [realtimeTrades, wsConnected]);
 
   return (
     <div

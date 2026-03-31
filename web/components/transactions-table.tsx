@@ -128,13 +128,21 @@ export function TransactionsTable({
       },
       {
         id: "address",
-        accessorFn: (row) => row.id,
+        accessorFn: (row) =>
+          (row as TradeEntry & { maker?: string; makerAddress?: string })
+            .maker ??
+          (row as TradeEntry & { maker?: string; makerAddress?: string })
+            .makerAddress ??
+          null,
         header: "Address",
-        cell: ({ getValue }) => (
-          <span className="font-mono text-text-muted">
-            {truncateAddr(getValue<string>())}
-          </span>
-        ),
+        cell: ({ getValue }) => {
+          const addr = getValue<string | null>();
+          return (
+            <span className="font-mono text-text-muted">
+              {addr ? truncateAddr(addr) : "—"}
+            </span>
+          );
+        },
         enableSorting: false,
       },
     ],
