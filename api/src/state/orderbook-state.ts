@@ -8,7 +8,12 @@
  *   - Candle aggregation per timeframe (1m, 5m, 15m, 1h, 1d)
  *   - Market info (last price, 24h volume)
  *   - Per-user open orders
+ *
+ * Emits events via EventEmitter so the WebSocket server can push
+ * real-time updates when state changes.
  */
+
+import { EventEmitter } from "node:events";
 
 import type {
   Order,
@@ -24,6 +29,19 @@ import type {
 } from "@cash/shared";
 
 import { PRICE_SCALE, CASH_DECIMALS, USDC_DECIMALS } from "@cash/shared";
+
+// ============================================================
+// Event types emitted by OrderbookState
+// ============================================================
+
+export interface OrderbookStateEvents {
+  /** Emitted when bid or ask depth changes */
+  orderbookUpdate: [delta: { bids: Array<{ price: number; quantity: number }>; asks: Array<{ price: number; quantity: number }> }];
+  /** Emitted when a new trade is processed */
+  trade: [trade: Trade];
+  /** Emitted when a user's balance changes */
+  balanceUpdate: [address: string, balances: UserBalances];
+}
 
 // ============================================================
 // Constants
@@ -48,7 +66,7 @@ export const CANDLE_INTERVALS: CandleInterval[] = ["1m", "5m", "15m", "1h", "1d"
 // OrderbookState class
 // ============================================================
 
-export class OrderbookState {
+export class OrderbookState extends EventEmitter {
   /** Bid depth: price (raw) -> quantity (raw) */
   private bids: Map<number, number> = new Map();
 
@@ -91,6 +109,7 @@ export class OrderbookState {
   private tradeIdCounter: number = 0;
 
   constructor() {
+    super();
     for (const interval of CANDLE_INTERVALS) {
       this.candles.set(interval, []);
     }
@@ -216,10 +235,21 @@ export class OrderbookState {
       const depthMap = event.is_bid ? this.bids : this.asks;
       const existing = depthMap.get(event.price) ?? 0;
       depthMap.set(event.price, existing + event.quantity);
+
+      // Emit orderbook delta
+      const humanPrice = event.price / PRICE_SCALE;
+      const newTotalQty = (depthMap.get(event.price) ?? 0) / 10 ** CASH_DECIMALS;
+      this.emit("orderbookUpdate", {
+        bids: event.is_bid ? [{ price: humanPrice, quantity: newTotalQty }] : [],
+        asks: !event.is_bid ? [{ price: humanPrice, quantity: newTotalQty }] : [],
+      });
     }
 
     // Update locked balance
     this.updateLockedOnPlace(event);
+
+    // Emit balance update for the order placer
+    this.emit("balanceUpdate", event.owner, this.getBalances(event.owner));
   }
 
   /**
@@ -250,8 +280,19 @@ export class OrderbookState {
       depthMap.set(event.price, newQty);
     }
 
+    // Emit orderbook delta
+    const humanPrice = event.price / PRICE_SCALE;
+    const remainingAtLevel = newQty <= 0 ? 0 : newQty / 10 ** CASH_DECIMALS;
+    this.emit("orderbookUpdate", {
+      bids: event.is_bid ? [{ price: humanPrice, quantity: remainingAtLevel }] : [],
+      asks: !event.is_bid ? [{ price: humanPrice, quantity: remainingAtLevel }] : [],
+    });
+
     // Unlock balance
     this.updateLockedOnCancel(event);
+
+    // Emit balance update for the order owner
+    this.emit("balanceUpdate", event.owner, this.getBalances(event.owner));
   }
 
   /**
@@ -273,6 +314,7 @@ export class OrderbookState {
     const side: OrderSide = event.taker_is_bid ? "buy" : "sell";
     const humanPrice = event.price / PRICE_SCALE;
     const humanQuantity = event.quantity / 10 ** CASH_DECIMALS;
+    const humanQuoteAmount = event.quote_amount / 10 ** USDC_DECIMALS;
 
     const trade: Trade = {
       tradeId: String(this.tradeIdCounter),
@@ -298,10 +340,16 @@ export class OrderbookState {
     // Update candles
     this.updateCandles(humanPrice, humanQuantity);
 
-    // Remove maker quantity from depth
+    // Remove maker quantity from depth (partial fill decrements, full fill removes)
     const makerOrder = this.orders.get(event.maker_order_id);
+    let depthChanged = false;
+    let depthDeltaPrice = 0;
+    let depthDeltaQty = 0;
+    let depthDeltaIsBid = false;
+
     if (makerOrder) {
-      const depthMap = makerOrder.side === "buy" ? this.bids : this.asks;
+      const isMakerBid = makerOrder.side === "buy";
+      const depthMap = isMakerBid ? this.bids : this.asks;
       const existing = depthMap.get(event.price) ?? 0;
       const newQty = existing - event.quantity;
       if (newQty <= 0) {
@@ -309,7 +357,29 @@ export class OrderbookState {
       } else {
         depthMap.set(event.price, newQty);
       }
+      depthChanged = true;
+      depthDeltaPrice = humanPrice;
+      depthDeltaQty = newQty <= 0 ? 0 : newQty / 10 ** CASH_DECIMALS;
+      depthDeltaIsBid = isMakerBid;
     }
+
+    // Update balances for buyer and seller
+    this.updateBalancesOnTrade(event.buyer, event.seller, humanQuantity, humanQuoteAmount);
+
+    // Emit trade event
+    this.emit("trade", trade);
+
+    // Emit orderbook delta if depth changed
+    if (depthChanged) {
+      this.emit("orderbookUpdate", {
+        bids: depthDeltaIsBid ? [{ price: depthDeltaPrice, quantity: depthDeltaQty }] : [],
+        asks: !depthDeltaIsBid ? [{ price: depthDeltaPrice, quantity: depthDeltaQty }] : [],
+      });
+    }
+
+    // Emit balance updates for both parties
+    this.emit("balanceUpdate", event.buyer, this.getBalances(event.buyer));
+    this.emit("balanceUpdate", event.seller, this.getBalances(event.seller));
   }
 
   /**
@@ -349,6 +419,9 @@ export class OrderbookState {
       balances[assetKey].available += event.amount / 10 ** (assetKey === "cash" ? CASH_DECIMALS : USDC_DECIMALS);
     }
     this.balances.set(event.user, balances);
+
+    // Emit balance update
+    this.emit("balanceUpdate", event.user, this.getBalances(event.user));
   }
 
   /**
@@ -366,6 +439,9 @@ export class OrderbookState {
       balances[assetKey].available = Math.max(0, balances[assetKey].available - event.amount / 10 ** decimals);
     }
     this.balances.set(event.user, balances);
+
+    // Emit balance update
+    this.emit("balanceUpdate", event.user, this.getBalances(event.user));
   }
 
   /**
@@ -437,6 +513,32 @@ export class OrderbookState {
       balances.cash.available = Math.max(0, balances.cash.available - baseAmount);
     }
     this.balances.set(event.owner, balances);
+  }
+
+  /**
+   * Update balances for both buyer and seller when a trade executes.
+   * Buyer receives base (CASH), seller receives quote (USDC).
+   * Buyer's locked USDC is released and debited; seller's locked CASH is released and debited.
+   */
+  private updateBalancesOnTrade(
+    buyer: string,
+    seller: string,
+    baseAmount: number,
+    quoteAmount: number,
+  ): void {
+    // Buyer: receives CASH (base), pays USDC (quote)
+    const buyerBalances = this.getOrCreateBalances(buyer);
+    buyerBalances.cash.available += baseAmount;
+    // Unlock and debit USDC — the USDC was locked when the buy order was placed
+    buyerBalances.usdc.locked = Math.max(0, buyerBalances.usdc.locked - quoteAmount);
+    this.balances.set(buyer, buyerBalances);
+
+    // Seller: receives USDC (quote), pays CASH (base)
+    const sellerBalances = this.getOrCreateBalances(seller);
+    sellerBalances.usdc.available += quoteAmount;
+    // Unlock and debit CASH — the CASH was locked when the sell order was placed
+    sellerBalances.cash.locked = Math.max(0, sellerBalances.cash.locked - baseAmount);
+    this.balances.set(seller, sellerBalances);
   }
 
   private updateLockedOnCancel(event: {

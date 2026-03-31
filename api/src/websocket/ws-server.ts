@@ -22,6 +22,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { IncomingMessage } from "http";
 import type { OrderbookState } from "../state/orderbook-state.js";
+import type { Trade, UserBalances } from "@cash/shared";
 
 // ============================================================
 // Types
@@ -71,6 +72,11 @@ export class WsServer {
   private readonly port: number;
   private readonly heartbeatIntervalMs: number;
 
+  /** Bound event handlers for cleanup */
+  private onOrderbookUpdate: ((delta: { bids: Array<{ price: number; quantity: number }>; asks: Array<{ price: number; quantity: number }> }) => void) | null = null;
+  private onTrade: ((trade: Trade) => void) | null = null;
+  private onBalanceUpdate: ((address: string, balances: UserBalances) => void) | null = null;
+
   constructor(options: WsServerOptions) {
     this.state = options.state;
     this.port = options.port ?? 3101;
@@ -94,6 +100,9 @@ export class WsServer {
       this.heartbeat();
     }, this.heartbeatIntervalMs);
 
+    // Wire up OrderbookState event bus → WS broadcasting
+    this.wireStateEvents();
+
     console.log(`[WS] WebSocket server listening on port ${this.port}`);
   }
 
@@ -105,6 +114,9 @@ export class WsServer {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }
+
+    // Remove OrderbookState event listeners
+    this.unwireStateEvents();
 
     // Close all client connections
     for (const client of this.clients) {
@@ -194,6 +206,58 @@ export class WsServer {
       if (client.subscriptions.has(channel) && client.ws.readyState === WebSocket.OPEN) {
         client.ws.send(payload);
       }
+    }
+  }
+
+  // ============================================================
+  // State event bus wiring
+  // ============================================================
+
+  /**
+   * Wire OrderbookState events to WebSocket broadcasting.
+   * When state processes an event, the appropriate WS channel is notified.
+   */
+  private wireStateEvents(): void {
+    // Orderbook depth changes → 'orderbook' channel delta
+    this.onOrderbookUpdate = (delta) => {
+      this.broadcastOrderbookDelta(delta);
+    };
+    this.state.on("orderbookUpdate", this.onOrderbookUpdate);
+
+    // New trades → 'trades' channel
+    this.onTrade = (trade) => {
+      this.broadcastTrade({
+        tradeId: trade.tradeId,
+        price: trade.price,
+        quantity: trade.quantity,
+        side: trade.side,
+        timestamp: trade.timestamp,
+      });
+    };
+    this.state.on("trade", this.onTrade);
+
+    // Balance changes → 'account:{address}' channel
+    this.onBalanceUpdate = (address, balances) => {
+      this.broadcastAccountUpdate(address, balances);
+    };
+    this.state.on("balanceUpdate", this.onBalanceUpdate);
+  }
+
+  /**
+   * Remove event listeners from OrderbookState (for clean shutdown).
+   */
+  private unwireStateEvents(): void {
+    if (this.onOrderbookUpdate) {
+      this.state.removeListener("orderbookUpdate", this.onOrderbookUpdate);
+      this.onOrderbookUpdate = null;
+    }
+    if (this.onTrade) {
+      this.state.removeListener("trade", this.onTrade);
+      this.onTrade = null;
+    }
+    if (this.onBalanceUpdate) {
+      this.state.removeListener("balanceUpdate", this.onBalanceUpdate);
+      this.onBalanceUpdate = null;
     }
   }
 

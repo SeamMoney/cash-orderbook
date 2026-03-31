@@ -2,7 +2,7 @@
  * Tests for EventIndexer — event processing and state updates.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { EventIndexer } from "./event-indexer.js";
 import { OrderbookState } from "../state/orderbook-state.js";
 
@@ -220,6 +220,117 @@ describe("EventIndexer", () => {
 
       expect(state.getMarketInfo().lastPrice).toBe(2.0);
     });
+
+    it("processes multiple event types in a full lifecycle and emits events", () => {
+      const orderbookHandler = vi.fn();
+      const tradeHandler = vi.fn();
+      const balanceHandler = vi.fn();
+
+      state.on("orderbookUpdate", orderbookHandler);
+      state.on("trade", tradeHandler);
+      state.on("balanceUpdate", balanceHandler);
+
+      // Deposit
+      indexer.processEvent("DepositEvent", {
+        user: "0xBUYER",
+        asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
+        amount: 1000_000_000,
+      });
+      expect(balanceHandler).toHaveBeenCalled();
+
+      // Place ask
+      indexer.processEvent("OrderPlaced", {
+        order_id: 100,
+        owner: "0xSELLER",
+        pair_id: 0,
+        price: 2_000_000,
+        quantity: 50_000_000,
+        is_bid: false,
+        order_type: 0,
+        timestamp: 1000,
+      });
+      expect(orderbookHandler).toHaveBeenCalled();
+
+      // Trade
+      indexer.processEvent("TradeEvent", {
+        taker_order_id: 200,
+        maker_order_id: 100,
+        price: 2_000_000,
+        quantity: 50_000_000,
+        quote_amount: 100_000_000,
+        buyer: "0xBUYER",
+        seller: "0xSELLER",
+        pair_id: 0,
+        taker_is_bid: true,
+      });
+      expect(tradeHandler).toHaveBeenCalled();
+
+      // Verify buyer got CASH
+      const buyerBal = state.getBalances("0xBUYER");
+      expect(buyerBal.cash.available).toBe(50);
+    });
+
+    it("processes events with balance updates for both parties", () => {
+      // Deposit for buyer
+      indexer.processEvent("DepositEvent", {
+        user: "0xBUYER",
+        asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
+        amount: 500_000_000,
+      });
+
+      // Deposit CASH for seller
+      indexer.processEvent("DepositEvent", {
+        user: "0xSELLER",
+        asset: "0x61ed8b048636516b4eaf4c74250fa4f9440d9c3e163d96aeb863fe658a4bdc67::CASH::CASH",
+        amount: 100_000_000,
+      });
+
+      // Place bid
+      indexer.processEvent("OrderPlaced", {
+        order_id: 1,
+        owner: "0xBUYER",
+        pair_id: 0,
+        price: 2_000_000,
+        quantity: 50_000_000,
+        is_bid: true,
+        order_type: 0,
+        timestamp: 1000,
+      });
+
+      // Place ask
+      indexer.processEvent("OrderPlaced", {
+        order_id: 2,
+        owner: "0xSELLER",
+        pair_id: 0,
+        price: 2_000_000,
+        quantity: 50_000_000,
+        is_bid: false,
+        order_type: 0,
+        timestamp: 1001,
+      });
+
+      // Trade
+      indexer.processEvent("TradeEvent", {
+        taker_order_id: 1,
+        maker_order_id: 2,
+        price: 2_000_000,
+        quantity: 50_000_000,
+        quote_amount: 100_000_000,
+        buyer: "0xBUYER",
+        seller: "0xSELLER",
+        pair_id: 0,
+        taker_is_bid: true,
+      });
+
+      // Verify balances
+      const buyerBal = state.getBalances("0xBUYER");
+      expect(buyerBal.cash.available).toBe(50); // received 50 CASH
+      expect(buyerBal.usdc.locked).toBe(0);     // locked USDC settled
+
+      const sellerBal = state.getBalances("0xSELLER");
+      expect(sellerBal.usdc.available).toBe(100); // received 100 USDC
+      expect(sellerBal.cash.locked).toBe(0);      // locked CASH settled
+    });
   });
 
   describe("start/stop", () => {
@@ -232,6 +343,12 @@ describe("EventIndexer", () => {
       indexer.start();
       indexer.start();
       expect(() => indexer.stop()).not.toThrow();
+    });
+  });
+
+  describe("cursor tracking", () => {
+    it("getCursor returns undefined for unpolled event type", () => {
+      expect(indexer.getCursor("0xCAFE::order_placement::OrderPlaced")).toBeUndefined();
     });
   });
 });

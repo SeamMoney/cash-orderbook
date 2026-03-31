@@ -8,6 +8,9 @@
  *   - TradeEvent (from settlement module)
  *   - DepositEvent (from accounts module)
  *   - WithdrawEvent (from accounts module)
+ *
+ * Uses `aptos.getModuleEventsByEventType()` with cursor-based pagination
+ * (sequence_number ordering) to fetch events after the last processed version.
  */
 
 import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
@@ -23,17 +26,22 @@ export interface EventIndexerConfig {
   pollIntervalMs?: number;
   /** Optional custom fullnode URL */
   fullnodeUrl?: string;
+  /** Maximum events to fetch per poll per event type (default: 100) */
+  batchSize?: number;
 }
 
-/** Event types we index */
-const EVENT_TYPES = [
-  "order_placement::OrderPlaced",
-  "cancel::OrderCancelled",
-  "settlement::OrderFilled",
-  "settlement::TradeEvent",
-  "accounts::DepositEvent",
-  "accounts::WithdrawEvent",
-] as const;
+/** Event type definitions: module::EventStruct → short name used by processEvent() */
+const EVENT_TYPE_MAP: Record<string, string> = {
+  "order_placement::OrderPlaced": "OrderPlaced",
+  "cancel::OrderCancelled": "OrderCancelled",
+  "settlement::OrderFilled": "OrderFilled",
+  "settlement::TradeEvent": "TradeEvent",
+  "accounts::DepositEvent": "DepositEvent",
+  "accounts::WithdrawEvent": "WithdrawEvent",
+};
+
+/** All event module::struct types we index */
+const EVENT_TYPES = Object.keys(EVENT_TYPE_MAP);
 
 /**
  * Map SDK network type to Aptos SDK Network enum.
@@ -51,19 +59,31 @@ function toAptosNetwork(network: string): Network {
 /**
  * EventIndexer polls Aptos RPC for contract events and feeds them
  * into the in-memory OrderbookState for fast API responses.
+ *
+ * Tracks a per-event-type sequence number cursor to avoid reprocessing events.
  */
 export class EventIndexer {
-  /** Aptos client for RPC polling (used when polling is active) */
+  /** Aptos client for RPC polling */
   readonly aptos: Aptos;
   private readonly contractAddress: string;
   private readonly pollIntervalMs: number;
+  private readonly batchSize: number;
   private readonly state: OrderbookState;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private isRunning: boolean = false;
+  private isPolling: boolean = false;
+
+  /**
+   * Per-event-type cursor: tracks the last processed sequence_number so we
+   * only fetch new events on each poll. Keyed by the full event type string
+   * (e.g. "0xCAFE::order_placement::OrderPlaced").
+   */
+  private cursors: Map<string, number> = new Map();
 
   constructor(config: EventIndexerConfig, state: OrderbookState) {
     this.contractAddress = config.contractAddress;
     this.pollIntervalMs = config.pollIntervalMs ?? 2000;
+    this.batchSize = config.batchSize ?? 100;
     this.state = state;
 
     const aptosConfig = new AptosConfig({
@@ -99,13 +119,24 @@ export class EventIndexer {
   }
 
   /**
+   * Get the current cursor for an event type (for testing/debugging).
+   */
+  getCursor(eventType: string): number | undefined {
+    return this.cursors.get(eventType);
+  }
+
+  /**
    * Poll for new events from the contract.
+   * Skips if a previous poll is still in progress (prevents overlap).
    */
   private async poll(): Promise<void> {
+    if (this.isPolling) return;
+    this.isPolling = true;
+
     try {
-      for (const eventType of EVENT_TYPES) {
-        const fullType = `${this.contractAddress}::${eventType}`;
-        await this.processEventType(fullType, eventType);
+      for (const moduleEventType of EVENT_TYPES) {
+        const fullType = `${this.contractAddress}::${moduleEventType}`;
+        await this.fetchAndProcessEvents(fullType, EVENT_TYPE_MAP[moduleEventType]);
       }
     } catch (error) {
       // Silently handle poll errors — the indexer is best-effort.
@@ -113,32 +144,64 @@ export class EventIndexer {
       if (process.env.NODE_ENV !== "test") {
         console.error("[EventIndexer] Poll error:", error);
       }
+    } finally {
+      this.isPolling = false;
     }
   }
 
   /**
-   * Process a specific event type, fetching new events since last indexed version.
+   * Fetch events of a specific type from Aptos RPC using cursor-based pagination.
+   * Processes each event through processEvent() and updates the cursor.
    */
-  private async processEventType(
-    _fullEventType: string,
+  private async fetchAndProcessEvents(
+    fullEventType: string,
     shortType: string,
   ): Promise<void> {
-    // In production, we'd use the Aptos events API to fetch events
-    // by type after a certain sequence number. For now, this is
-    // the integration point — events are fed via processEvent() in tests
-    // and manual polling would use:
-    //
-    // const events = await this.aptos.getEvents({
-    //   eventType: fullEventType,
-    //   options: { start: lastSequence, limit: 100 },
-    // });
-    //
-    // For each event, call the appropriate processor on state.
-    void shortType;
+    try {
+      const cursor = this.cursors.get(fullEventType) ?? 0;
+
+      // Use the Aptos SDK to fetch events after our cursor.
+      // The SDK's getModuleEventsByEventType uses the indexer GraphQL API
+      // which supports filtering and ordering.
+      const events = await this.aptos.getModuleEventsByEventType({
+        eventType: fullEventType as `${string}::${string}::${string}`,
+        options: {
+          offset: cursor,
+          limit: this.batchSize,
+          orderBy: [{ sequence_number: "asc" } as Record<string, unknown>],
+        },
+      });
+
+      if (!events || events.length === 0) return;
+
+      for (const event of events) {
+        const data = event.data as Record<string, unknown>;
+        this.processEvent(shortType, data);
+      }
+
+      // Advance cursor by the number of events processed
+      this.cursors.set(fullEventType, cursor + events.length);
+
+      // Update the global last indexed version from the last event's transaction version
+      const lastEvent = events[events.length - 1];
+      if (lastEvent && typeof lastEvent.transaction_version === "number") {
+        const version = lastEvent.transaction_version;
+        if (version > this.state.getLastIndexedVersion()) {
+          this.state.setLastIndexedVersion(version);
+        }
+      }
+    } catch (error) {
+      // Individual event type fetch errors are non-fatal — other event types
+      // will still be processed. Log for debugging.
+      if (process.env.NODE_ENV !== "test") {
+        console.error(`[EventIndexer] Error fetching ${fullEventType}:`, error);
+      }
+    }
   }
 
   /**
-   * Process a single raw event (used for testing and manual event injection).
+   * Process a single raw event (used for testing, manual event injection,
+   * and by the poll loop after fetching from RPC).
    */
   processEvent(eventType: string, data: Record<string, unknown>): void {
     switch (eventType) {

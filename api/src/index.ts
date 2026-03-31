@@ -15,6 +15,7 @@ export const API_VERSION = "0.1.0";
 // Re-export for consumers
 export { createApp } from "./server.js";
 export { OrderbookState } from "./state/orderbook-state.js";
+export type { OrderbookStateEvents } from "./state/orderbook-state.js";
 export { EventIndexer } from "./indexer/event-indexer.js";
 export type { EventIndexerConfig } from "./indexer/event-indexer.js";
 export { WsServer } from "./websocket/ws-server.js";
