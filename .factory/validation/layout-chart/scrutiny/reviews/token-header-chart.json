@@ -1,0 +1,44 @@
+{
+  "featureId": "token-header-chart",
+  "reviewedAt": "2026-03-31T07:52:33Z",
+  "commitId": "3c54c8381f33b82a649687ae021418026266b054",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature adds token header/chart UX, loading/empty states, and time-range switching, but it does not satisfy the required 24h change behavior because the value is hardcoded to 0%.",
+    "issues": [
+      {
+        "file": "web/app/page.tsx",
+        "line": 28,
+        "severity": "blocking",
+        "description": "24h change is hardcoded to `0` when market data exists (`change24h` computed on lines 28-33), so the UI never reflects real positive/negative 24h movement and can never show a true red negative state."
+      },
+      {
+        "file": "web/components/price-chart.tsx",
+        "line": 138,
+        "severity": "non_blocking",
+        "description": "`LightweightChart` takes `containerRef` but discards it (`containerRef: _externalRef`), while the parent still creates/passes a ref only for this prop. This dead prop/ref path adds avoidable complexity."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "knowledge",
+      "observation": "Mission API docs and actual API/types disagree on `/market` shape; docs claim `change24h`, but code exposes only `lastPrice` and `volume24h`. This mismatch likely drove the hardcoded 0% workaround.",
+      "evidence": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/AGENTS.md:77 includes `change24h`; /Users/maxmohammadi/cash-orderbook/shared/src/index.ts:98-109 MarketInfo has no `change24h`; /Users/maxmohammadi/cash-orderbook/api/src/routes/market.ts:4 documents only lastPrice/volume24h."
+    },
+    {
+      "area": "skills",
+      "observation": "Skill registration/discovery appears inconsistent: the worker could not invoke `frontend-ui-worker` via Skill tool despite the skill file being present.",
+      "evidence": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/worker-transcripts.jsonl line 40 contains `Error: Skill \"frontend-ui-worker\" not found` and later notes `.factory/skills/frontend-ui-worker/SKILL.md` exists."
+    },
+    {
+      "area": "conventions",
+      "observation": "Feature commit scope drifted beyond `web/` by including shared-state `.factory` file edits, which conflicts with mission/skill boundaries and can muddy feature-only review history.",
+      "evidence": "`git show --name-only 3c54c8381f33b82a649687ae021418026266b054` includes `.factory/library/architecture.md`, `.factory/library/user-testing.md`, and `.factory/skills/frontend-ui-worker/SKILL.md`."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review failed: core chart functionality is present, but required 24h change behavior is not implemented correctly because the displayed percentage is synthetic and fixed at 0%."
+}

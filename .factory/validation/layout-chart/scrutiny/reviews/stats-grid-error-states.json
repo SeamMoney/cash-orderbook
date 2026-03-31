@@ -1,0 +1,39 @@
+{
+  "featureId": "stats-grid-error-states",
+  "reviewedAt": "2026-03-31T07:52:58Z",
+  "commitId": "6ec2a37",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The stats grid and candle-based 24h change hook are implemented and wired correctly, but the feature does not meet its own API-down console-error expectation, and the 24h change hook has an edge-case calculation drift.",
+    "issues": [
+      {
+        "file": "web/hooks/use-market.ts",
+        "line": 37,
+        "severity": "blocking",
+        "description": "API-down behavior still emits console error entries (ERR_CONNECTION_REFUSED) from repeated fetches, which conflicts with the feature expectedBehavior 'No JavaScript console errors when API is down'. Evidence from transcript: worker-transcripts.jsonl line 41 notes unavoidable ERR_CONNECTION_REFUSED console logs during API-down verification; additional fetch sources are web/hooks/use-candles.ts:40 and web/hooks/use-price-change.ts:19 (extra polling path)."
+      },
+      {
+        "file": "web/hooks/use-price-change.ts",
+        "line": 33,
+        "severity": "non_blocking",
+        "description": "When there are fewer than 2 candles in the last 24h, the hook falls back to all available candles (`recentCandles.length >= 2 ? recentCandles : candles`), which can compute a non-24h change and diverges from the requirement to compute first-vs-last close over a 24h window."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Skill resolution appears inconsistent: feature metadata targets frontend-ui-worker and the skill file exists, but runtime reported that skill as unavailable and the worker switched to frontend-worker.",
+      "evidence": "Mission features.json entry for stats-grid-error-states has `skillName: frontend-ui-worker`; repo contains .factory/skills/frontend-ui-worker/SKILL.md; transcript (worker-transcripts.jsonl line 41) contains 'The skill `frontend-ui-worker` doesn't exist' followed by invocation of frontend-worker."
+    },
+    {
+      "area": "knowledge",
+      "observation": "Mission API reference is out of sync with actual API schema, which can mislead frontend implementations.",
+      "evidence": "Mission AGENTS.md claims /market includes change24h and /candles supports limit, but current contract used by frontend is MarketData { ... lastPrice, volume24h } in web/hooks/use-market.ts and candles route validates only `interval` in api/src/routes/candles.ts."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review result: fail. Feature implementation is close, but strict API-down console-error acceptance is not satisfied per transcript evidence, and there is a non-blocking 24h-window edge-case in the change calculation."
+}
