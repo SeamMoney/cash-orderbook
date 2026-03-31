@@ -39,6 +39,8 @@ vi.mock("@aptos-labs/ts-sdk", () => {
 // ============================================================
 
 const CONTRACT_ADDRESS = "0xCAFE";
+const MOCK_BASE_ASSET = "0xCASH";
+const MOCK_QUOTE_ASSET = "0xUSDC";
 const MOCK_TX_HASH = "0xabc123def456789";
 const MOCK_ACCOUNT = {
   accountAddress: { toString: () => "0xBEEF" },
@@ -49,6 +51,8 @@ function createClient(): CashOrderbook {
   return new CashOrderbook({
     network: "mainnet",
     contractAddress: CONTRACT_ADDRESS,
+    baseAsset: MOCK_BASE_ASSET,
+    quoteAsset: MOCK_QUOTE_ASSET,
   });
 }
 
@@ -81,6 +85,8 @@ describe("CashOrderbook", () => {
     it("creates client with required config", () => {
       expect(client.contractAddress).toBe(CONTRACT_ADDRESS);
       expect(client.network).toBe("mainnet");
+      expect(client.baseAsset).toBe(MOCK_BASE_ASSET);
+      expect(client.quoteAsset).toBe(MOCK_QUOTE_ASSET);
       expect(client.aptos).toBeDefined();
     });
 
@@ -88,6 +94,8 @@ describe("CashOrderbook", () => {
       const c = new CashOrderbook({
         network: "testnet",
         contractAddress: "0x1234",
+        baseAsset: MOCK_BASE_ASSET,
+        quoteAsset: MOCK_QUOTE_ASSET,
         apiKey: "test-key",
       });
       expect(c.network).toBe("testnet");
@@ -97,6 +105,8 @@ describe("CashOrderbook", () => {
       const c = new CashOrderbook({
         network: "local",
         contractAddress: "0x1234",
+        baseAsset: MOCK_BASE_ASSET,
+        quoteAsset: MOCK_QUOTE_ASSET,
         fullnodeUrl: "http://localhost:8080",
       });
       expect(c.network).toBe("local");
@@ -533,15 +543,15 @@ describe("CashOrderbook", () => {
   // ----------------------------------------------------------
 
   describe("getBalances", () => {
-    it("calls view function with correct parameters", async () => {
+    it("calls view function with config base/quote asset addresses", async () => {
       mockView.mockResolvedValue(["0", "0", "0", "0"]);
 
-      await client.getBalances("0xBEEF", "0xCASH", "0xUSDC");
+      await client.getBalances("0xBEEF");
 
       expect(mockView).toHaveBeenCalledWith({
         payload: {
           function: `${CONTRACT_ADDRESS}::views::get_user_balances`,
-          functionArguments: ["0xBEEF", "0xCASH", "0xUSDC"],
+          functionArguments: ["0xBEEF", MOCK_BASE_ASSET, MOCK_QUOTE_ASSET],
         },
       });
     });
@@ -555,7 +565,7 @@ describe("CashOrderbook", () => {
         "200000000",  // quote locked
       ]);
 
-      const balances = await client.getBalances("0xBEEF", "0xCASH", "0xUSDC");
+      const balances = await client.getBalances("0xBEEF");
 
       expect(balances.cash.available).toBe(500);
       expect(balances.cash.locked).toBe(100);
@@ -566,7 +576,7 @@ describe("CashOrderbook", () => {
     it("returns zeros for non-existent user", async () => {
       mockView.mockResolvedValue(["0", "0", "0", "0"]);
 
-      const balances = await client.getBalances("0xDEAD", "0xCASH", "0xUSDC");
+      const balances = await client.getBalances("0xDEAD");
 
       expect(balances.cash.available).toBe(0);
       expect(balances.cash.locked).toBe(0);

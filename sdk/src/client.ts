@@ -144,10 +144,16 @@ export class CashOrderbook {
   public readonly contractAddress: string;
   /** The network being used */
   public readonly network: NetworkType;
+  /** Base asset (CASH) metadata address */
+  public readonly baseAsset: string;
+  /** Quote asset (USDC) metadata address */
+  public readonly quoteAsset: string;
 
   constructor(config: CashOrderbookConfig) {
     this.contractAddress = config.contractAddress;
     this.network = config.network;
+    this.baseAsset = config.baseAsset;
+    this.quoteAsset = config.quoteAsset;
 
     const aptosConfig = new AptosConfig({
       network: toAptosNetwork(config.network),
@@ -365,18 +371,14 @@ export class CashOrderbook {
    * Get a user's available and locked balances for CASH and USDC.
    *
    * Calls the on-chain view function `views::get_user_balances(user, base, quote)`.
-   * Requires the base asset and quote asset metadata addresses.
+   * Resolves base and quote asset addresses from the client config.
    *
    * Fulfills VAL-BACKEND-005: SDK getBalances returns available + locked per asset.
    */
-  async getBalances(
-    address: string,
-    baseAssetAddress: string,
-    quoteAssetAddress: string,
-  ): Promise<UserBalances> {
+  async getBalances(address: string): Promise<UserBalances> {
     const payload: InputViewFunctionData = {
       function: `${this.contractAddress}::${MODULE_NAMES.VIEWS}::get_user_balances`,
-      functionArguments: [address, baseAssetAddress, quoteAssetAddress],
+      functionArguments: [address, this.baseAsset, this.quoteAsset],
     };
 
     const result = await this.aptos.view({ payload });

@@ -36,6 +36,10 @@ export interface CashOrderbookConfig {
   network: NetworkType;
   /** The address where cash_orderbook contracts are deployed */
   contractAddress: string;
+  /** Base asset (CASH) metadata address */
+  baseAsset: string;
+  /** Quote asset (USDC) metadata address */
+  quoteAsset: string;
   /** Optional API key for RPC rate limit bypass */
   apiKey?: string;
   /** Optional custom fullnode URL override */
