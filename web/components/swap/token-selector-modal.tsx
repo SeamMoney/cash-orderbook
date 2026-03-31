@@ -103,11 +103,9 @@ function TokenRow({
           <span className="text-sm font-medium text-white">{token.name}</span>
           <span className="text-xs text-text-muted">{token.symbol}</span>
         </div>
-        {balance !== null && (
-          <span className="text-sm font-mono text-text-secondary">
-            {formatBalance(balance, 4)}
-          </span>
-        )}
+        <span className="text-sm font-mono text-text-secondary">
+          {balance !== null ? formatBalance(balance, 4) : "—"}
+        </span>
       </button>
     </div>
   );

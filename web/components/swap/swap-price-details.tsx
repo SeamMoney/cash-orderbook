@@ -35,7 +35,16 @@ export function SwapPriceDetails({
         </div>
       );
     }
-    return null;
+    return (
+      <div className="mt-3">
+        <div className="flex w-full items-center justify-between rounded-xl bg-background border border-border px-3 py-2.5 text-xs">
+          <span className="text-text-muted">
+            Enter an amount to see price details
+          </span>
+          <ChevronDown className="h-3.5 w-3.5 text-text-muted" />
+        </div>
+      </div>
+    );
   }
 
   const rateLabel =
