@@ -11,6 +11,7 @@ module cash_orderbook::cancel {
     use cash_orderbook::types;
     use cash_orderbook::accounts;
     use cash_orderbook::market;
+    use cash_orderbook::subaccounts;
 
     // ========== Error Codes ==========
     const E_UNAUTHORIZED: u64 = 1;
@@ -59,6 +60,32 @@ module cash_orderbook::cancel {
         order_id: u64,
     ) {
         let user_addr = signer::address_of(user);
+        cancel_order_internal(user_addr, pair_id, order_id);
+    }
+
+    /// Cancel a resting order on behalf of another user (delegation).
+    /// The signer must be an authorized delegate of the owner.
+    ///
+    /// Aborts with E_UNAUTHORIZED if the signer is not authorized for the owner.
+    /// Aborts with E_ORDER_NOT_FOUND if order is not on the book.
+    public entry fun cancel_order_delegated(
+        delegate: &signer,
+        owner_addr: address,
+        pair_id: u64,
+        order_id: u64,
+    ) {
+        let delegate_addr = signer::address_of(delegate);
+        subaccounts::assert_authorized_trader(delegate_addr, owner_addr);
+        cancel_order_internal(owner_addr, pair_id, order_id);
+    }
+
+    /// Internal implementation for cancelling an order.
+    /// Used by both direct and delegated entry functions.
+    fun cancel_order_internal(
+        user_addr: address,
+        pair_id: u64,
+        order_id: u64,
+    ) {
 
         // Market must exist (but doesn't need to be active — cancel works when paused)
         market::assert_market_exists(pair_id);
@@ -368,5 +395,138 @@ module cash_orderbook::cancel {
         // Best bid should be at 3.0 (order_id=2)
         let best_bid_price = market::get_best_bid_price();
         assert!(best_bid_price == 3_000_000, 403);
+    }
+
+    // ========== Delegation Cancel Tests ==========
+
+    #[test_only]
+    use cash_orderbook::subaccounts as test_subaccounts;
+
+    #[test_only]
+    /// Setup for delegation cancel tests.
+    fun setup_delegation_cancel_env(
+        deployer: &signer,
+        owner: &signer,
+        delegate: &signer,
+    ): (Object<Metadata>, Object<Metadata>, u64) {
+        let deployer_addr = signer::address_of(deployer);
+        let owner_addr = signer::address_of(owner);
+        let delegate_addr = signer::address_of(delegate);
+        test_account::create_account_for_test(deployer_addr);
+        test_account::create_account_for_test(owner_addr);
+        test_account::create_account_for_test(delegate_addr);
+
+        types::init_module_for_test(deployer);
+        let resource_signer = types::get_resource_signer();
+        let resource_addr = signer::address_of(&resource_signer);
+        test_account::create_account_for_test(resource_addr);
+
+        let aptos_framework = test_account::create_signer_for_test(@0x1);
+        timestamp::set_time_has_started_for_testing(&aptos_framework);
+
+        // Create base asset
+        let base_constructor_ref = object::create_named_object(deployer, b"TEST_CASH");
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            &base_constructor_ref,
+            std::option::none(),
+            string::utf8(b"Test CASH"),
+            string::utf8(b"CASH"),
+            6,
+            string::utf8(b""),
+            string::utf8(b""),
+        );
+        let base_metadata = object::object_from_constructor_ref<Metadata>(&base_constructor_ref);
+        let base_mint_ref = fungible_asset::generate_mint_ref(&base_constructor_ref);
+
+        // Create quote asset
+        let quote_constructor_ref = object::create_named_object(deployer, b"TEST_USDC");
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            &quote_constructor_ref,
+            std::option::none(),
+            string::utf8(b"Test USDC"),
+            string::utf8(b"USDC"),
+            6,
+            string::utf8(b""),
+            string::utf8(b""),
+        );
+        let quote_metadata = object::object_from_constructor_ref<Metadata>(&quote_constructor_ref);
+        let quote_mint_ref = fungible_asset::generate_mint_ref(&quote_constructor_ref);
+
+        // Mint and deposit for owner
+        let base_fa = fungible_asset::mint(&base_mint_ref, 10_000_000_000);
+        primary_fungible_store::deposit(owner_addr, base_fa);
+        let quote_fa = fungible_asset::mint(&quote_mint_ref, 10_000_000_000);
+        primary_fungible_store::deposit(owner_addr, quote_fa);
+        accounts::deposit(owner, base_metadata, 5_000_000_000);
+        accounts::deposit(owner, quote_metadata, 5_000_000_000);
+
+        // Register market
+        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+
+        // Owner sets up subaccount and delegates
+        test_subaccounts::create_subaccount(owner);
+        test_subaccounts::delegate_trading(owner, delegate_addr, 0); // never expires
+
+        (base_metadata, quote_metadata, 0)
+    }
+
+    #[test(deployer = @cash_orderbook, owner = @0xBEEF, delegate = @0xDEAD)]
+    /// Delegated cancel_order succeeds when delegate is authorized.
+    fun test_delegated_cancel_authorized(deployer: &signer, owner: &signer, delegate: &signer) {
+        let (_base_metadata, quote_metadata, pair_id) = setup_delegation_cancel_env(deployer, owner, delegate);
+        let owner_addr = signer::address_of(owner);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Owner places a limit buy (directly)
+        cash_orderbook::order_placement::place_limit_order(
+            owner, pair_id, 1_500_000, 100_000_000, true, types::order_type_gtc()
+        );
+        assert!(!market::bids_is_empty(), 500);
+        assert!(accounts::get_locked_balance(owner_addr, quote_addr) == 150_000_000, 501);
+
+        // Delegate cancels the order on owner's behalf
+        cancel_order_delegated(delegate, owner_addr, pair_id, 0);
+
+        // Order removed, funds unlocked
+        assert!(market::bids_is_empty(), 502);
+        assert!(accounts::get_locked_balance(owner_addr, quote_addr) == 0, 503);
+        assert!(accounts::get_available_balance(owner_addr, quote_addr) == 5_000_000_000, 504);
+    }
+
+    #[test(deployer = @cash_orderbook, owner = @0xBEEF, delegate = @0xDEAD)]
+    #[expected_failure(abort_code = 1, location = cash_orderbook::subaccounts)]
+    /// Delegated cancel_order fails when signer is not authorized for the owner.
+    fun test_delegated_cancel_unauthorized(deployer: &signer, owner: &signer, delegate: &signer) {
+        let (_base_metadata, _quote_metadata, pair_id) = setup_delegation_cancel_env(deployer, owner, delegate);
+
+        // Owner places an order
+        cash_orderbook::order_placement::place_limit_order(
+            owner, pair_id, 1_500_000, 100_000_000, true, types::order_type_gtc()
+        );
+
+        // Delegate tries to cancel on behalf of a random address where they are NOT authorized
+        let random_addr = @0xAAAA;
+        cancel_order_delegated(delegate, random_addr, pair_id, 0);
+    }
+
+    #[test(deployer = @cash_orderbook, owner = @0xBEEF, delegate = @0xDEAD)]
+    /// Delegated cancel of sell order succeeds.
+    fun test_delegated_cancel_sell_order(deployer: &signer, owner: &signer, delegate: &signer) {
+        let (base_metadata, _quote_metadata, pair_id) = setup_delegation_cancel_env(deployer, owner, delegate);
+        let owner_addr = signer::address_of(owner);
+        let base_addr = object::object_address(&base_metadata);
+
+        // Owner places a sell order
+        cash_orderbook::order_placement::place_limit_order(
+            owner, pair_id, 2_000_000, 50_000_000, false, types::order_type_gtc()
+        );
+        assert!(!market::asks_is_empty(), 600);
+        assert!(accounts::get_locked_balance(owner_addr, base_addr) == 50_000_000, 601);
+
+        // Delegate cancels
+        cancel_order_delegated(delegate, owner_addr, pair_id, 0);
+
+        assert!(market::asks_is_empty(), 602);
+        assert!(accounts::get_locked_balance(owner_addr, base_addr) == 0, 603);
     }
 }

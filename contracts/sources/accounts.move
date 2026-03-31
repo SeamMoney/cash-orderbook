@@ -178,6 +178,20 @@ module cash_orderbook::accounts {
         smart_table::upsert(&mut user_balance.locked, asset_addr, locked - amount);
     }
 
+    /// Debit available balance (e.g., for fee deduction after settlement).
+    /// Called by settlement module.
+    public(friend) fun debit_available(
+        user_addr: address,
+        asset_addr: address,
+        amount: u64,
+    ) acquires UserBalance {
+        assert!(exists<UserBalance>(user_addr), E_INSUFFICIENT_BALANCE);
+        let user_balance = borrow_global_mut<UserBalance>(user_addr);
+        let available = get_or_default(&user_balance.available, asset_addr);
+        assert!(available >= amount, E_INSUFFICIENT_BALANCE);
+        smart_table::upsert(&mut user_balance.available, asset_addr, available - amount);
+    }
+
     /// Credit available balance on fill (receiving assets from trade).
     /// Called by settlement module.
     public(friend) fun credit_available(

@@ -156,6 +156,7 @@ module cash_orderbook::subaccounts {
 
     // ========== Friend Declarations ==========
     friend cash_orderbook::order_placement;
+    friend cash_orderbook::cancel;
 
     // ========== Tests ==========
 

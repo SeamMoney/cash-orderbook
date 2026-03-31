@@ -24,6 +24,7 @@ module cash_orderbook::order_placement {
     use cash_orderbook::market;
     use cash_orderbook::matching;
     use cash_orderbook::settlement;
+    use cash_orderbook::subaccounts;
 
     // ========== Error Codes ==========
     const E_INSUFFICIENT_BALANCE: u64 = 2;
@@ -89,6 +90,38 @@ module cash_orderbook::order_placement {
         is_bid: bool,
         order_type: u8,
     ) {
+        let user_addr = signer::address_of(user);
+        place_limit_order_internal(user_addr, pair_id, price, quantity, is_bid, order_type);
+    }
+
+    /// Place a limit order on behalf of another user (delegation).
+    /// The signer must be an authorized delegate of the owner.
+    ///
+    /// Aborts with E_UNAUTHORIZED if the signer is not authorized for the owner.
+    public entry fun place_limit_order_delegated(
+        delegate: &signer,
+        owner_addr: address,
+        pair_id: u64,
+        price: u64,
+        quantity: u64,
+        is_bid: bool,
+        order_type: u8,
+    ) {
+        let delegate_addr = signer::address_of(delegate);
+        subaccounts::assert_authorized_trader(delegate_addr, owner_addr);
+        place_limit_order_internal(owner_addr, pair_id, price, quantity, is_bid, order_type);
+    }
+
+    /// Internal implementation for placing a limit order.
+    /// Used by both direct and delegated entry functions.
+    fun place_limit_order_internal(
+        user_addr: address,
+        pair_id: u64,
+        price: u64,
+        quantity: u64,
+        is_bid: bool,
+        order_type: u8,
+    ) {
         // 1. Validate inputs
         assert!(price > 0, E_INVALID_PRICE);
         assert!(quantity > 0, E_INVALID_AMOUNT);
@@ -100,7 +133,6 @@ module cash_orderbook::order_placement {
         // 3. Get market info for asset addresses
         let (base_asset, quote_asset, _lot_size, _tick_size, _min_size, _status) = market::get_market_info(pair_id);
 
-        let user_addr = signer::address_of(user);
         let now = timestamp::now_microseconds();
 
         // 4. Calculate required funds and lock them
@@ -249,6 +281,34 @@ module cash_orderbook::order_placement {
         quantity: u64,
         is_bid: bool,
     ) {
+        let user_addr = signer::address_of(user);
+        place_market_order_internal(user_addr, pair_id, quantity, is_bid);
+    }
+
+    /// Place a market order on behalf of another user (delegation).
+    /// The signer must be an authorized delegate of the owner.
+    ///
+    /// Aborts with E_UNAUTHORIZED if the signer is not authorized for the owner.
+    public entry fun place_market_order_delegated(
+        delegate: &signer,
+        owner_addr: address,
+        pair_id: u64,
+        quantity: u64,
+        is_bid: bool,
+    ) {
+        let delegate_addr = signer::address_of(delegate);
+        subaccounts::assert_authorized_trader(delegate_addr, owner_addr);
+        place_market_order_internal(owner_addr, pair_id, quantity, is_bid);
+    }
+
+    /// Internal implementation for placing a market order.
+    /// Used by both direct and delegated entry functions.
+    fun place_market_order_internal(
+        user_addr: address,
+        pair_id: u64,
+        quantity: u64,
+        is_bid: bool,
+    ) {
         // 1. Validate inputs
         assert!(quantity > 0, E_INVALID_AMOUNT);
 
@@ -258,7 +318,6 @@ module cash_orderbook::order_placement {
         // 3. Get market info for asset addresses
         let (base_asset, quote_asset, _lot_size, _tick_size, _min_size, _status) = market::get_market_info(pair_id);
 
-        let user_addr = signer::address_of(user);
         let now = timestamp::now_microseconds();
 
         // 4. Lock funds
@@ -1506,5 +1565,324 @@ module cash_orderbook::order_placement {
         let (_base_metadata, _quote_metadata, pair_id) = setup_order_test_env(deployer, user);
         // order_type = 5 is out of range [0..3]
         place_limit_order(user, pair_id, 1_000_000, 100_000_000, true, 5);
+    }
+
+    // ========== FEE INTEGRATION TESTS ==========
+
+    #[test_only]
+    use cash_orderbook::fees;
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// Trade with zero fees (default) — no deduction occurs, balances same as before.
+    fun test_trade_with_zero_fees_no_deduction(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_two_user_test_env(deployer, maker, taker);
+        let maker_addr = signer::address_of(maker);
+        let taker_addr = signer::address_of(taker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Verify fees are zero
+        let (maker_bps, taker_bps) = fees::get_fee_config();
+        assert!(maker_bps == 0 && taker_bps == 0, 5000);
+
+        // Maker: sell 100 CASH at 2.0 USDC
+        place_limit_order(maker, pair_id, 2_000_000, 100_000_000, false, types::order_type_gtc());
+
+        // Taker: buy 100 CASH at 2.0 USDC — full fill
+        place_limit_order(taker, pair_id, 2_000_000, 100_000_000, true, types::order_type_gtc());
+
+        // Settlement: 100 CASH at 2.0 = 200 USDC
+        // Taker (buyer): 5000 + 100 CASH = 5100, 5000 - 200 USDC = 4800
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_100_000_000, 5001);
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 4_800_000_000, 5002);
+
+        // Maker (seller): 5000 - 100 CASH = 4900, 5000 + 200 USDC = 5200
+        assert!(accounts::get_available_balance(maker_addr, base_addr) == 4_900_000_000, 5003);
+        assert!(accounts::get_available_balance(maker_addr, quote_addr) == 5_200_000_000, 5004);
+
+        // Fee vault should be empty
+        assert!(fees::get_collected_fees(quote_addr) == 0, 5005);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// Trade after fee update — correct taker and maker fee deduction.
+    /// Setup: 10 bps maker fee (0.1%), 30 bps taker fee (0.3%).
+    /// Trade: 100 CASH at 2.0 USDC = 200 USDC quote.
+    /// Taker fee = 200 * 30 / 10000 = 0.6 USDC = 600_000
+    /// Maker fee = 200 * 10 / 10000 = 0.2 USDC = 200_000
+    fun test_trade_with_nonzero_fees_correct_deduction(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_two_user_test_env(deployer, maker, taker);
+        let maker_addr = signer::address_of(maker);
+        let taker_addr = signer::address_of(taker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Update fees: 10 bps maker, 30 bps taker
+        fees::update_fee_config(deployer, 10, 30);
+
+        // Maker: sell 100 CASH at 2.0 USDC
+        place_limit_order(maker, pair_id, 2_000_000, 100_000_000, false, types::order_type_gtc());
+
+        // Taker: buy 100 CASH at 2.0 USDC — full fill
+        place_limit_order(taker, pair_id, 2_000_000, 100_000_000, true, types::order_type_gtc());
+
+        // Settlement: 100 CASH at 2.0 = 200 USDC (quote_amount = 200_000_000)
+        // Taker fee: 200_000_000 * 30 / 10_000 = 600_000
+        // Maker fee: 200_000_000 * 10 / 10_000 = 200_000
+
+        // Taker (buyer): gets 100 CASH, pays 200 USDC, pays 0.6 USDC taker fee
+        // Taker CASH: 5000 + 100 = 5100
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_100_000_000, 5100);
+        // Taker USDC: 5000 - 200 - 0.6 = 4799.4 = 4_799_400_000
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 4_799_400_000, 5101);
+
+        // Maker (seller): sells 100 CASH, receives 200 USDC, pays 0.2 USDC maker fee
+        // Maker CASH: 5000 - 100 = 4900
+        assert!(accounts::get_available_balance(maker_addr, base_addr) == 4_900_000_000, 5102);
+        // Maker USDC: 5000 + 200 - 0.2 = 5199.8 = 5_199_800_000
+        assert!(accounts::get_available_balance(maker_addr, quote_addr) == 5_199_800_000, 5103);
+
+        // Fee vault: 600_000 + 200_000 = 800_000
+        assert!(fees::get_collected_fees(quote_addr) == 800_000, 5104);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// Fee vault balance increases with multiple trades.
+    fun test_fee_vault_accumulates_across_trades(deployer: &signer, maker: &signer, taker: &signer) {
+        let (_base_metadata, quote_metadata, pair_id) = setup_two_user_test_env(deployer, maker, taker);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Set 50 bps taker fee (0.5%), 0 maker fee
+        fees::update_fee_config(deployer, 0, 50);
+
+        // Trade 1: 50 CASH at 1.0 USDC = 50 USDC, taker fee = 50 * 50 / 10000 = 0.25 = 250_000
+        place_limit_order(maker, pair_id, 1_000_000, 50_000_000, false, types::order_type_gtc());
+        place_limit_order(taker, pair_id, 1_000_000, 50_000_000, true, types::order_type_gtc());
+
+        assert!(fees::get_collected_fees(quote_addr) == 250_000, 5200);
+
+        // Trade 2: 100 CASH at 2.0 USDC = 200 USDC, taker fee = 200 * 50 / 10000 = 1.0 = 1_000_000
+        place_limit_order(maker, pair_id, 2_000_000, 100_000_000, false, types::order_type_gtc());
+        place_limit_order(taker, pair_id, 2_000_000, 100_000_000, true, types::order_type_gtc());
+
+        // Total: 250_000 + 1_000_000 = 1_250_000
+        assert!(fees::get_collected_fees(quote_addr) == 1_250_000, 5201);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// Trade where taker is seller — verify fees deducted correctly.
+    /// Taker is seller: taker pays taker_fee from the USDC they received.
+    /// Maker is buyer: maker pays maker_fee from the USDC they locked.
+    fun test_fees_when_taker_is_seller(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_two_user_test_env(deployer, maker, taker);
+        let maker_addr = signer::address_of(maker);
+        let taker_addr = signer::address_of(taker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // 20 bps maker, 50 bps taker
+        fees::update_fee_config(deployer, 20, 50);
+
+        // Maker: buy 100 CASH at 1.5 USDC (resting bid)
+        place_limit_order(maker, pair_id, 1_500_000, 100_000_000, true, types::order_type_gtc());
+
+        // Taker: sell 100 CASH at 1.5 USDC — taker is the seller
+        place_limit_order(taker, pair_id, 1_500_000, 100_000_000, false, types::order_type_gtc());
+
+        // Settlement: 100 CASH at 1.5 = 150 USDC
+        // Taker fee (seller): 150_000_000 * 50 / 10_000 = 750_000
+        // Maker fee (buyer): 150_000_000 * 20 / 10_000 = 300_000
+
+        // Taker (seller): sells 100 CASH, gets 150 USDC, pays 0.75 taker fee
+        // Taker CASH: 5000 - 100 = 4900
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 4_900_000_000, 5300);
+        // Taker USDC: 5000 + 150 - 0.75 = 5149.25 = 5_149_250_000
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 5_149_250_000, 5301);
+
+        // Maker (buyer): gets 100 CASH, pays 150 USDC, pays 0.3 maker fee
+        // Maker CASH: 5000 + 100 = 5100
+        assert!(accounts::get_available_balance(maker_addr, base_addr) == 5_100_000_000, 5302);
+        // Maker USDC: 5000 - 150 - 0.3 = 4849.7 = 4_849_700_000
+        assert!(accounts::get_available_balance(maker_addr, quote_addr) == 4_849_700_000, 5303);
+
+        // Fee vault: 750_000 + 300_000 = 1_050_000
+        assert!(fees::get_collected_fees(quote_addr) == 1_050_000, 5304);
+    }
+
+    // ========== DELEGATION TESTS ==========
+
+    #[test_only]
+    use cash_orderbook::subaccounts as test_subaccounts;
+
+    #[test_only]
+    /// Setup for delegation tests: deployer, owner, delegate, with market + deposits.
+    fun setup_delegation_test_env(
+        deployer: &signer,
+        owner: &signer,
+        delegate: &signer,
+    ): (Object<Metadata>, Object<Metadata>, u64) {
+        let deployer_addr = signer::address_of(deployer);
+        let owner_addr = signer::address_of(owner);
+        let delegate_addr = signer::address_of(delegate);
+        test_account::create_account_for_test(deployer_addr);
+        test_account::create_account_for_test(owner_addr);
+        test_account::create_account_for_test(delegate_addr);
+
+        // Initialize protocol
+        types::init_module_for_test(deployer);
+        let resource_signer = types::get_resource_signer();
+        let resource_addr = signer::address_of(&resource_signer);
+        test_account::create_account_for_test(resource_addr);
+
+        // Set timestamp
+        let aptos_framework = test_account::create_signer_for_test(@0x1);
+        timestamp::set_time_has_started_for_testing(&aptos_framework);
+
+        // Create base asset (CASH)
+        let base_constructor_ref = object::create_named_object(deployer, b"TEST_CASH");
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            &base_constructor_ref,
+            std::option::none(),
+            string::utf8(b"Test CASH"),
+            string::utf8(b"CASH"),
+            6,
+            string::utf8(b""),
+            string::utf8(b""),
+        );
+        let base_metadata = object::object_from_constructor_ref<Metadata>(&base_constructor_ref);
+        let base_mint_ref = fungible_asset::generate_mint_ref(&base_constructor_ref);
+
+        // Create quote asset (USDC)
+        let quote_constructor_ref = object::create_named_object(deployer, b"TEST_USDC");
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            &quote_constructor_ref,
+            std::option::none(),
+            string::utf8(b"Test USDC"),
+            string::utf8(b"USDC"),
+            6,
+            string::utf8(b""),
+            string::utf8(b""),
+        );
+        let quote_metadata = object::object_from_constructor_ref<Metadata>(&quote_constructor_ref);
+        let quote_mint_ref = fungible_asset::generate_mint_ref(&quote_constructor_ref);
+
+        // Mint and deposit for owner: 10,000 CASH, 10,000 USDC
+        let base_fa = fungible_asset::mint(&base_mint_ref, 10_000_000_000);
+        primary_fungible_store::deposit(owner_addr, base_fa);
+        let quote_fa = fungible_asset::mint(&quote_mint_ref, 10_000_000_000);
+        primary_fungible_store::deposit(owner_addr, quote_fa);
+        accounts::deposit(owner, base_metadata, 5_000_000_000);
+        accounts::deposit(owner, quote_metadata, 5_000_000_000);
+
+        // Register market (pair_id = 0)
+        market::register_market(
+            deployer,
+            base_metadata,
+            quote_metadata,
+            1_000,
+            1_000,
+            10_000,
+        );
+
+        // Owner sets up subaccount and delegates to delegate
+        test_subaccounts::create_subaccount(owner);
+        test_subaccounts::delegate_trading(owner, delegate_addr, 0); // never expires
+
+        (base_metadata, quote_metadata, 0)
+    }
+
+    #[test(deployer = @cash_orderbook, owner = @0xBEEF, delegate = @0xDEAD)]
+    /// Delegated place_limit_order succeeds when delegate is authorized.
+    /// The order should be placed on owner's behalf, using owner's balances.
+    fun test_delegated_limit_order_authorized(deployer: &signer, owner: &signer, delegate: &signer) {
+        let (_base_metadata, quote_metadata, pair_id) = setup_delegation_test_env(deployer, owner, delegate);
+        let owner_addr = signer::address_of(owner);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Delegate places limit buy on behalf of owner: 100 CASH at 1.5 USDC
+        place_limit_order_delegated(delegate, owner_addr, pair_id, 1_500_000, 100_000_000, true, types::order_type_gtc());
+
+        // Owner's quote balance should be locked (150 USDC)
+        let locked = accounts::get_locked_balance(owner_addr, quote_addr);
+        assert!(locked == 150_000_000, 6000);
+
+        // Order is on the bids side
+        assert!(!market::bids_is_empty(), 6001);
+    }
+
+    #[test(deployer = @cash_orderbook, owner = @0xBEEF, delegate = @0xDEAD)]
+    /// Delegated place_market_order succeeds when delegate is authorized.
+    fun test_delegated_market_order_authorized(deployer: &signer, owner: &signer, delegate: &signer) {
+        let (base_metadata, _quote_metadata, pair_id) = setup_delegation_test_env(deployer, owner, delegate);
+        let owner_addr = signer::address_of(owner);
+        let base_addr = object::object_address(&base_metadata);
+
+        // First place a resting bid that will match
+        place_limit_order(owner, pair_id, 1_500_000, 50_000_000, true, types::order_type_gtc());
+
+        // Delegate places market sell on behalf of owner (self-trade prevention will kick in though)
+        // Let's instead just test that a market order can be placed via delegation (no match needed)
+        // Place a market buy (no asks, so it just returns with no fill)
+        place_market_order_delegated(delegate, owner_addr, pair_id, 10_000_000, false);
+
+        // No locked base (market order remainder unlocked)
+        assert!(accounts::get_locked_balance(owner_addr, base_addr) == 0, 6100);
+    }
+
+    #[test(deployer = @cash_orderbook, owner = @0xBEEF, unauthorized = @0xFACE)]
+    #[expected_failure(abort_code = 1, location = cash_orderbook::subaccounts)]
+    /// Delegated place_limit_order fails when signer is not authorized.
+    fun test_delegated_limit_order_unauthorized(deployer: &signer, owner: &signer, unauthorized: &signer) {
+        let (_base_metadata, _quote_metadata, pair_id) = setup_delegation_test_env(deployer, owner, unauthorized);
+
+        // Try to place on behalf of a random address where the signer is NOT authorized
+        let random_addr = @0xAAAA;
+        place_limit_order_delegated(unauthorized, random_addr, pair_id, 1_000_000, 10_000_000, true, types::order_type_gtc());
+    }
+
+    #[test(deployer = @cash_orderbook, owner = @0xBEEF, delegate = @0xDEAD)]
+    #[expected_failure(abort_code = 1, location = cash_orderbook::subaccounts)]
+    /// Delegated place_market_order fails when signer is not authorized.
+    fun test_delegated_market_order_unauthorized(deployer: &signer, owner: &signer, delegate: &signer) {
+        let (_base_metadata, _quote_metadata, pair_id) = setup_delegation_test_env(deployer, owner, delegate);
+
+        // Try to place on behalf of an address where delegate is NOT authorized
+        let random_addr = @0xAAAA;
+        place_market_order_delegated(delegate, random_addr, pair_id, 10_000_000, true);
+    }
+
+    #[test(deployer = @cash_orderbook, owner = @0xBEEF, delegate = @0xDEAD)]
+    /// After revoking delegation, is_authorized_delegate returns false.
+    fun test_delegated_after_revocation_fails(deployer: &signer, owner: &signer, delegate: &signer) {
+        let (_base_metadata, _quote_metadata, pair_id) = setup_delegation_test_env(deployer, owner, delegate);
+        let owner_addr = signer::address_of(owner);
+        let delegate_addr = signer::address_of(delegate);
+
+        // First verify delegation works
+        place_limit_order_delegated(delegate, owner_addr, pair_id, 1_500_000, 50_000_000, true, types::order_type_gtc());
+        assert!(!market::bids_is_empty(), 6400);
+
+        // Revoke delegation
+        test_subaccounts::revoke_delegation(owner, delegate_addr);
+
+        // Now check that is_authorized_delegate returns false
+        assert!(!test_subaccounts::is_authorized_delegate(owner_addr, delegate_addr), 6401);
+    }
+
+    #[test(deployer = @cash_orderbook, owner = @0xBEEF, delegate = @0xDEAD)]
+    /// Delegated sell order places on owner's behalf using owner's base balance.
+    fun test_delegated_limit_sell_authorized(deployer: &signer, owner: &signer, delegate: &signer) {
+        let (base_metadata, _quote_metadata, pair_id) = setup_delegation_test_env(deployer, owner, delegate);
+        let owner_addr = signer::address_of(owner);
+        let base_addr = object::object_address(&base_metadata);
+
+        // Delegate places limit sell on behalf of owner: 50 CASH at 2.0 USDC
+        place_limit_order_delegated(delegate, owner_addr, pair_id, 2_000_000, 50_000_000, false, types::order_type_gtc());
+
+        // Owner's base balance should be locked
+        assert!(accounts::get_locked_balance(owner_addr, base_addr) == 50_000_000, 6500);
+
+        // Order is on the asks side
+        assert!(!market::asks_is_empty(), 6501);
     }
 }

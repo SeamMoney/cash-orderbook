@@ -13,6 +13,7 @@ module cash_orderbook::settlement {
     use cash_orderbook::accounts;
     use cash_orderbook::market;
     use cash_orderbook::matching::{Self, Trade};
+    use cash_orderbook::fees;
 
     // ========== Events ==========
 
@@ -76,6 +77,11 @@ module cash_orderbook::settlement {
     }
 
     /// Settle a single trade.
+    /// After calculating quote_amount, fees are computed and deducted:
+    ///   - Taker fee: deducted from the taker's side (buyer pays more, or seller receives less)
+    ///   - Maker fee: deducted from the maker's side
+    ///   - Fees are credited to the fee vault via fees::collect_fee()
+    ///   - When fees are 0 (default), no deduction occurs (backward compatible)
     fun settle_single_trade(
         trade: &Trade,
         base_asset: address,
@@ -95,6 +101,14 @@ module cash_orderbook::settlement {
         // Use u128 to prevent overflow
         let quote_amount = (((fill_price as u128) * (fill_quantity as u128)) / (price_scale as u128) as u64);
 
+        // Calculate fees
+        let taker_fee = fees::calculate_taker_fee(quote_amount);
+        let maker_fee = fees::calculate_maker_fee(quote_amount);
+
+        // Determine taker and maker addresses
+        let taker_addr = if (taker_is_bid) { buyer } else { seller };
+        let maker_addr = if (taker_is_bid) { seller } else { buyer };
+
         // Transfer base asset (CASH): seller's locked -> buyer's available
         // The seller had locked their CASH when placing a sell order
         accounts::debit_locked(seller, base_asset, fill_quantity);
@@ -104,6 +118,19 @@ module cash_orderbook::settlement {
         // The buyer had locked their USDC when placing a buy order
         accounts::debit_locked(buyer, quote_asset, quote_amount);
         accounts::credit_available(seller, quote_asset, quote_amount);
+
+        // Collect taker fee: deduct from taker's available balance in quote asset
+        // (taker just received credit or had quote deducted — fee comes from their available)
+        if (taker_fee > 0) {
+            accounts::debit_available(taker_addr, quote_asset, taker_fee);
+            fees::collect_fee(quote_asset, taker_fee, false, taker_addr);
+        };
+
+        // Collect maker fee: deduct from maker's available balance in quote asset
+        if (maker_fee > 0) {
+            accounts::debit_available(maker_addr, quote_asset, maker_fee);
+            fees::collect_fee(quote_asset, maker_fee, true, maker_addr);
+        };
 
         // Emit TradeEvent
         event::emit(TradeEvent {
