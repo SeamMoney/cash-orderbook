@@ -10,6 +10,10 @@ interface SwapPriceDetailsProps {
   quote: SwapQuote | null;
   direction: SwapDirection;
   loading: boolean;
+  /** Symbol of the base asset (default: CASH) */
+  baseSymbol?: string;
+  /** Symbol of the quote asset (default: USD1) */
+  quoteSymbol?: string;
 }
 
 /**
@@ -24,6 +28,8 @@ export function SwapPriceDetails({
   quote,
   direction,
   loading,
+  baseSymbol = "CASH",
+  quoteSymbol = "USD1",
 }: SwapPriceDetailsProps): React.ReactElement | null {
   const [expanded, setExpanded] = useState(false);
 
@@ -75,15 +81,12 @@ export function SwapPriceDetails({
     );
   }
 
-  const rateLabel =
-    direction === "sell"
-      ? `1 CASH = ${formatBalance(quote.effectivePrice, 6)} USDC`
-      : `1 CASH = ${formatBalance(quote.effectivePrice, 6)} USDC`;
+  const rateLabel = `1 ${baseSymbol} = ${formatBalance(quote.effectivePrice, 6)} ${quoteSymbol}`;
 
   const minimumLabel =
     direction === "sell"
-      ? `${formatBalance(quote.minimumReceived, 6)} USDC`
-      : `${formatBalance(quote.minimumReceived, 6)} CASH`;
+      ? `${formatBalance(quote.minimumReceived, 6)} ${quoteSymbol}`
+      : `${formatBalance(quote.minimumReceived, 6)} ${baseSymbol}`;
 
   const showPriceImpactWarning = quote.priceImpact > 0.001;
   const showPriceImpactDanger = quote.priceImpact > 0.01;

@@ -38,14 +38,11 @@ export function PriceQuote({
   const showPriceImpactWarning = quote.priceImpact > 0.001; // > 0.1%
   const showPriceImpactDanger = quote.priceImpact > 0.01; // > 1%
 
-  const rateLabel =
-    direction === "sell"
-      ? `1 CASH = ${formatBalance(quote.effectivePrice, 6)} USDC`
-      : `1 CASH = ${formatBalance(quote.effectivePrice, 6)} USDC`;
+  const rateLabel = `1 CASH = ${formatBalance(quote.effectivePrice, 6)} USD1`;
 
   const minimumLabel =
     direction === "sell"
-      ? `${formatBalance(quote.minimumReceived, 6)} USDC`
+      ? `${formatBalance(quote.minimumReceived, 6)} USD1`
       : `${formatBalance(quote.minimumReceived, 6)} CASH`;
 
   return (

@@ -29,12 +29,14 @@ type SwapTab = "swap" | "limit";
 /** Which token selector slot is being edited */
 type SelectorSlot = "from" | "to" | null;
 
-/** CASH/USDC token metadata — lookup map */
+/** Token metadata — lookup map */
 const TOKENS: Record<string, TokenInfo> = Object.fromEntries(
   SUPPORTED_TOKENS.map((t) => [t.symbol, t]),
 );
 
-type TokenSymbol = string;
+/** Default tokens */
+const DEFAULT_FROM_TOKEN = TOKENS["USD1"] ?? SUPPORTED_TOKENS[1];
+const DEFAULT_TO_TOKEN = TOKENS["CASH"] ?? SUPPORTED_TOKENS[0];
 
 /**
  * SwapWidget — Uniswap-style swap card with Swap and Limit tabs.
@@ -66,11 +68,15 @@ export function SwapWidget(): React.ReactElement {
   const [activeTab, setActiveTab] = useState<SwapTab>("swap");
 
   // --- Swap tab state ---
-  const [direction, setDirection] = useState<SwapDirection>("sell");
+  const [fromToken, setFromToken] = useState<TokenInfo>(DEFAULT_FROM_TOKEN);
+  const [toToken, setToToken] = useState<TokenInfo>(DEFAULT_TO_TOKEN);
   const [inputAmount, setInputAmount] = useState("");
   const [quote, setQuote] = useState<SwapQuote | null>(null);
   const [isSwapping, setIsSwapping] = useState(false);
   const [directionRotation, setDirectionRotation] = useState(0);
+
+  // Derived direction for orderbook swap-quote compatibility
+  const direction: SwapDirection = toToken.symbol === "CASH" ? "buy" : "sell";
 
   // --- Token selector modal state ---
   const [selectorOpen, setSelectorOpen] = useState<SelectorSlot>(null);
@@ -86,21 +92,19 @@ export function SwapWidget(): React.ReactElement {
   // Debounce timer ref
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fromToken: TokenSymbol = direction === "sell" ? "CASH" : "USDC";
-  const toToken: TokenSymbol = direction === "sell" ? "USDC" : "CASH";
+  /** Resolve a token symbol to the user's available balance, or null */
+  const getTokenBalance = useCallback(
+    (symbol: string): number | null => {
+      if (!balances) return null;
+      if (symbol === "CASH") return balances.cash.available;
+      if (symbol === "USDC") return balances.usdc.available;
+      return null;
+    },
+    [balances],
+  );
 
-  // Determine user's available balance for the "from" asset
-  const fromBalance = balances
-    ? direction === "sell"
-      ? balances.cash.available
-      : balances.usdc.available
-    : null;
-
-  const toBalance = balances
-    ? direction === "sell"
-      ? balances.usdc.available
-      : balances.cash.available
-    : null;
+  const fromBalance = getTokenBalance(fromToken.symbol);
+  const toBalance = getTokenBalance(toToken.symbol);
 
   // Check if the input amount exceeds the user's available balance
   const inputNum = parseFloat(inputAmount);
@@ -141,31 +145,31 @@ export function SwapWidget(): React.ReactElement {
   }, [inputAmount, direction, depth]);
 
   const handleDirectionToggle = useCallback((): void => {
-    setDirection((prev) => (prev === "sell" ? "buy" : "sell"));
+    setFromToken((prev) => {
+      const next = toToken;
+      setToToken(prev);
+      return next;
+    });
     setInputAmount("");
     setQuote(null);
     setDirectionRotation((prev) => prev + 180);
-  }, []);
+  }, [toToken]);
 
   /** Handle token selection from the modal */
   const handleTokenSelect = useCallback(
     (token: TokenInfo): void => {
       if (selectorOpen === "from") {
-        // If user selects the same token that's currently on "to", swap direction
-        if (token.symbol === toToken) {
-          setDirection((prev) => (prev === "sell" ? "buy" : "sell"));
-        } else {
-          // Set direction based on what was selected as "from"
-          setDirection(token.symbol === "CASH" ? "sell" : "buy");
+        // If user selects the same token that's currently on "to", swap sides
+        if (token.symbol === toToken.symbol) {
+          setToToken(fromToken);
         }
+        setFromToken(token);
       } else if (selectorOpen === "to") {
-        // If user selects the same token that's currently on "from", swap direction
-        if (token.symbol === fromToken) {
-          setDirection((prev) => (prev === "sell" ? "buy" : "sell"));
-        } else {
-          // Set direction based on what was selected as "to"
-          setDirection(token.symbol === "USDC" ? "sell" : "buy");
+        // If user selects the same token that's currently on "from", swap sides
+        if (token.symbol === fromToken.symbol) {
+          setFromToken(toToken);
         }
+        setToToken(token);
       }
       setInputAmount("");
       setQuote(null);
@@ -332,7 +336,7 @@ export function SwapWidget(): React.ReactElement {
           : String(response);
 
       toast.success("Order placed", {
-        description: `${limitSide === "buy" ? "Buy" : "Sell"} ${amount} CASH @ ${price} USDC — Tx: ${txHash.slice(0, 10)}...${txHash.slice(-8)}`,
+        description: `${limitSide === "buy" ? "Buy" : "Sell"} ${amount} CASH @ ${price} USD1 — Tx: ${txHash.slice(0, 10)}...${txHash.slice(-8)}`,
         duration: 6000,
       });
 
@@ -451,7 +455,7 @@ export function SwapWidget(): React.ReactElement {
                 />
                 <TokenSelectorButton
                   ref={fromTokenBtnRef}
-                  symbol={fromToken}
+                  symbol={fromToken.symbol}
                   onClick={() => setSelectorOpen("from")}
                 />
               </div>
@@ -504,7 +508,7 @@ export function SwapWidget(): React.ReactElement {
                 </AnimatePresence>
                 <TokenSelectorButton
                   ref={toTokenBtnRef}
-                  symbol={toToken}
+                  symbol={toToken.symbol}
                   onClick={() => setSelectorOpen("to")}
                 />
               </div>
@@ -538,6 +542,8 @@ export function SwapWidget(): React.ReactElement {
               quote={quote}
               direction={direction}
               loading={depthLoading}
+              baseSymbol={direction === "sell" ? fromToken.symbol : toToken.symbol}
+              quoteSymbol={direction === "sell" ? toToken.symbol : fromToken.symbol}
             />
           </motion.div>
         ) : (
@@ -583,7 +589,7 @@ export function SwapWidget(): React.ReactElement {
             {/* Price Input */}
             <div className="rounded-xl bg-background border border-border p-4 mb-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-text-muted">Price (USDC)</span>
+                <span className="text-xs text-text-muted">Price (USD1)</span>
               </div>
               <input
                 type="text"
@@ -630,7 +636,7 @@ export function SwapWidget(): React.ReactElement {
                       parseFloat(limitPrice) * parseFloat(limitAmount),
                       2,
                     )}{" "}
-                    USDC
+                    USD1
                   </span>
                 </div>
               </div>
@@ -674,7 +680,7 @@ export function SwapWidget(): React.ReactElement {
         onSelect={handleTokenSelect}
         balances={balances}
         selectedSymbol={
-          selectorOpen === "from" ? fromToken : selectorOpen === "to" ? toToken : undefined
+          selectorOpen === "from" ? fromToken.symbol : selectorOpen === "to" ? toToken.symbol : undefined
         }
         triggerRef={selectorOpen === "from" ? fromTokenBtnRef : toTokenBtnRef}
       />
@@ -694,7 +700,7 @@ export function SwapWidget(): React.ReactElement {
  */
 const TokenSelectorButton = forwardRef<
   HTMLButtonElement,
-  { symbol: TokenSymbol; onClick: () => void }
+  { symbol: string; onClick: () => void }
 >(function TokenSelectorButton({ symbol, onClick }, ref): React.ReactElement {
   const token = TOKENS[symbol];
 

@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, X } from "lucide-react";
 import { List, type RowComponentProps } from "react-window";
 import { AutoSizer } from "react-virtualized-auto-sizer";
+import { STABLECOINS, CASH_DECIMALS } from "@cash/shared";
 import type { UserBalances } from "@cash/shared";
 import { formatBalance } from "@/lib/utils";
 
@@ -39,24 +40,24 @@ function useIsDesktop(): boolean {
   );
 }
 
-/** All supported tokens */
+/** All supported tokens — CASH first, then stablecoins sorted: USD1, USDC, USDT, USDe, GHO */
 export const SUPPORTED_TOKENS: TokenInfo[] = [
   {
     symbol: "CASH",
     name: "CASH",
-    decimals: 6,
-    gradient: "from-emerald-400 to-emerald-600",
+    decimals: CASH_DECIMALS,
+    gradient: "from-green-400 to-emerald-600",
   },
-  {
-    symbol: "USDC",
-    name: "USD Coin",
-    decimals: 6,
-    gradient: "from-blue-400 to-blue-600",
-  },
+  ...STABLECOINS.map((s) => ({
+    symbol: s.symbol,
+    name: s.name,
+    decimals: s.decimals,
+    gradient: s.gradient,
+  })),
 ];
 
-/** Popular token symbols shown at the top */
-const POPULAR_SYMBOLS = ["CASH", "USDC"];
+/** Popular token symbols shown at the top (top 4) */
+const POPULAR_SYMBOLS = ["CASH", "USD1", "USDC", "USDT"];
 
 /** Props for the TokenSelectorModal */
 interface TokenSelectorModalProps {
@@ -130,7 +131,7 @@ function TokenRow({
  *
  * Features:
  * - Search input that filters by name/ticker
- * - Popular tokens row (CASH, USDC)
+ * - Popular tokens row (CASH, USD1, USDC, USDT)
  * - Virtualized token list with icon + name + ticker + balance
  * - Framer Motion scale/fade enter/exit animation
  * - Escape closes modal, focus returns to trigger
@@ -171,7 +172,7 @@ export function TokenSelectorModal({
     });
   }, [search]);
 
-  // Popular tokens — always show both CASH and USDC
+  // Popular tokens — top 4: CASH, USD1, USDC, USDT
   const popularTokens = useMemo(
     () =>
       SUPPORTED_TOKENS.filter((t) => POPULAR_SYMBOLS.includes(t.symbol)),
@@ -191,6 +192,7 @@ export function TokenSelectorModal({
       if (!balances) return null;
       if (symbol === "CASH") return balances.cash.available;
       if (symbol === "USDC") return balances.usdc.available;
+      // Tokens without a balance endpoint show '—' (return null)
       return null;
     },
     [balances],
