@@ -20,6 +20,7 @@ import {
   SUPPORTED_TOKENS,
   type TokenInfo,
 } from "@/components/swap/token-selector-modal";
+import { WalletSelector } from "@/components/wallet/wallet-selector";
 import { formatBalance } from "@/lib/utils";
 
 /** Tab types for the swap widget */
@@ -57,6 +58,9 @@ export function SwapWidget(): React.ReactElement {
 
   // Subscribe to WS account channel for real-time balance updates
   useAccountSubscription(walletAddress, updateBalances);
+
+  // Wallet selector modal state (for CTA "Connect Wallet" clicks)
+  const [walletSelectorOpen, setWalletSelectorOpen] = useState(false);
 
   // Active tab
   const [activeTab, setActiveTab] = useState<SwapTab>("swap");
@@ -350,28 +354,28 @@ export function SwapWidget(): React.ReactElement {
   ]);
 
   // CTA button state for Swap tab
-  const getSwapCtaState = (): { label: string; disabled: boolean } => {
-    if (!connected) return { label: "Connect Wallet", disabled: true };
+  const getSwapCtaState = (): { label: string; disabled: boolean; connectWallet: boolean } => {
+    if (!connected) return { label: "Connect Wallet", disabled: false, connectWallet: true };
     if (!inputAmount || parseFloat(inputAmount) <= 0)
-      return { label: "Enter an amount", disabled: true };
+      return { label: "Enter an amount", disabled: true, connectWallet: false };
     if (insufficientBalance)
-      return { label: "Insufficient balance", disabled: true };
-    if (!quote) return { label: "Fetching quote...", disabled: true };
+      return { label: "Insufficient balance", disabled: true, connectWallet: false };
+    if (!quote) return { label: "Fetching quote...", disabled: true, connectWallet: false };
     if (!quote.sufficientLiquidity)
-      return { label: "Insufficient liquidity", disabled: true };
-    if (isSwapping) return { label: "Swapping...", disabled: true };
-    return { label: "Swap", disabled: false };
+      return { label: "Insufficient liquidity", disabled: true, connectWallet: false };
+    if (isSwapping) return { label: "Swapping...", disabled: true, connectWallet: false };
+    return { label: "Swap", disabled: false, connectWallet: false };
   };
 
   // CTA button state for Limit tab
-  const getLimitCtaState = (): { label: string; disabled: boolean } => {
-    if (!connected) return { label: "Connect Wallet", disabled: true };
+  const getLimitCtaState = (): { label: string; disabled: boolean; connectWallet: boolean } => {
+    if (!connected) return { label: "Connect Wallet", disabled: false, connectWallet: true };
     if (!limitPrice || parseFloat(limitPrice) <= 0)
-      return { label: "Enter a price", disabled: true };
+      return { label: "Enter a price", disabled: true, connectWallet: false };
     if (!limitAmount || parseFloat(limitAmount) <= 0)
-      return { label: "Enter an amount", disabled: true };
-    if (isPlacingOrder) return { label: "Placing order...", disabled: true };
-    return { label: "Place Order", disabled: false };
+      return { label: "Enter an amount", disabled: true, connectWallet: false };
+    if (isPlacingOrder) return { label: "Placing order...", disabled: true, connectWallet: false };
+    return { label: "Place Order", disabled: false, connectWallet: false };
   };
 
   const swapCta = getSwapCtaState();
@@ -510,7 +514,7 @@ export function SwapWidget(): React.ReactElement {
 
             {/* CTA Button */}
             <button
-              onClick={handleSwap}
+              onClick={swapCta.connectWallet ? () => setWalletSelectorOpen(true) : handleSwap}
               disabled={swapCta.disabled}
               className="mt-4 w-full rounded-2xl py-3.5 text-base font-semibold transition-all
                 bg-primary text-primary-foreground hover:brightness-110
@@ -624,15 +628,17 @@ export function SwapWidget(): React.ReactElement {
 
             {/* Place Order CTA */}
             <button
-              onClick={handlePlaceLimitOrder}
+              onClick={limitCta.connectWallet ? () => setWalletSelectorOpen(true) : handlePlaceLimitOrder}
               disabled={limitCta.disabled}
               className={`mt-1 w-full rounded-2xl py-3.5 text-base font-semibold transition-all
                 disabled:bg-secondary disabled:text-text-muted disabled:cursor-not-allowed
                 ${
                   !limitCta.disabled
-                    ? limitSide === "buy"
-                      ? "bg-cash-green text-primary-foreground hover:brightness-110"
-                      : "bg-cash-red text-white hover:brightness-110"
+                    ? limitCta.connectWallet
+                      ? "bg-primary text-primary-foreground hover:brightness-110"
+                      : limitSide === "buy"
+                        ? "bg-cash-green text-primary-foreground hover:brightness-110"
+                        : "bg-cash-red text-white hover:brightness-110"
                     : ""
                 }`}
             >
@@ -660,6 +666,12 @@ export function SwapWidget(): React.ReactElement {
         excludeSymbol={
           selectorOpen === "from" ? toToken : selectorOpen === "to" ? fromToken : undefined
         }
+      />
+
+      {/* Wallet Selector Modal — opened by CTA when disconnected */}
+      <WalletSelector
+        isOpen={walletSelectorOpen}
+        onClose={() => setWalletSelectorOpen(false)}
       />
     </div>
   );
