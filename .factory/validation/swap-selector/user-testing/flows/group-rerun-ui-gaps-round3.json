@@ -1,0 +1,72 @@
+{
+  "groupId": "group-rerun-ui-gaps-round3",
+  "testedAt": "2026-03-31T12:31:53.939039+00:00",
+  "isolation": {
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "surface": "agent-browser",
+    "browserSession": "5e34a6e47763__u1",
+    "appUrl": "http://localhost:3102",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-SWAP-004",
+      "title": "Token selector modal",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Click the 'You pay' token selector button",
+          "expected": "Modal opens with search input and CASH/USDC token rows including icon, name, ticker, and balance value/placeholder",
+          "observed": "Modal opened with search input 'Search by name or ticker'; rows showed CASH and USD Coin (USDC) with icon initials and visible balance placeholder '\u2014'."
+        },
+        {
+          "action": "Select USDC from the token list",
+          "expected": "Modal closes and selected input token updates",
+          "observed": "Modal closed and the 'You pay' selector updated from CASH to USDC."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "swap-selector/group-rerun-ui-gaps-round3/VAL-SWAP-004-modal-open.png",
+          "swap-selector/group-rerun-ui-gaps-round3/VAL-SWAP-004-token-selected.png"
+        ],
+        "consoleErrors": "none (agent-browser errors returned [])",
+        "network": "Background fetches observed: GET /candles?interval=5m, GET /market, GET /depth"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SWAP-010",
+      "title": "Price details expandable",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Inspect swap card default state below CTA",
+          "expected": "A collapsed price-details section is visible by default",
+          "observed": "Placeholder text 'Enter an amount to see price details' is visible in the default swap card state."
+        },
+        {
+          "action": "Attempt to expand price details by clicking the visible placeholder text",
+          "expected": "Section expands on click and shows exchange rate / price impact / minimum received, or explicit placeholder content when no quote",
+          "observed": "No expansion occurred; no exchange rate, price impact, or minimum received fields appeared, and accessibility snapshot showed no expandable control for price details."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "swap-selector/group-rerun-ui-gaps-round3/VAL-SWAP-010-collapsed-default.png",
+          "swap-selector/group-rerun-ui-gaps-round3/VAL-SWAP-010-expand-attempt.png"
+        ],
+        "consoleErrors": "none (agent-browser errors returned [])",
+        "network": "Background fetches observed: GET /candles?interval=5m, GET /market, GET /depth"
+      },
+      "issues": "Price details area is visible only as static placeholder text; it does not expose an expandable interaction to reveal detailed rows."
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Re-validated 2 assertions: VAL-SWAP-004 passed; VAL-SWAP-010 failed because price details did not expand to show detailed rows."
+}

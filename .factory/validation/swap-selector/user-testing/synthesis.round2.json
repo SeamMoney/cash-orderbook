@@ -1,0 +1,27 @@
+{
+  "milestone": "swap-selector",
+  "round": 2,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 3,
+    "passed": 1,
+    "failed": 2,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-A11Y-002"
+  ],
+  "failedAssertions": [
+    {
+      "id": "VAL-SWAP-004",
+      "reason": "Re-validation confirms the token selector modal opens and selection works, but per-token user balances are still not rendered in token rows."
+    },
+    {
+      "id": "VAL-SWAP-010",
+      "reason": "Re-validation confirms there is still no expandable price details section (exchange rate, price impact, minimum received) in the swap card."
+    }
+  ],
+  "blockedAssertions": [],
+  "appliedUpdates": [],
+  "previousRound": ".factory/validation/swap-selector/user-testing/synthesis.round1.json"
+}
