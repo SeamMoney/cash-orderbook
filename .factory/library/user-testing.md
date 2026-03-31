@@ -41,6 +41,6 @@
 - `pnpm --filter @cash/scripts seed-orderbook` currently requires `APTOS_PRIVATE_KEY`; without this env var, local candle/trade seeding is unavailable.
 - Mobile responsive tests: set viewport to 375x812 (iPhone SE) and 768x1024 (iPad)
 - Chart tests may show empty state if API is not running — VAL-ERROR-001 validates this is handled
-- In local runs, `/candles` may return empty arrays even when API is healthy; treat line-render/crosshair assertions as **blocked** unless candle data is seeded.
+- In development mode, the frontend now falls back to deterministic mock candles when `/candles` is empty, so line-render/crosshair assertions are testable without seeding; in non-development builds, seed candle data if the API returns empty arrays.
 - Observed valid candle intervals from API: `1m`, `5m`, `15m`, `1h`, `1d`; `4h` returned HTTP 400 in this environment.
 - For API-unavailable assertions, prefer browser-level request blocking (`http://localhost:3100/**`) instead of stopping shared services, so parallel validators remain isolated.

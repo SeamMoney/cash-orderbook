@@ -1,0 +1,33 @@
+{
+  "featureId": "animations-realtime-polish",
+  "reviewedAt": "2026-03-31T13:18:16Z",
+  "commitId": "aa42b5d116b8036beb3b3dcda75bc69b403a33fe",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The commit implements most polish work (page transition, token-header flash animation, modal/tab/row animations, skeletons, and dev candle fallback), but it does not satisfy the feature contract requirement that chart updates come from WebSocket data.",
+    "issues": [
+      {
+        "file": "web/components/price-chart.tsx",
+        "line": 44,
+        "severity": "blocking",
+        "description": "Feature contract expects chart updates with new data points from WS (features.json line 600), but PriceChart sources data only via useCandles(interval), which performs REST polling (web/hooks/use-candles.ts lines 44 and 84) and has no WebSocket subscription path."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Mission feature metadata references skillName 'frontend-ui-worker', but the worker reported that skill was unavailable in runtime and substituted 'frontend-worker'.",
+      "evidence": "features.json:589 sets skillName=frontend-ui-worker; handoff 2026-03-31T13-13-36-814Z... lines 96-98 record deviation using frontend-worker because frontend-ui-worker was not found."
+    },
+    {
+      "area": "knowledge",
+      "observation": "User-testing guidance still says chart line/crosshair assertions should be blocked unless candles are seeded, but this feature added a dev mock-candle fallback that makes those assertions executable without seeding.",
+      "evidence": ".factory/library/user-testing.md:44 says treat line-render/crosshair assertions as blocked unless seeded; web/hooks/use-candles.ts:26 and 51-64 now fall back to deterministic mock candles in development."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review failed due to one blocking gap: chart data is still REST-polled rather than WebSocket-driven as required by the feature contract."
+}

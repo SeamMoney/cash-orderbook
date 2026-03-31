@@ -1,0 +1,38 @@
+{
+  "featureId": "transactions-table",
+  "reviewedAt": "2026-03-31T13:17:23Z",
+  "commitId": "e099bd3",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "Implementation delivers the table, sorting, websocket updates, empty state, and token info UI, but it does not satisfy the Address column requirement because it renders trade IDs/random websocket IDs instead of participant addresses.",
+    "issues": [
+      {
+        "file": "web/components/transactions-table.tsx",
+        "line": 131,
+        "severity": "blocking",
+        "description": "The Address column uses `row.id` (`accessorFn: (row) => row.id`) rather than a trader address. This means values shown are trade IDs (and websocket fallback IDs like `ws-trade-...`), so expected Address behavior is not met."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Feature metadata references a non-existent skill (`frontend-ui-worker`), forcing workers to deviate to `frontend-worker`.",
+      "evidence": "transactions-table entry in mission features.json sets `skillName` to `frontend-ui-worker`; transcript skeleton shows Skill invocation failure for that name and fallback to `frontend-worker`."
+    },
+    {
+      "area": "skills",
+      "observation": "Skill guidance is inconsistent with observed mission verification flow: it requires a build step, but feature verification/handoff used only typecheck, lint, and visual checks.",
+      "evidence": ".factory/skills/frontend-ui-worker/SKILL.md step 6 requires `pnpm build`; transcript/handoff verification records only `pnpm typecheck` and `pnpm lint`."
+    },
+    {
+      "area": "knowledge",
+      "observation": "Feature requirements and API contract are misaligned: Address is required in the table, but `/trades` response does not include buyer/seller/maker addresses.",
+      "evidence": "Feature description/expectedBehavior require Address; mission AGENTS API reference and api/src/routes/trades.ts return `{ id, price, quantity, side, timestamp }` only."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed feature transactions-table via handoff, transcript skeleton, skill file, and commit e099bd3 diff. Result is FAIL due to a blocking Address-column mismatch (trade identifiers displayed instead of addresses), with additional shared-state gaps documented."
+}

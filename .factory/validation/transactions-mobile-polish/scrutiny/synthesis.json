@@ -1,0 +1,83 @@
+{
+  "milestone": "transactions-mobile-polish",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "pnpm -r test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm -r typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm -r lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 3,
+    "passed": 0,
+    "failed": 3,
+    "failedFeatures": [
+      "transactions-table",
+      "mobile-responsive",
+      "animations-realtime-polish"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "transactions-table",
+      "severity": "blocking",
+      "description": "Address column uses `row.id` in `web/components/transactions-table.tsx` instead of participant address, so required address behavior is not met."
+    },
+    {
+      "featureId": "mobile-responsive",
+      "severity": "blocking",
+      "description": "Mobile menu `ConnectButton` resolves to default `Button` height `h-9` (36px), below the required 44px touch target at 375px."
+    },
+    {
+      "featureId": "animations-realtime-polish",
+      "severity": "blocking",
+      "description": "Chart updates are still REST-polled via `useCandles` and do not subscribe to WebSocket data, contrary to feature requirement."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "library",
+      "description": "Updated `.factory/library/user-testing.md` to reflect new development mock-candle fallback so chart line/crosshair assertions are testable without seeding in dev mode.",
+      "sourceFeature": "animations-realtime-polish"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "skills",
+      "suggestion": "Normalize frontend skill naming/runtime availability and enforce that `features.json` only references installed skills; also reconcile frontend skill validator procedure (web-scoped + build requirement) with accepted mission verification flow.",
+      "evidence": "Multiple reviews reported `frontend-ui-worker` references while runtime required fallback to `frontend-worker`, and reviewers observed validator-procedure mismatch between skill instructions and recorded handoffs.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add explicit mobile touch-target minimum (44px) to core conventions/checklist so shared controls (like wallet connect) are not missed during responsive passes.",
+      "evidence": "Validation contract requires 44px minimum touch targets; review found mobile nav Connect Wallet control remained 36px due shared button defaults.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Align feature requirements with backend API contract for trades address fields (or specify approved fallback) before assigning Address-column assertions.",
+      "evidence": "Transactions feature requires Address display, while `/trades` API currently returns `{ id, price, quantity, side, timestamp }` without participant address fields.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Duplicate report that `frontend-ui-worker` was unavailable and replaced by `frontend-worker`.",
+      "reason": "duplicate"
+    }
+  ],
+  "previousRound": null
+}

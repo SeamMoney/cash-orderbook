@@ -1,0 +1,33 @@
+{
+  "featureId": "mobile-responsive",
+  "reviewedAt": "2026-03-31T13:17:44Z",
+  "commitId": "e798bbaa02c214521ecab1730c7dc841c9e93248",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The commit correctly introduces the mobile single-column layout, hamburger nav, inline mobile swap placement, responsive typography/chart sizing, and full-screen token selector behavior. However, it does not fully satisfy the explicit 44px touch-target requirement at 375px because the mobile menu uses the shared ConnectButton component, which remains 36px tall by default.",
+    "issues": [
+      {
+        "file": "web/components/wallet/connect-button.tsx",
+        "line": 45,
+        "severity": "blocking",
+        "description": "At mobile width, nav.tsx renders <ConnectButton /> inside the hamburger drawer (web/components/nav.tsx:139). Both ConnectButton states use the shared Button default size without override (connect-button.tsx:45 and :63), and Button default height is h-9 (36px) in web/components/ui/button.tsx:23. This is below the required 44px minimum touch target for 375px."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The 44px mobile touch-target requirement is defined in the validation contract but not captured in mission AGENTS conventions, which likely contributed to partial coverage (many controls were updated, but ConnectButton was missed).",
+      "evidence": "validation-contract.md:127 requires 44px minimum touch targets; mission AGENTS.md has no '44'/'touch' guidance; connect-button remains default h-9 via button.tsx:23."
+    },
+    {
+      "area": "skills",
+      "observation": "Skill procedure and handoff compliance reporting are misaligned: the skill mandates web-scoped typecheck/lint/build, but the worker reported monorepo typecheck/lint/test and still marked followedProcedure=true.",
+      "evidence": ".factory/skills/frontend-ui-worker/SKILL.md:26-28; handoff commands at ...mobile-responsive__6600a33c-62bc-4805-aefa-9f88aa8b3af0.json:16,21,26 with followedProcedure at line 68."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed feature mobile-responsive (commit e798bba). Most responsive behaviors were implemented as specified, but the mobile 44px touch-target requirement is not fully met because the hamburger menu Connect Wallet control remains 36px tall via shared Button defaults. Marking this feature as fail with one blocking issue."
+}
