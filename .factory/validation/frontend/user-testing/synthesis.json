@@ -1,0 +1,107 @@
+{
+  "milestone": "frontend",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 26,
+    "passed": 7,
+    "failed": 0,
+    "blocked": 19
+  },
+  "passedAssertions": [
+    "VAL-FRONTEND-001",
+    "VAL-FRONTEND-002",
+    "VAL-FRONTEND-003",
+    "VAL-FRONTEND-005",
+    "VAL-FRONTEND-011",
+    "VAL-FRONTEND-015",
+    "VAL-FRONTEND-018"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [
+    {
+      "id": "VAL-CROSS-001",
+      "blockedBy": "Blocked by missing funded/connected wallet signer and no successful trade creation path from attempted flow."
+    },
+    {
+      "id": "VAL-CROSS-002",
+      "blockedBy": "Blocked by wallet/on-chain signer prerequisite."
+    },
+    {
+      "id": "VAL-CROSS-003",
+      "blockedBy": "Blocked by missing signer prerequisites and no reachable local mutation path linked to this frontend run."
+    },
+    {
+      "id": "VAL-CROSS-004",
+      "blockedBy": "Blocked by missing prerequisite trade activity (5+ trades) in isolated environment."
+    },
+    {
+      "id": "VAL-CROSS-005",
+      "blockedBy": "Blocked by unavailable automatable connected wallet in this flow boundary."
+    },
+    {
+      "id": "VAL-CROSS-006",
+      "blockedBy": "Blocked due to lack of observable state-driving events during reconnect test (no live updates to validate recovery correctness)."
+    },
+    {
+      "id": "VAL-CROSS-007",
+      "blockedBy": "Blocked by wallet/signing prerequisite; insufficient-balance and retry-success transaction outcomes were unreachable."
+    },
+    {
+      "id": "VAL-CROSS-008",
+      "blockedBy": "Blocked by missing external state-driving endpoint/signer path inside assigned boundary."
+    },
+    {
+      "id": "VAL-FRONTEND-004",
+      "blockedBy": "No automatable connected wallet/signing context available in this browser boundary (credentials/extension prerequisite)."
+    },
+    {
+      "id": "VAL-FRONTEND-006",
+      "blockedBy": "Depth-dependent quote behavior could not be fully validated in this run because displayed quote stayed at 0.00 for multiple inputs."
+    },
+    {
+      "id": "VAL-FRONTEND-007",
+      "blockedBy": "Wallet connection prerequisite not satisfied, so transaction submission could not be executed."
+    },
+    {
+      "id": "VAL-FRONTEND-008",
+      "blockedBy": "Local orderbook depth was empty (No orders yet), so row-level bid/ask coloration and cumulative-depth rendering could not be fully validated."
+    },
+    {
+      "id": "VAL-FRONTEND-009",
+      "blockedBy": "Blocked by missing runtime depth data; required green/red stepped depth areas cannot be validated in empty-state mode."
+    },
+    {
+      "id": "VAL-FRONTEND-010",
+      "blockedBy": "Blocked by missing runtime trade data; ticker row color/time and new-trade animation cannot be validated without entries."
+    },
+    {
+      "id": "VAL-FRONTEND-012",
+      "blockedBy": "Could not place order without connected wallet/signing flow."
+    },
+    {
+      "id": "VAL-FRONTEND-013",
+      "blockedBy": "Open-order prerequisite unavailable because wallet-dependent placement flow could not run."
+    },
+    {
+      "id": "VAL-FRONTEND-014",
+      "blockedBy": "Realtime behavior could not be fully validated because no executable path existed to generate a new order event in this session."
+    },
+    {
+      "id": "VAL-FRONTEND-016",
+      "blockedBy": "Disconnect could not be tested because connected-wallet state was never reached."
+    },
+    {
+      "id": "VAL-FRONTEND-017",
+      "blockedBy": "Failed-transaction assertion is blocked until a connected wallet can submit signed transactions from the UI."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added frontend validation findings covering wallet-signing prerequisites, empty depth/trade-data blockers, and missing REST mutation route for cross-flow assertions.",
+      "source": "flow-report"
+    }
+  ],
+  "previousRound": null
+}

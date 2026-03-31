@@ -1,0 +1,211 @@
+{
+  "groupId": "layout-core",
+  "testedAt": "2026-03-31T04:49:56Z",
+  "isolation": {
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "frontendUrl": "http://localhost:3102",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "browserSession": "layout-core-flow-79476079",
+    "portBoundary": "3100-3102"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-FRONTEND-001",
+      "title": "Landing page loads with tagline",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Open http://localhost:3102",
+          "expected": "Landing/swap page loads",
+          "observed": "Landing page loaded with swap interface and site title CASH Orderbook"
+        },
+        {
+          "action": "Verify tagline content",
+          "expected": "Tagline 'The Fastest CASH Swap Ever' is visible",
+          "observed": "Tagline is visible on the landing view"
+        },
+        {
+          "action": "Check theme background",
+          "expected": "Dark background (#212121 or similar)",
+          "observed": "Computed body background is rgb(33, 33, 33)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/layout-core/VAL-FRONTEND-001-landing-annotated.png"
+        ],
+        "consoleErrors": "none (frontend/layout-core/VAL-FRONTEND-001-console.json)",
+        "network": "Frontend polling requests captured (frontend/layout-core/VAL-FRONTEND-001-network.json)",
+        "artifacts": [
+          "frontend/layout-core/VAL-FRONTEND-001-body.txt",
+          "frontend/layout-core/VAL-FRONTEND-001-body-styles.txt"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-FRONTEND-002",
+      "title": "Wallet connect button visible",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect landing page before wallet connection",
+          "expected": "A 'Connect Wallet' button is visible",
+          "observed": "Connect Wallet is visible in the header and as the swap action button"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/layout-core/VAL-FRONTEND-002-connect-wallet-visible-annotated.png"
+        ],
+        "consoleErrors": "none (frontend/layout-core/VAL-FRONTEND-002-console.json)",
+        "network": "Request log captured (frontend/layout-core/VAL-FRONTEND-002-network.json)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-FRONTEND-003",
+      "title": "Wallet connection modal",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Click Connect Wallet",
+          "expected": "Wallet modal opens",
+          "observed": "Wallet selection modal opened"
+        },
+        {
+          "action": "Check social/Aptos options",
+          "expected": "Google and Petra are shown",
+          "observed": "Continue with Google and Petra wallet option are visible"
+        },
+        {
+          "action": "Check cross-chain options",
+          "expected": "MetaMask and Phantom are shown",
+          "observed": "MetaMask and Phantom options are visible under Ethereum options"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/layout-core/VAL-FRONTEND-003-wallet-modal-annotated.png",
+          "frontend/layout-core/VAL-FRONTEND-003-wallet-modal-ethereum-annotated.png"
+        ],
+        "consoleErrors": "none (frontend/layout-core/VAL-FRONTEND-003-console.json)",
+        "network": "Request log captured (frontend/layout-core/VAL-FRONTEND-003-network.json)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-FRONTEND-005",
+      "title": "Swap interface layout",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect swap panel layout",
+          "expected": "Amount input, asset selector, direction toggle, quote area, and execute action are visible",
+          "observed": "Swap panel shows amount input, CASH/USDC selectors, a center icon toggle button, 'To (estimated)' quote, and Connect Wallet action"
+        },
+        {
+          "action": "Check dark-theme contrast",
+          "expected": "Dark theme with readable contrast",
+          "observed": "Body/background contrast is dark (rgb(33, 33, 33) background with white foreground text)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/layout-core/VAL-FRONTEND-005-swap-layout-annotated.png"
+        ],
+        "consoleErrors": "none (frontend/layout-core/VAL-FRONTEND-005-console.json)",
+        "network": "Depth polling requests captured (frontend/layout-core/VAL-FRONTEND-005-network.json)",
+        "artifacts": [
+          "frontend/layout-core/VAL-FRONTEND-005-body.txt",
+          "frontend/layout-core/VAL-FRONTEND-005-layout-probe.json"
+        ]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-FRONTEND-008",
+      "title": "Orderbook ladder display",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Navigate to Orderbook view",
+          "expected": "Two-column bid/ask ladder visible",
+          "observed": "Orderbook view opened with bid/ask column headers and 'No orders yet' empty-state"
+        },
+        {
+          "action": "Verify ladder row styling/details",
+          "expected": "Rows show bid/ask colors, price+quantity, and cumulative depth bars with monospace prices",
+          "observed": "Could not verify populated bid/ask rows because depth feed had no active orders during the run"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/layout-core/VAL-FRONTEND-008-orderbook-ladder-annotated.png"
+        ],
+        "consoleErrors": "none (frontend/layout-core/VAL-FRONTEND-008-console.json)",
+        "network": "Repeated GET /depth and GET /trades polling captured (frontend/layout-core/VAL-FRONTEND-008-network.json)",
+        "artifacts": [
+          "frontend/layout-core/VAL-FRONTEND-008-body.txt",
+          "frontend/layout-core/VAL-FRONTEND-008-style-probe.json"
+        ]
+      },
+      "issues": "Local orderbook depth was empty (No orders yet), so row-level bid/ask coloration and cumulative-depth rendering could not be fully validated."
+    },
+    {
+      "id": "VAL-FRONTEND-015",
+      "title": "Navigation between views",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Switch from Orderbook to Swap",
+          "expected": "Swap view becomes active and usable",
+          "observed": "Swap view loaded with input fields and Connect Wallet action"
+        },
+        {
+          "action": "Switch from Swap back to Orderbook",
+          "expected": "Orderbook view becomes active and usable",
+          "observed": "Orderbook view loaded again with orderbook, depth chart, and order form panels"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/layout-core/VAL-FRONTEND-015-swap-view-annotated.png",
+          "frontend/layout-core/VAL-FRONTEND-015-orderbook-view-annotated.png"
+        ],
+        "consoleErrors": "none (frontend/layout-core/VAL-FRONTEND-015-console.json)",
+        "network": "View-switch polling/request log captured (frontend/layout-core/VAL-FRONTEND-015-network.json)",
+        "artifacts": [
+          "frontend/layout-core/VAL-FRONTEND-015-body.txt"
+        ]
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "`agent-browser get text body` includes Next.js dev payload text alongside UI text, which adds noise during assertion checks.",
+      "resolved": true,
+      "resolution": "Used annotated screenshots and targeted style/layout probes for deterministic evidence.",
+      "affectedAssertions": [
+        "VAL-FRONTEND-001",
+        "VAL-FRONTEND-005",
+        "VAL-FRONTEND-008"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "No live order rows were present in the orderbook during this run (empty depth state).",
+      "affectedAssertions": [
+        "VAL-FRONTEND-008"
+      ],
+      "quickFixAttempted": "Waited for networkidle and additional settle time; confirmed continued polling to /depth and /trades with UI still showing 'No orders yet'."
+    }
+  ],
+  "summary": "Tested 6 assigned assertions: 5 passed (VAL-FRONTEND-001/002/003/005/015), 1 blocked (VAL-FRONTEND-008) due to empty orderbook depth preventing row-level ladder validation."
+}

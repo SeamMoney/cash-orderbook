@@ -77,8 +77,29 @@
 - Capture exact request/response payloads and status codes for each assertion.
 - If required trade/depth data cannot be produced from available local surfaces, mark affected assertions blocked and include precise prerequisite gap.
 
+## Flow Validator Guidance: agent-browser
+
+- Isolation boundary: use only `http://localhost:3102` (frontend), with backend dependencies at `http://localhost:3100` and `ws://localhost:3101`.
+- Do not start/stop services from subagents; shared services are controlled by the parent validator.
+- Use a dedicated browser session per flow group; do not reuse sessions across groups.
+- For wallet-dependent assertions, attempt real UI flow only. If no automatable wallet is available in the browser environment, mark assertions as `blocked` with exact UI/console evidence.
+- Save screenshots and console/network evidence for every assertion outcome, including blocked outcomes.
+
+## Flow Validator Guidance: agent-browser+curl
+
+- Use `agent-browser` for frontend interactions and `curl` only for corroborating backend state linked to that exact interaction.
+- Keep assertions in this surface serialized within the same flow when they mutate shared orderbook state.
+- If on-chain transaction prerequisites (funded wallet, executable signer flow) are unavailable, mark affected cross assertions `blocked` and reference both frontend evidence and API evidence.
+
 ## Backend Validation Findings (2026-03-31)
 
 - REST/WS surface currently exposes read endpoints only; POST attempts to create orders/trades/deposits returned `404`, so dynamic data assertions require an external state-driving mechanism (SDK/contract integration harness) to be testable.
 - For ad-hoc WS scripts in repo root, import `ws` from `api/node_modules/ws` if root resolution fails.
 - With default runtime settings (`CONTRACT_ADDRESS=0xCAFE`), indexer polling can remain at `lastIndexedVersion=0`; validate event-driven assertions only after wiring a contract address/network that emits events through the supported indexer path.
+
+## Frontend Validation Findings (2026-03-31)
+
+- Core UI assertions for landing, wallet modal visibility/options, swap layout, and view navigation are testable and passed via `agent-browser`.
+- Wallet-dependent assertions are blocked in this environment when no automatable connected signer is available (social auth requires credentials and extension wallets are install paths only).
+- Data-driven orderbook/chart/ticker assertions are blocked when `GET /depth` and `GET /trades` stay empty; the UI remains in empty-state (`No orders yet`, `No depth data`, `No trades yet`).
+- Cross-surface E2E assertions requiring state mutation were blocked because there is no local REST mutation route (`POST /orders` returns `404`) and no connected wallet flow to create on-chain events from the browser surface.

@@ -1,0 +1,282 @@
+{
+  "groupId": "wallet-trading",
+  "testedAt": "2026-03-31T04:57:11Z",
+  "isolation": {
+    "surface": "agent-browser",
+    "appUrl": "http://localhost:3102",
+    "backendDeps": [
+      "http://localhost:3100",
+      "ws://localhost:3101"
+    ],
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "browserSession": "wallet-trading-79476079"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-FRONTEND-004",
+      "title": "Connected wallet state",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Open Connect Wallet modal",
+          "expected": "Wallet connects and UI shows truncated address with CASH/USDC balances",
+          "observed": "Modal showed Google/Apple plus Aptos wallet install links; no connected state reached"
+        },
+        {
+          "action": "Attempt Continue with Google flow",
+          "expected": "Return to app with connected wallet",
+          "observed": "Redirected to Google sign-in page requiring credentials; connection could not be completed in isolated automation"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/wallet-trading/VAL-FRONTEND-004-pre-connect.png",
+          "frontend/wallet-trading/VAL-FRONTEND-004-wallet-modal.png",
+          "frontend/wallet-trading/VAL-FRONTEND-004-google-signin-required.png"
+        ],
+        "consoleErrors": "none from `agent-browser errors` (frontend/wallet-trading/console-errors-final.txt); console log has COOP/WS warnings (frontend/wallet-trading/console-log-final.txt)",
+        "network": "frontend/wallet-trading/network-requests-final.txt (GET depth/trades polling only; no wallet connect transaction from app surface)"
+      },
+      "issues": "No automatable connected wallet/signing context available in this browser boundary (credentials/extension prerequisite)."
+    },
+    {
+      "id": "VAL-FRONTEND-006",
+      "title": "Swap price quote",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Enter amount 10 in swap input",
+          "expected": "Estimated output updates based on orderbook depth",
+          "observed": "Estimated output remained 0.00 USDC"
+        },
+        {
+          "action": "Change amount from 1 to 2",
+          "expected": "Quote value changes as user types",
+          "observed": "Quote still remained 0.00 with no visible change"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/wallet-trading/VAL-FRONTEND-006-before-input.png",
+          "frontend/wallet-trading/VAL-FRONTEND-006-after-input.png",
+          "frontend/wallet-trading/VAL-FRONTEND-006-after-typing-2.png"
+        ],
+        "consoleErrors": "none from `agent-browser errors` (frontend/wallet-trading/console-errors-final.txt)",
+        "network": "frontend/wallet-trading/network-requests-final.txt (repeated GET /depth and GET /trades polling)",
+        "artifacts": [
+          "frontend/wallet-trading/VAL-FRONTEND-006-body-text.txt",
+          "frontend/wallet-trading/VAL-FRONTEND-006-body-text-amount1.txt",
+          "frontend/wallet-trading/VAL-FRONTEND-006-body-text-amount2.txt"
+        ]
+      },
+      "issues": "Depth-dependent quote behavior could not be fully validated in this run because displayed quote stayed at 0.00 for multiple inputs."
+    },
+    {
+      "id": "VAL-FRONTEND-007",
+      "title": "Execute swap transaction",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Enter swap amount",
+          "expected": "Submit swap and see success confirmation",
+          "observed": "Primary action remained disabled as 'Connect Wallet'"
+        },
+        {
+          "action": "Check submit control state",
+          "expected": "Action button enabled when prerequisites are met",
+          "observed": "Enabled check returned false; transaction path unreachable"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/wallet-trading/VAL-FRONTEND-007-swap-submit-disabled.png"
+        ],
+        "consoleErrors": "none from `agent-browser errors` (frontend/wallet-trading/console-errors-final.txt)",
+        "network": "frontend/wallet-trading/VAL-FRONTEND-007-network.txt (polling only; no POST/transaction request)",
+        "artifacts": [
+          "frontend/wallet-trading/VAL-FRONTEND-007-swap-submit-enabled-check.txt"
+        ]
+      },
+      "issues": "Wallet connection prerequisite not satisfied, so transaction submission could not be executed."
+    },
+    {
+      "id": "VAL-FRONTEND-012",
+      "title": "Place limit order from UI",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Open Orderbook and fill price/amount fields",
+          "expected": "Submit limit order transaction",
+          "observed": "Form fields accepted input but submit control remained disabled as 'Connect Wallet'"
+        },
+        {
+          "action": "Check submit control availability",
+          "expected": "Submit action enabled for placement",
+          "observed": "Enabled check returned false"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/wallet-trading/VAL-FRONTEND-012-orderbook-disconnected.png",
+          "frontend/wallet-trading/VAL-FRONTEND-012-filled-form.png"
+        ],
+        "consoleErrors": "none from `agent-browser errors` (frontend/wallet-trading/console-errors-final.txt)",
+        "network": "frontend/wallet-trading/network-requests-final.txt (GET polling only)",
+        "artifacts": [
+          "frontend/wallet-trading/VAL-FRONTEND-012-submit-enabled-check.txt"
+        ]
+      },
+      "issues": "Could not place order without connected wallet/signing flow."
+    },
+    {
+      "id": "VAL-FRONTEND-013",
+      "title": "Cancel order from UI",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Inspect orderbook controls for open orders/cancel action",
+          "expected": "Existing open order listed with cancel button",
+          "observed": "No cancel controls or open-order controls available in disconnected state"
+        },
+        {
+          "action": "Attempt prerequisite order creation",
+          "expected": "Create open order first, then cancel",
+          "observed": "Order creation blocked by wallet prerequisite"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/wallet-trading/VAL-FRONTEND-013-no-orders-to-cancel.png"
+        ],
+        "consoleErrors": "none from `agent-browser errors` (frontend/wallet-trading/console-errors-final.txt)",
+        "network": "frontend/wallet-trading/network-requests-final.txt (no cancel transaction request)",
+        "artifacts": [
+          "frontend/wallet-trading/VAL-FRONTEND-013-snapshot-no-open-orders.txt"
+        ]
+      },
+      "issues": "Open-order prerequisite unavailable because wallet-dependent placement flow could not run."
+    },
+    {
+      "id": "VAL-FRONTEND-014",
+      "title": "Real-time orderbook updates",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Capture orderbook state, wait, and re-capture",
+          "expected": "Orderbook updates without refresh when new orders arrive",
+          "observed": "Before/after snapshots remained identical during observation window"
+        },
+        {
+          "action": "Trigger update by placing order",
+          "expected": "New order mutates ladder in real time",
+          "observed": "Could not place order due disconnected wallet, so realtime trigger was unavailable"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/wallet-trading/VAL-FRONTEND-014-before-wait.png",
+          "frontend/wallet-trading/VAL-FRONTEND-014-after-wait.png"
+        ],
+        "consoleErrors": "none from `agent-browser errors` (frontend/wallet-trading/console-errors-final.txt); websocket warning present in console log (frontend/wallet-trading/console-log-final.txt)",
+        "network": "frontend/wallet-trading/network-requests-final.txt (polling GET /depth and GET /trades only)",
+        "artifacts": [
+          "frontend/wallet-trading/VAL-FRONTEND-014-snapshot-before.txt",
+          "frontend/wallet-trading/VAL-FRONTEND-014-snapshot-after.txt"
+        ]
+      },
+      "issues": "Realtime behavior could not be fully validated because no executable path existed to generate a new order event in this session."
+    },
+    {
+      "id": "VAL-FRONTEND-016",
+      "title": "Wallet disconnect",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Check top-right wallet control",
+          "expected": "Connected wallet menu includes disconnect",
+          "observed": "Only Connect Wallet control available"
+        },
+        {
+          "action": "Open wallet modal from orderbook",
+          "expected": "Disconnect option should be available after connection",
+          "observed": "Modal showed connect options only (Google/Apple/Aptos/Solana/Ethereum)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/wallet-trading/VAL-FRONTEND-016-connect-modal-instead-of-disconnect.png"
+        ],
+        "consoleErrors": "none from `agent-browser errors` (frontend/wallet-trading/console-errors-final.txt)",
+        "network": "frontend/wallet-trading/network-requests-final.txt"
+      },
+      "issues": "Disconnect could not be tested because connected-wallet state was never reached."
+    },
+    {
+      "id": "VAL-FRONTEND-017",
+      "title": "Error display on failed transaction",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Attempt to reach swap submit path",
+          "expected": "Submit intentionally failing tx (e.g., insufficient balance) and verify error toast",
+          "observed": "Submit control stayed disabled as Connect Wallet"
+        },
+        {
+          "action": "Check for transaction failure UI",
+          "expected": "Clear failed-transaction message shown",
+          "observed": "No transaction attempt could be initiated, so no tx-failure UI was emitted"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/wallet-trading/VAL-FRONTEND-017-swap-no-wallet.png"
+        ],
+        "consoleErrors": "none from `agent-browser errors` (frontend/wallet-trading/console-errors-final.txt); console log shows COOP and WS warnings only (frontend/wallet-trading/console-log-final.txt)",
+        "network": "frontend/wallet-trading/network-requests-final.txt (no swap transaction request observed)"
+      },
+      "issues": "Failed-transaction assertion is blocked until a connected wallet can submit signed transactions from the UI."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Wallet connect routes required external auth/extension setup (Google credentials and/or wallet extension) that was unavailable in this isolated automated run.",
+      "resolved": false,
+      "resolution": "Tried modal connect paths and documented blocked outcomes with screenshots.",
+      "affectedAssertions": [
+        "VAL-FRONTEND-004",
+        "VAL-FRONTEND-007",
+        "VAL-FRONTEND-012",
+        "VAL-FRONTEND-013",
+        "VAL-FRONTEND-014",
+        "VAL-FRONTEND-016",
+        "VAL-FRONTEND-017"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "No automatable connected wallet/signer was available in the agent-browser environment, preventing all wallet-connected transaction flows.",
+      "affectedAssertions": [
+        "VAL-FRONTEND-004",
+        "VAL-FRONTEND-007",
+        "VAL-FRONTEND-012",
+        "VAL-FRONTEND-013",
+        "VAL-FRONTEND-014",
+        "VAL-FRONTEND-016",
+        "VAL-FRONTEND-017"
+      ],
+      "quickFixAttempted": "Opened wallet modal, attempted Google flow, inspected Aptos wallet options, and retried from app; still no connected state."
+    },
+    {
+      "description": "Swap quote remained 0.00 for multiple typed amounts in this run, so depth-driven quote dynamics could not be conclusively validated.",
+      "affectedAssertions": [
+        "VAL-FRONTEND-006"
+      ],
+      "quickFixAttempted": "Tested multiple input amounts (10, 1, 2) and captured repeated polling network evidence."
+    }
+  ],
+  "summary": "Tested 8 assigned assertions: 8 blocked in this isolated run due unavailable wallet/signing prerequisites and non-changing quote evidence for depth-dependent behavior."
+}

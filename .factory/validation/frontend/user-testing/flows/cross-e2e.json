@@ -1,0 +1,303 @@
+{
+  "groupId": "cross-e2e",
+  "testedAt": "2026-03-31T05:04:07Z",
+  "isolation": {
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "frontendUrl": "http://localhost:3102",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "surface": "agent-browser+curl",
+    "browserSession": "cross-e2e-79476079"
+  },
+  "toolsUsed": [
+    "agent-browser",
+    "curl"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-CROSS-001",
+      "title": "End-to-end limit order fill",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Open orderbook, fill limit order fields, and attempt to proceed via UI",
+          "expected": "User A places buy; User B places matching sell; trade fills and UI/backend update",
+          "observed": "Order form displayed but trading remained wallet-gated; connect modal opened instead of executable transaction path"
+        },
+        {
+          "action": "Corroborate trade/book state via REST",
+          "expected": "New trade visible in /trades and changed levels in /depth",
+          "observed": "GET /trades returned [] and GET /depth returned empty book"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/cross-e2e/VAL-CROSS-001-before-trade.png",
+          "frontend/cross-e2e/VAL-CROSS-001-after-trade-attempt-blocked-wallet-modal.png",
+          "frontend/cross-e2e/VAL-CROSS-001-limit-order-attempt-no-wallet.png"
+        ],
+        "consoleErrors": "none (frontend/cross-e2e/browser-errors.txt is empty)",
+        "network": [
+          "frontend/cross-e2e/browser-network-requests.txt",
+          "GET /trades?limit=5 -> 200 [] (frontend/cross-e2e/curl-trades-after-ui-attempts.txt)",
+          "GET /depth -> 200 {\"bids\":[],\"asks\":[]} (frontend/cross-e2e/curl-depth-after-ui-attempts.txt)"
+        ]
+      },
+      "issues": "Blocked by missing funded/connected wallet signer and no successful trade creation path from attempted flow."
+    },
+    {
+      "id": "VAL-CROSS-002",
+      "title": "End-to-end swap flow",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Enter swap amount and attempt swap action",
+          "expected": "Market order submits, confirms on-chain, UI shows success and updated balance",
+          "observed": "Amount entry worked; attempting to proceed opened wallet modal and did not reach transaction submission"
+        },
+        {
+          "action": "Corroborate backend trade/balance state",
+          "expected": "New trade in /trades and updated /balances for connected address",
+          "observed": "No connected address available; sampled REST state showed no trades and zero balances"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/cross-e2e/VAL-CROSS-002-swap-attempt-before-submit.png",
+          "frontend/cross-e2e/VAL-CROSS-002-swap-attempt-blocked-wallet-modal.png"
+        ],
+        "consoleErrors": "none (frontend/cross-e2e/browser-errors.txt is empty)",
+        "network": [
+          "GET /trades?limit=5 -> 200 [] (frontend/cross-e2e/curl-trades-after-ui-attempts.txt)",
+          "GET /balances/0x1 -> 200 zero balances (frontend/cross-e2e/curl-balances-0x1.txt)"
+        ]
+      },
+      "issues": "Blocked by wallet/on-chain signer prerequisite."
+    },
+    {
+      "id": "VAL-CROSS-003",
+      "title": "Deposit-trade-withdraw cycle",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Attempt to perform deposit/trade/withdraw through frontend flow",
+          "expected": "Deposit, matched trade, and withdraw all execute with balance transitions",
+          "observed": "Current UI path was wallet-gated and showed no executable deposit/withdraw action in this session"
+        },
+        {
+          "action": "Corroborate backend mutation surface and balances",
+          "expected": "State mutations available and reflected in balances",
+          "observed": "POST /orders probe returned 404 and sampled balances remained zero"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/cross-e2e/VAL-CROSS-003-deposit-trade-withdraw-attempt.png",
+          "frontend/cross-e2e/VAL-CROSS-001-after-trade-attempt-blocked-wallet-modal.png"
+        ],
+        "consoleErrors": "none (frontend/cross-e2e/browser-errors.txt is empty)",
+        "network": [
+          "POST /orders -> 404 NOT_FOUND (frontend/cross-e2e/curl-post-orders-attempt.txt)",
+          "GET /balances/0x1 -> 200 zero balances (frontend/cross-e2e/curl-balances-0x1.txt)"
+        ]
+      },
+      "issues": "Blocked by missing signer prerequisites and no reachable local mutation path linked to this frontend run."
+    },
+    {
+      "id": "VAL-CROSS-004",
+      "title": "Backend-frontend state consistency",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Open frontend orderbook and compare with backend depth",
+          "expected": "After 5+ trades, frontend levels match REST depth levels/quantities",
+          "observed": "Frontend showed \"No orders yet\" and \"No trades yet\"; prerequisite 5+ trades not present"
+        },
+        {
+          "action": "Check REST state for trade history and depth",
+          "expected": "Populated trade/depth data for consistency comparison",
+          "observed": "Depth and trades were empty"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/cross-e2e/VAL-CROSS-004-frontend-orderbook.png"
+        ],
+        "consoleErrors": "none (frontend/cross-e2e/browser-errors.txt is empty)",
+        "network": [
+          "GET /depth -> 200 {\"bids\":[],\"asks\":[]} (frontend/cross-e2e/curl-depth-after-ui-attempts.txt)",
+          "GET /trades?limit=5 -> 200 [] (frontend/cross-e2e/curl-trades-after-ui-attempts.txt)"
+        ]
+      },
+      "issues": "Blocked by missing prerequisite trade activity (5+ trades) in isolated environment."
+    },
+    {
+      "id": "VAL-CROSS-005",
+      "title": "First-visit to first-trade flow",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Visit landing page and open wallet-connect modal",
+          "expected": "New user connects wallet and sees balances",
+          "observed": "Landing and wallet modal rendered; options required external auth/wallet install and no wallet was connected"
+        },
+        {
+          "action": "Navigate to orderbook and attempt first limit order flow",
+          "expected": "Limit order submitted and appears in My Orders",
+          "observed": "Order inputs were available but submission path remained blocked behind wallet connection"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/cross-e2e/VAL-CROSS-005-landing.png",
+          "frontend/cross-e2e/VAL-CROSS-005-connect-modal.png",
+          "frontend/cross-e2e/VAL-CROSS-005-orderbook-view.png",
+          "frontend/cross-e2e/VAL-CROSS-001-limit-order-attempt-no-wallet.png"
+        ],
+        "consoleErrors": "none (frontend/cross-e2e/browser-errors.txt is empty)",
+        "network": [
+          "frontend/cross-e2e/browser-network-requests.txt"
+        ]
+      },
+      "issues": "Blocked by unavailable automatable connected wallet in this flow boundary."
+    },
+    {
+      "id": "VAL-CROSS-006",
+      "title": "WebSocket reconnection",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Capture baseline, force browser offline, then restore online",
+          "expected": "Frontend reconnects WS and resumes live current state",
+          "observed": "Offline/online transition completed, but no observable trade/orderbook delta existed to verify reconnect correctness"
+        },
+        {
+          "action": "Inspect network activity around reconnect attempt",
+          "expected": "Clear reconnect behavior with fresh state updates",
+          "observed": "Observed repeated polling GETs to /depth and /trades; no state change to prove reconnection quality"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/cross-e2e/VAL-CROSS-006-before-offline.png",
+          "frontend/cross-e2e/VAL-CROSS-006-offline-state.png",
+          "frontend/cross-e2e/VAL-CROSS-006-after-reconnect-attempt.png"
+        ],
+        "consoleErrors": "none (frontend/cross-e2e/browser-errors.txt is empty)",
+        "network": [
+          "frontend/cross-e2e/browser-network-requests.txt"
+        ]
+      },
+      "issues": "Blocked due to lack of observable state-driving events during reconnect test (no live updates to validate recovery correctness)."
+    },
+    {
+      "id": "VAL-CROSS-007",
+      "title": "Transaction failure recovery",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Attempt high-amount swap to trigger insufficient-balance failure",
+          "expected": "On-chain failure toast shown, then user retries successfully with valid amount",
+          "observed": "Flow did not reach transaction submission; connect-wallet modal interrupted both initial and retry attempts"
+        },
+        {
+          "action": "Retry with lower amount",
+          "expected": "Retry succeeds and confirmation appears",
+          "observed": "Retry remained wallet-gated"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/cross-e2e/VAL-CROSS-007-insufficient-balance-attempt.png",
+          "frontend/cross-e2e/VAL-CROSS-007-error-expected-but-wallet-modal.png",
+          "frontend/cross-e2e/VAL-CROSS-007-retry-attempt-before-submit.png",
+          "frontend/cross-e2e/VAL-CROSS-007-retry-blocked-wallet-modal.png"
+        ],
+        "consoleErrors": "none (frontend/cross-e2e/browser-errors.txt is empty)",
+        "network": [
+          "frontend/cross-e2e/browser-network-requests.txt"
+        ]
+      },
+      "issues": "Blocked by wallet/signing prerequisite; insufficient-balance and retry-success transaction outcomes were unreachable."
+    },
+    {
+      "id": "VAL-CROSS-008",
+      "title": "Contract events drive UI updates",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Attempt external order injection linked to frontend state check",
+          "expected": "External SDK/CLI order appears in frontend via indexer/WS",
+          "observed": "POST /orders probe returned 404; no external order injection route available from assigned tools"
+        },
+        {
+          "action": "Compare frontend before/after and REST state",
+          "expected": "Orderbook/ticker show externally injected change",
+          "observed": "Frontend remained unchanged and REST trades/depth stayed empty"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/cross-e2e/VAL-CROSS-008-frontend-before-external-order-attempt.png",
+          "frontend/cross-e2e/VAL-CROSS-008-orderbook-after-external-order-attempt.png"
+        ],
+        "consoleErrors": "none (frontend/cross-e2e/browser-errors.txt is empty)",
+        "network": [
+          "POST /orders -> 404 NOT_FOUND (frontend/cross-e2e/curl-post-orders-attempt.txt)",
+          "GET /trades?limit=5 -> 200 [] (frontend/cross-e2e/curl-trades-after-ui-attempts.txt)",
+          "GET /depth -> 200 {\"bids\":[],\"asks\":[]} (frontend/cross-e2e/curl-depth-after-ui-attempts.txt)"
+        ]
+      },
+      "issues": "Blocked by missing external state-driving endpoint/signer path inside assigned boundary."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Wallet modal options were external-provider based (Google/Apple/install links), so no local pre-funded automatable signer was available in this isolated run.",
+      "resolved": false,
+      "resolution": "Documented as blocker and marked wallet-dependent assertions blocked.",
+      "affectedAssertions": [
+        "VAL-CROSS-001",
+        "VAL-CROSS-002",
+        "VAL-CROSS-003",
+        "VAL-CROSS-005",
+        "VAL-CROSS-007"
+      ]
+    },
+    {
+      "description": "Frontend showed empty orderbook/trade state, preventing required multi-trade and event-driven validations.",
+      "resolved": false,
+      "resolution": "Used curl corroboration to confirm empty /depth and /trades; marked dependent assertions blocked.",
+      "affectedAssertions": [
+        "VAL-CROSS-001",
+        "VAL-CROSS-004",
+        "VAL-CROSS-006",
+        "VAL-CROSS-008"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Wallet/signer prerequisite unavailable for transaction-bearing frontend flows within the assigned isolation boundary.",
+      "affectedAssertions": [
+        "VAL-CROSS-001",
+        "VAL-CROSS-002",
+        "VAL-CROSS-003",
+        "VAL-CROSS-005",
+        "VAL-CROSS-007"
+      ],
+      "quickFixAttempted": "Opened connect modal repeatedly and attempted social-provider path; it required external account auth and no connected signer was established."
+    },
+    {
+      "description": "External state-driving mutation path unavailable via assigned API surface.",
+      "affectedAssertions": [
+        "VAL-CROSS-001",
+        "VAL-CROSS-003",
+        "VAL-CROSS-004",
+        "VAL-CROSS-008"
+      ],
+      "quickFixAttempted": "Probed POST /orders with JSON payload; server returned 404 NOT_FOUND."
+    }
+  ],
+  "summary": "Validated VAL-CROSS-001..008 using agent-browser+curl. All 8 assertions are blocked by unmet prerequisites (no connected signer and no external state-driving endpoint), with evidence captured for UI state, network activity, and REST corroboration."
+}

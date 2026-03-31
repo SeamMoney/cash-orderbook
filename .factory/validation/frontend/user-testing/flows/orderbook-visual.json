@@ -1,0 +1,135 @@
+{
+  "groupId": "orderbook-visual",
+  "testedAt": "2026-03-31T04:48:25Z",
+  "isolation": {
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "frontendUrl": "http://localhost:3102",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "browserSession": "orderbook-visual-79476079",
+    "portBoundary": "3100-3102"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-FRONTEND-009",
+      "title": "Depth chart rendering",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Navigate to Orderbook view and inspect Depth Chart section",
+          "expected": "Stepped cumulative bid (green) and ask (red) depth areas are visible",
+          "observed": "Depth Chart panel is visible with a canvas, but UI shows \"No depth data\" and no rendered bid/ask areas"
+        },
+        {
+          "action": "Validate backing depth data availability",
+          "expected": "Depth endpoint provides non-empty bid/ask levels for chart rendering",
+          "observed": "In-browser fetch to http://localhost:3100/depth returned 200 with bids=[], asks=[]"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/orderbook-visual/VAL-FRONTEND-009-depth-chart-view.png"
+        ],
+        "consoleErrors": "none (checked via `agent-browser errors` after flow)",
+        "network": "GET http://localhost:3100/depth -> 200, empty book (bids=0, asks=0)"
+      },
+      "issues": "Blocked by missing runtime depth data; required green/red stepped depth areas cannot be validated in empty-state mode."
+    },
+    {
+      "id": "VAL-FRONTEND-010",
+      "title": "Trade ticker",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Inspect Recent Trades panel in Orderbook view",
+          "expected": "Scrolling trades list with colored price, quantity, and time entries",
+          "observed": "Panel renders headers and placeholder text \"No trades yet\" with no trade rows"
+        },
+        {
+          "action": "Validate backing trades availability",
+          "expected": "Trades endpoint provides recent rows for ticker rendering",
+          "observed": "In-browser fetch to http://localhost:3100/trades returned 200 with an empty array"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/orderbook-visual/VAL-FRONTEND-010-trade-ticker.png"
+        ],
+        "consoleErrors": "none (checked via `agent-browser errors` after flow)",
+        "network": "GET http://localhost:3100/trades -> 200, trades=[]"
+      },
+      "issues": "Blocked by missing runtime trade data; ticker row color/time and new-trade animation cannot be validated without entries."
+    },
+    {
+      "id": "VAL-FRONTEND-011",
+      "title": "Order form buy/sell toggle",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Verify default Buy state in order form",
+          "expected": "Buy toggle active with green accent; price/amount/order-type controls visible",
+          "observed": "Buy state active; indicator background `rgb(16, 185, 129)` (green), and Price/Amount fields plus Limit/Market selector are visible"
+        },
+        {
+          "action": "Switch to Sell state",
+          "expected": "Sell toggle active with red accent and animated indicator shift",
+          "observed": "Sell state active; indicator moved and background changed to `rgb(244, 63, 94)` (red)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/orderbook-visual/VAL-FRONTEND-011-buy-state.png",
+          "frontend/orderbook-visual/VAL-FRONTEND-011-sell-state.png"
+        ],
+        "consoleErrors": "none (checked via `agent-browser errors` after flow)",
+        "network": "not required for this visual toggle assertion"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-FRONTEND-018",
+      "title": "Responsive desktop layout",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Set viewport to 1280x900 in Orderbook view",
+          "expected": "Orderbook, depth chart, order form, and trade ticker appear in desktop multi-panel layout with no horizontal scroll",
+          "observed": "All four sections visible concurrently; heading positions confirm two-column panel layout and overflow check returned false"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "frontend/orderbook-visual/VAL-FRONTEND-018-responsive-1280.png"
+        ],
+        "consoleErrors": "none (checked via `agent-browser errors` after flow)",
+        "network": "layout-only assertion; no blocking network dependency observed"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "`agent-browser network requests` returned no captured entries in this session, so backend response evidence for depth/trades was collected via in-browser `fetch` checks instead.",
+      "resolved": true,
+      "resolution": "Used `agent-browser eval` with `fetch(http://localhost:3100/depth|/trades)` and recorded status/payload counts.",
+      "affectedAssertions": [
+        "VAL-FRONTEND-009",
+        "VAL-FRONTEND-010"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Runtime market data was unavailable for visual data-driven panels: depth and trades both remained empty.",
+      "affectedAssertions": [
+        "VAL-FRONTEND-009",
+        "VAL-FRONTEND-010"
+      ],
+      "quickFixAttempted": "Reloaded page, waited, and directly fetched backend endpoints; both still returned empty datasets."
+    }
+  ],
+  "summary": "Tested 4 assigned assertions: 2 passed (VAL-FRONTEND-011, VAL-FRONTEND-018) and 2 blocked by missing runtime depth/trade data (VAL-FRONTEND-009, VAL-FRONTEND-010)."
+}
