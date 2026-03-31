@@ -1,0 +1,105 @@
+{
+  "milestone": "swap-selector",
+  "groupId": "group-execution",
+  "testedAt": "2026-03-31T11:59:21.719769+00:00",
+  "isolation": {
+    "appUrl": "http://localhost:3102",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "session": "1fb6079bff48__g2b",
+    "surface": "agent-browser"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-SWAP-005",
+      "status": "blocked",
+      "reason": "Could not validate quote-updates-as-you-type behavior because environment data appears unseeded (no chart data, 24H volume $0.00) and receive quote stayed 0 across multiple input changes; USD equivalents were not visible.",
+      "evidence": [
+        "swap-selector/group-execution/VAL-SWAP-005-quote-amount-10.png",
+        "swap-selector/group-execution/VAL-SWAP-005-quote-amount-25.png",
+        "swap-selector/group-execution/VAL-SWAP-005-amount-1-receive-0.png",
+        "swap-selector/group-execution/VAL-SWAP-005-amount-9-receive-0.png",
+        "snapshot observation: You pay changed (1 -> 9) while You receive remained \"0\"",
+        "consoleErrors: none",
+        "network: repeated GET http://localhost:3100/depth and GET http://localhost:3100/market on reload"
+      ]
+    },
+    {
+      "id": "VAL-SWAP-007",
+      "status": "blocked",
+      "reason": "Disconnected CTA state is visible, but connected CTA states (Swap / Enter an amount / Insufficient balance) could not be validated because no local Aptos wallet extension is installed and social login requires external account credentials.",
+      "evidence": [
+        "swap-selector/group-execution/VAL-SWAP-007-disconnected-cta.png",
+        "swap-selector/group-execution/VAL-SWAP-007-connect-wallet-modal.png",
+        "swap-selector/group-execution/VAL-SWAP-007-aptos-wallet-options.png",
+        "swap-selector/group-execution/VAL-SWAP-007-google-auth-attempt.png",
+        "wallet modal options observed: Petra/Nightly/Backpack install links (no connected wallet)",
+        "consoleErrors: none"
+      ]
+    },
+    {
+      "id": "VAL-SWAP-008",
+      "status": "blocked",
+      "reason": "Swap execution could not be attempted because wallet connection/signing is unavailable in this isolated run; CTA remains Connect Wallet and no signed transaction path is reachable.",
+      "evidence": [
+        "swap-selector/group-execution/VAL-SWAP-008-swap-tab-amount-connect-required.png",
+        "swap-selector/group-execution/VAL-SWAP-008-wallet-modal-no-signer.png",
+        "wallet modal shows install links and social sign-in entry points only",
+        "consoleErrors: none"
+      ]
+    },
+    {
+      "id": "VAL-SWAP-009",
+      "status": "blocked",
+      "reason": "Limit form UI is present (buy/sell toggle, price and amount fields) and can be filled, but Place Order submission via SDK could not be validated without a connected/signing wallet.",
+      "evidence": [
+        "swap-selector/group-execution/VAL-SWAP-009-limit-form-buy-filled.png",
+        "swap-selector/group-execution/VAL-SWAP-009-limit-form-sell-filled.png",
+        "observation: CTA remained Connect Wallet while in Limit tab",
+        "consoleErrors: none"
+      ]
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Wallet connect flow in this environment requires either browser wallet extensions (not installed) or external Google/Apple auth credentials.",
+      "resolved": false,
+      "resolution": "Attempted Aptos wallet path and Google auth path; both were non-actionable in isolated run.",
+      "affectedAssertions": [
+        "VAL-SWAP-007",
+        "VAL-SWAP-008",
+        "VAL-SWAP-009"
+      ]
+    },
+    {
+      "description": "Swap quote verification is constrained by empty/zero market state (no chart data and zero volume), preventing confidence in dynamic quote assertion behavior.",
+      "resolved": false,
+      "resolution": "Retested with multiple input amounts and captured repeated depth/market requests.",
+      "affectedAssertions": [
+        "VAL-SWAP-005"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "No connected/signing wallet available in browser session (wallet extensions absent; social auth requires credentials).",
+      "affectedAssertions": [
+        "VAL-SWAP-007",
+        "VAL-SWAP-008",
+        "VAL-SWAP-009"
+      ],
+      "quickFixAttempted": "Opened wallet modal, verified install-only Aptos extension options, attempted Google auth redirect, then returned to app."
+    },
+    {
+      "description": "Environment appears unseeded for market/liquidity data (No chart data, $0.00 volume), so quote dynamics remain at zero and cannot be fully validated.",
+      "affectedAssertions": [
+        "VAL-SWAP-005"
+      ],
+      "quickFixAttempted": "Retried on fresh reload and multiple amount inputs; captured network requests to /depth and /market."
+    }
+  ],
+  "summary": "Tested 4 assigned assertions (VAL-SWAP-005/007/008/009): all 4 are blocked by environment prerequisites (wallet connectivity/signing and non-seeded market data), with screenshots and console checks captured for each."
+}

@@ -1,0 +1,72 @@
+{
+  "milestone": "swap-selector",
+  "groupId": "group-core",
+  "testedAt": "2026-03-31T11:53:52Z",
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-SWAP-001",
+      "status": "pass",
+      "reason": "Swap widget card is visible with You pay/You receive rows, token selectors, direction toggle, and green Connect Wallet CTA.",
+      "evidence": [
+        "swap-selector/group-core/VAL-SWAP-001-swap-widget-layout.png",
+        "consoleErrors: none"
+      ]
+    },
+    {
+      "id": "VAL-SWAP-002",
+      "status": "pass",
+      "reason": "Swap and Limit tabs are both present; switching to Limit shows buy/sell controls with price+amount inputs and switching back restores Swap inputs.",
+      "evidence": [
+        "swap-selector/group-core/VAL-SWAP-002-swap-tab.png",
+        "swap-selector/group-core/VAL-SWAP-002-limit-tab.png",
+        "consoleErrors: none"
+      ]
+    },
+    {
+      "id": "VAL-SWAP-003",
+      "status": "pass",
+      "reason": "Both input rows expose token selector buttons with icon+ticker labels (e.g., CASH, USDC) and they are clickable.",
+      "evidence": [
+        "swap-selector/group-core/VAL-SWAP-003-token-selector-buttons.png",
+        "consoleErrors: none"
+      ]
+    },
+    {
+      "id": "VAL-SWAP-004",
+      "status": "fail",
+      "reason": "Token selector modal opens with search and token list (CASH/USDC), and selecting USDC updates the input and closes modal, but per-token user balances are not shown in the modal.",
+      "evidence": [
+        "swap-selector/group-core/VAL-SWAP-004-token-selector-modal-open.png",
+        "swap-selector/group-core/VAL-SWAP-004-token-selector-modal-balances.png",
+        "swap-selector/group-core/VAL-SWAP-004-token-selected-updated-input.png",
+        "consoleErrors: none"
+      ]
+    },
+    {
+      "id": "VAL-SWAP-006",
+      "status": "pass",
+      "reason": "Clicking the direction toggle swaps from/to token positions (USDC↔CASH) as expected.",
+      "evidence": [
+        "swap-selector/group-core/VAL-SWAP-006-before-toggle.png",
+        "swap-selector/group-core/VAL-SWAP-006-after-toggle.png",
+        "consoleErrors: none"
+      ]
+    },
+    {
+      "id": "VAL-SWAP-010",
+      "status": "fail",
+      "reason": "No expandable price-details section is visible; no exchange-rate, price-impact, or minimum-received fields were found in the swap card.",
+      "evidence": [
+        "swap-selector/group-core/VAL-SWAP-010-details-section-current-state.png",
+        "domCheck: detailsButtons=[]",
+        "consoleErrors: none"
+      ]
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 6 assigned assertions for swap-selector group-core using agent-browser: 4 passed (VAL-SWAP-001/002/003/006) and 2 failed (VAL-SWAP-004 missing visible balances in modal, VAL-SWAP-010 missing expandable price details section)."
+}

@@ -1,0 +1,90 @@
+{
+  "milestone": "swap-selector",
+  "groupId": "group-wallet-a11y",
+  "assertions": [
+    {
+      "id": "VAL-ERROR-005",
+      "status": "pass",
+      "reason": "Token selector search filters correctly: query \"CASH\" leaves only CASH entries and query \"xyz\" shows no results state.",
+      "evidence": [
+        "swap-selector/group-wallet-a11y/VAL-ERROR-005-modal-open-annotated.png",
+        "swap-selector/group-wallet-a11y/VAL-ERROR-005-search-cash-annotated.png",
+        "swap-selector/group-wallet-a11y/VAL-ERROR-005-search-xyz-annotated.png",
+        "Console errors: none"
+      ]
+    },
+    {
+      "id": "VAL-A11Y-001",
+      "status": "pass",
+      "reason": "Tab navigation moves focus across interactive controls and the focused element shows a visible outline (observed computed style: 1px auto rgb(0, 95, 204)).",
+      "evidence": [
+        "swap-selector/group-wallet-a11y/VAL-A11Y-001-focus-tab-1.png",
+        "swap-selector/group-wallet-a11y/VAL-A11Y-001-focus-tab-2.png",
+        "swap-selector/group-wallet-a11y/VAL-A11Y-001-focus-style-check.png",
+        "Console errors: none"
+      ]
+    },
+    {
+      "id": "VAL-A11Y-002",
+      "status": "fail",
+      "reason": "Escape closes the token selector modal, but focus does not return to the trigger element; focus lands on BODY instead.",
+      "evidence": [
+        "swap-selector/group-wallet-a11y/VAL-A11Y-002-before-escape.png",
+        "swap-selector/group-wallet-a11y/VAL-A11Y-002-after-escape-annotated.png",
+        "swap-selector/group-wallet-a11y/VAL-A11Y-002-keyboard-open-before-escape.png",
+        "swap-selector/group-wallet-a11y/VAL-A11Y-002-keyboard-after-escape.png",
+        "Observed activeElement after Escape: BODY",
+        "Console errors: none"
+      ]
+    },
+    {
+      "id": "VAL-CROSS-UI-002",
+      "status": "blocked",
+      "reason": "Wallet extension integration is unavailable in this environment (wallet modal shows install links for Petra/Nightly/Backpack, with no connected wallet extension available). Fallback disconnected state is observable and stable.",
+      "evidence": [
+        "swap-selector/group-wallet-a11y/VAL-CROSS-UI-002-wallet-modal-annotated.png",
+        "swap-selector/group-wallet-a11y/VAL-CROSS-UI-002-disconnected-fallback-annotated.png",
+        "Fallback observed: navbar CTA remains \"Connect Wallet\", swap CTA remains \"Connect Wallet\", balances not shown",
+        "Console errors: none"
+      ]
+    },
+    {
+      "id": "VAL-CROSS-UI-003",
+      "status": "pass",
+      "reason": "On Swap tab, amount was entered, switching to Limit showed limit form fields, and switching back to Swap preserved the entered amount (value remained 12).",
+      "evidence": [
+        "swap-selector/group-wallet-a11y/VAL-CROSS-UI-003-swap-filled-annotated.png",
+        "swap-selector/group-wallet-a11y/VAL-CROSS-UI-003-limit-tab-annotated.png",
+        "swap-selector/group-wallet-a11y/VAL-CROSS-UI-003-back-to-swap-annotated.png",
+        "Observed swap input value after return: 12",
+        "Console errors: none"
+      ]
+    },
+    {
+      "id": "VAL-POLISH-008",
+      "status": "blocked",
+      "reason": "Could not validate disconnect-after-connect behavior because no wallet extension could be connected in this environment. Observable fallback disconnected state is correct.",
+      "evidence": [
+        "swap-selector/group-wallet-a11y/VAL-CROSS-UI-002-wallet-modal-annotated.png",
+        "swap-selector/group-wallet-a11y/VAL-POLISH-008-disconnected-state-annotated.png",
+        "Fallback observed: disconnected navbar/swap CTAs both show \"Connect Wallet\"",
+        "Console errors: none"
+      ]
+    }
+  ],
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "frictions": [],
+  "blockers": [
+    {
+      "description": "No connectable Aptos wallet extension was available in the browser session (only install options were presented).",
+      "affectedAssertions": [
+        "VAL-CROSS-UI-002",
+        "VAL-POLISH-008"
+      ],
+      "quickFixAttempted": "Opened wallet modal from navbar and checked available Aptos wallet options; only install links were available."
+    }
+  ],
+  "summary": "Validated 6 assertions: 3 passed (VAL-ERROR-005, VAL-A11Y-001, VAL-CROSS-UI-003), 1 failed (VAL-A11Y-002 focus return on Escape), and 2 were blocked due to unavailable wallet extension integration (VAL-CROSS-UI-002, VAL-POLISH-008)."
+}
