@@ -21,10 +21,20 @@ const TIME_RANGES: { label: string; interval: CandleInterval }[] = [
   { label: "1Y", interval: "1d" },
 ];
 
+/** Chart display mode: candlestick bars or area/line chart. */
+export type ChartMode = "candle" | "line";
+
 /** Props for the crosshair hover callback. */
 export interface CrosshairData {
   price: number | null;
   timestamp: string | null;
+  /** OHLC values when hovering in candlestick mode. */
+  open?: number | null;
+  high?: number | null;
+  low?: number | null;
+  close?: number | null;
+  /** Current chart mode so the consumer knows which fields are available. */
+  chartMode?: ChartMode;
 }
 
 interface PriceChartProps {
@@ -33,14 +43,16 @@ interface PriceChartProps {
 }
 
 /**
- * PriceChart — TradingView lightweight-charts area chart with time range tabs.
- * Green line + gradient when period is positive, red when negative.
+ * PriceChart — TradingView lightweight-charts with candlestick/line toggle and time range tabs.
+ * Default: CandlestickSeries with green up / red down bars.
+ * Toggle to AreaSeries (line + gradient) via Candle | Line buttons.
  * Shows empty state when no data, loading skeleton while fetching.
  */
 export function PriceChart({
   onCrosshairMove,
 }: PriceChartProps): React.ReactElement {
   const [activeRange, setActiveRange] = useState(1); // default "1D"
+  const [chartMode, setChartMode] = useState<ChartMode>("candle");
   const interval = TIME_RANGES[activeRange].interval;
   const { candles, loading: rawLoading, error } = useCandles(interval);
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -66,23 +78,54 @@ export function PriceChart({
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
-      {/* Time range tabs */}
-      <div className="mb-4 flex items-center gap-1 sm:gap-2">
-        {TIME_RANGES.map((range, idx) => (
+      {/* Chart type toggle + Time range tabs */}
+      <div className="mb-4 flex items-center justify-between">
+        {/* Chart mode toggle */}
+        <div className="flex items-center gap-1 rounded-lg bg-secondary/50 p-0.5">
           <button
-            key={range.label}
-            onClick={() => setActiveRange(idx)}
-            className={`rounded-full px-3 py-1.5 min-h-[44px] min-w-[44px] text-xs font-medium transition-colors ${
-              idx === activeRange
-                ? "bg-secondary text-white"
+            onClick={() => setChartMode("candle")}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              chartMode === "candle"
+                ? "bg-primary text-black"
                 : "text-text-muted hover:text-muted-foreground cursor-pointer"
             }`}
-            aria-label={`Show ${range.label} chart range`}
-            aria-pressed={idx === activeRange}
+            aria-label="Candlestick chart"
+            aria-pressed={chartMode === "candle"}
           >
-            {range.label}
+            Candle
           </button>
-        ))}
+          <button
+            onClick={() => setChartMode("line")}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              chartMode === "line"
+                ? "bg-primary text-black"
+                : "text-text-muted hover:text-muted-foreground cursor-pointer"
+            }`}
+            aria-label="Line chart"
+            aria-pressed={chartMode === "line"}
+          >
+            Line
+          </button>
+        </div>
+
+        {/* Time range tabs */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          {TIME_RANGES.map((range, idx) => (
+            <button
+              key={range.label}
+              onClick={() => setActiveRange(idx)}
+              className={`rounded-full px-3 py-1.5 min-h-[44px] min-w-[44px] text-xs font-medium transition-colors ${
+                idx === activeRange
+                  ? "bg-secondary text-white"
+                  : "text-text-muted hover:text-muted-foreground cursor-pointer"
+              }`}
+              aria-label={`Show ${range.label} chart range`}
+              aria-pressed={idx === activeRange}
+            >
+              {range.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Chart area */}
@@ -95,6 +138,7 @@ export function PriceChart({
           <LightweightChart
             containerRef={chartContainerRef}
             candles={candles}
+            chartMode={chartMode}
             lineColor={lineColor}
             topGradient={topGradient}
             bottomGradient={bottomGradient}
@@ -150,10 +194,20 @@ interface RealtimeTrade {
   timestamp: number;
 }
 
+/** Candle data shape with full OHLCV fields. */
+interface CandleInput {
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  timestamp: number;
+}
+
 /** The actual lightweight-charts render component. Dynamically imports the library. */
 function LightweightChart({
   containerRef: _externalRef,
   candles,
+  chartMode,
   lineColor,
   topGradient,
   bottomGradient,
@@ -162,7 +216,8 @@ function LightweightChart({
   wsConnected,
 }: {
   containerRef: RefObject<HTMLDivElement | null>;
-  candles: { close: number; timestamp: number }[];
+  candles: CandleInput[];
+  chartMode: ChartMode;
   lineColor: string;
   topGradient: string;
   bottomGradient: string;
@@ -174,13 +229,24 @@ function LightweightChart({
   const chartRef = useRef<ReturnType<
     typeof import("lightweight-charts").createChart
   > | null>(null);
-  // Store area series ref for WS updates. Uses Record to avoid
+  // Store series ref for WS updates. Uses Record to avoid
   // importing lightweight-charts types at module level (dynamic import).
-  const areaSeriesRef = useRef<Record<string, unknown> | null>(null);
+  const seriesRef = useRef<Record<string, unknown> | null>(null);
   const lastUpdateTimestampRef = useRef<number>(0);
+  /** Track current candle OHLC state for real-time aggregation in candlestick mode. */
+  const currentCandleRef = useRef<{
+    time: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+  } | null>(null);
 
   const onCrosshairMoveRef = useRef(onCrosshairMove);
   onCrosshairMoveRef.current = onCrosshairMove;
+
+  const chartModeRef = useRef(chartMode);
+  chartModeRef.current = chartMode;
 
   const formatTimestamp = useCallback((ts: number): string => {
     const date = new Date(ts);
@@ -200,9 +266,8 @@ function LightweightChart({
 
     const initChart = async (): Promise<void> => {
       // Dynamic import to avoid SSR issues
-      const { createChart, AreaSeries, CrosshairMode } = await import(
-        "lightweight-charts"
-      );
+      const { createChart, AreaSeries, CandlestickSeries, CrosshairMode } =
+        await import("lightweight-charts");
 
       if (disposed || !chartContainerRef.current) return;
 
@@ -251,63 +316,155 @@ function LightweightChart({
 
       chartRef.current = chart;
 
-      const areaSeries = chart.addSeries(AreaSeries, {
-        lineColor,
-        topColor: topGradient,
-        bottomColor: bottomGradient,
-        lineWidth: 2,
-        crosshairMarkerVisible: true,
-        crosshairMarkerRadius: 4,
-        crosshairMarkerBackgroundColor: lineColor,
-        crosshairMarkerBorderColor: "#FFFFFF",
-        crosshairMarkerBorderWidth: 2,
-        priceFormat: {
-          type: "price",
-          precision: 4,
-          minMove: 0.0001,
-        },
-      });
-
-      // Convert candle data to area series format { time, value }
       // lightweight-charts expects time as seconds (UTC timestamp)
-      const chartData = candles
-        .map((c) => ({
-          time: Math.floor(c.timestamp / 1000) as import("lightweight-charts").UTCTimestamp,
-          value: c.close,
-        }))
-        .sort((a, b) => (a.time as number) - (b.time as number));
+      type UTCTs = import("lightweight-charts").UTCTimestamp;
 
-      areaSeries.setData(chartData);
-      areaSeriesRef.current = areaSeries as unknown as Record<string, unknown>;
-      // Track the latest timestamp from historical data to avoid duplicates
-      if (chartData.length > 0) {
-        lastUpdateTimestampRef.current = chartData[chartData.length - 1].time as number;
+      if (chartMode === "candle") {
+        // --- Candlestick Series ---
+        const candleSeries = chart.addSeries(CandlestickSeries, {
+          upColor: "#00D54B",
+          downColor: "#FF3B30",
+          wickUpColor: "#00D54B",
+          wickDownColor: "#FF3B30",
+          borderUpColor: "#00D54B",
+          borderDownColor: "#FF3B30",
+          priceFormat: {
+            type: "price",
+            precision: 4,
+            minMove: 0.0001,
+          },
+        });
+
+        const chartData = candles
+          .map((c) => ({
+            time: (Math.floor(c.timestamp / 1000)) as UTCTs,
+            open: c.open,
+            high: c.high,
+            low: c.low,
+            close: c.close,
+          }))
+          .sort((a, b) => (a.time as number) - (b.time as number));
+
+        candleSeries.setData(chartData);
+        seriesRef.current = candleSeries as unknown as Record<string, unknown>;
+
+        // Initialize currentCandleRef with the last candle for real-time aggregation
+        if (chartData.length > 0) {
+          const last = chartData[chartData.length - 1];
+          currentCandleRef.current = {
+            time: last.time as number,
+            open: last.open,
+            high: last.high,
+            low: last.low,
+            close: last.close,
+          };
+          lastUpdateTimestampRef.current = last.time as number;
+        }
+
+        // Subscribe to crosshair — expose OHLC values
+        chart.subscribeCrosshairMove((param) => {
+          if (!onCrosshairMoveRef.current) return;
+
+          if (
+            !param.time ||
+            param.point === undefined ||
+            param.point.x < 0 ||
+            param.point.y < 0
+          ) {
+            onCrosshairMoveRef.current({
+              price: null,
+              timestamp: null,
+              chartMode: chartModeRef.current,
+            });
+            return;
+          }
+
+          const seriesData = param.seriesData.get(candleSeries);
+          if (seriesData && "close" in seriesData) {
+            const ohlc = seriesData as {
+              open: number;
+              high: number;
+              low: number;
+              close: number;
+            };
+            const ts = (param.time as number) * 1000;
+            onCrosshairMoveRef.current({
+              price: ohlc.close,
+              timestamp: formatTimestamp(ts),
+              open: ohlc.open,
+              high: ohlc.high,
+              low: ohlc.low,
+              close: ohlc.close,
+              chartMode: "candle",
+            });
+          }
+        });
+      } else {
+        // --- Area Series (line + gradient) ---
+        const areaSeries = chart.addSeries(AreaSeries, {
+          lineColor,
+          topColor: topGradient,
+          bottomColor: bottomGradient,
+          lineWidth: 2,
+          crosshairMarkerVisible: true,
+          crosshairMarkerRadius: 4,
+          crosshairMarkerBackgroundColor: lineColor,
+          crosshairMarkerBorderColor: "#FFFFFF",
+          crosshairMarkerBorderWidth: 2,
+          priceFormat: {
+            type: "price",
+            precision: 4,
+            minMove: 0.0001,
+          },
+        });
+
+        const chartData = candles
+          .map((c) => ({
+            time: (Math.floor(c.timestamp / 1000)) as UTCTs,
+            value: c.close,
+          }))
+          .sort((a, b) => (a.time as number) - (b.time as number));
+
+        areaSeries.setData(chartData);
+        seriesRef.current = areaSeries as unknown as Record<string, unknown>;
+        currentCandleRef.current = null;
+
+        if (chartData.length > 0) {
+          lastUpdateTimestampRef.current = chartData[chartData.length - 1]
+            .time as number;
+        }
+
+        // Subscribe to crosshair — single value (close only)
+        chart.subscribeCrosshairMove((param) => {
+          if (!onCrosshairMoveRef.current) return;
+
+          if (
+            !param.time ||
+            param.point === undefined ||
+            param.point.x < 0 ||
+            param.point.y < 0
+          ) {
+            onCrosshairMoveRef.current({
+              price: null,
+              timestamp: null,
+              chartMode: chartModeRef.current,
+            });
+            return;
+          }
+
+          const seriesData = param.seriesData.get(areaSeries);
+          if (seriesData && "value" in seriesData) {
+            const ts = (param.time as number) * 1000;
+            onCrosshairMoveRef.current({
+              price: seriesData.value as number,
+              timestamp: formatTimestamp(ts),
+              chartMode: "line",
+            });
+          }
+        });
       }
+
       chart.timeScale().fitContent();
-
-      // Subscribe to crosshair move for hover tooltip
-      chart.subscribeCrosshairMove((param) => {
-        if (!onCrosshairMoveRef.current) return;
-
-        if (
-          !param.time ||
-          param.point === undefined ||
-          param.point.x < 0 ||
-          param.point.y < 0
-        ) {
-          onCrosshairMoveRef.current({ price: null, timestamp: null });
-          return;
-        }
-
-        const seriesData = param.seriesData.get(areaSeries);
-        if (seriesData && "value" in seriesData) {
-          const ts = (param.time as number) * 1000;
-          onCrosshairMoveRef.current({
-            price: seriesData.value as number,
-            timestamp: formatTimestamp(ts),
-          });
-        }
-      });
 
       // Handle resize
       const handleResize = (): void => {
@@ -330,7 +487,8 @@ function LightweightChart({
 
     return () => {
       disposed = true;
-      areaSeriesRef.current = null;
+      seriesRef.current = null;
+      currentCandleRef.current = null;
       lastUpdateTimestampRef.current = 0;
       if (chartRef.current) {
         const chart = chartRef.current;
@@ -341,12 +499,19 @@ function LightweightChart({
         chartRef.current = null;
       }
     };
-  }, [candles, lineColor, topGradient, bottomGradient, formatTimestamp]);
+  }, [
+    candles,
+    chartMode,
+    lineColor,
+    topGradient,
+    bottomGradient,
+    formatTimestamp,
+  ]);
 
   // Append new data points from WebSocket trades to the chart series
   useEffect(() => {
     if (!wsConnected || !realtimeTrades || realtimeTrades.length === 0) return;
-    if (!areaSeriesRef.current) return;
+    if (!seriesRef.current) return;
 
     // Process only trades newer than the last update
     const newTrades = realtimeTrades.filter((t) => {
@@ -356,26 +521,68 @@ function LightweightChart({
 
     if (newTrades.length === 0) return;
 
-    // Sort by timestamp ascending and update the series
+    // Sort by timestamp ascending
     const sorted = [...newTrades].sort((a, b) => a.timestamp - b.timestamp);
-    const updateFn = areaSeriesRef.current.update as
-      | ((data: { time: number; value: number }) => void)
+
+    const updateFn = seriesRef.current.update as
+      | ((data: Record<string, unknown>) => void)
       | undefined;
     if (!updateFn) return;
 
-    for (const trade of sorted) {
-      const timeSec = Math.floor(trade.timestamp / 1000);
-      try {
-        updateFn({
-          time: timeSec,
-          value: trade.price,
-        });
-        lastUpdateTimestampRef.current = timeSec;
-      } catch {
-        // Silently ignore update errors (e.g., invalid time ordering)
+    if (chartMode === "candle") {
+      // In candlestick mode: aggregate trades into current candle's OHLC
+      for (const trade of sorted) {
+        const timeSec = Math.floor(trade.timestamp / 1000);
+
+        if (
+          currentCandleRef.current &&
+          timeSec === currentCandleRef.current.time
+        ) {
+          // Same candle period — update OHLC
+          const candle = currentCandleRef.current;
+          candle.high = Math.max(candle.high, trade.price);
+          candle.low = Math.min(candle.low, trade.price);
+          candle.close = trade.price;
+        } else {
+          // New candle period — start fresh
+          currentCandleRef.current = {
+            time: timeSec,
+            open: trade.price,
+            high: trade.price,
+            low: trade.price,
+            close: trade.price,
+          };
+        }
+
+        try {
+          updateFn({
+            time: currentCandleRef.current.time,
+            open: currentCandleRef.current.open,
+            high: currentCandleRef.current.high,
+            low: currentCandleRef.current.low,
+            close: currentCandleRef.current.close,
+          });
+          lastUpdateTimestampRef.current = timeSec;
+        } catch {
+          // Silently ignore update errors (e.g., invalid time ordering)
+        }
+      }
+    } else {
+      // In line mode: append as individual points
+      for (const trade of sorted) {
+        const timeSec = Math.floor(trade.timestamp / 1000);
+        try {
+          updateFn({
+            time: timeSec,
+            value: trade.price,
+          });
+          lastUpdateTimestampRef.current = timeSec;
+        } catch {
+          // Silently ignore update errors (e.g., invalid time ordering)
+        }
       }
     }
-  }, [realtimeTrades, wsConnected]);
+  }, [realtimeTrades, wsConnected, chartMode]);
 
   return (
     <div

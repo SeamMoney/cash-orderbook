@@ -5,6 +5,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatBalance } from "@/lib/utils";
 import type { PriceFlashDirection } from "@/hooks/use-realtime-price";
 
+/** OHLC hover values from candlestick crosshair. */
+interface OhlcValues {
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
+
 interface TokenHeaderProps {
   /** Current price to display (from API or chart hover). */
   price: number | null;
@@ -16,6 +24,8 @@ interface TokenHeaderProps {
   hoverTimestamp?: string | null;
   /** Optional: flash direction for price change animation ("up" = green, "down" = red). */
   flashDirection?: PriceFlashDirection;
+  /** Optional: OHLC values when hovering candlestick chart. */
+  hoverOhlc?: OhlcValues | null;
 }
 
 /**
@@ -29,6 +39,7 @@ export function TokenHeader({
   loading,
   hoverTimestamp,
   flashDirection,
+  hoverOhlc,
 }: TokenHeaderProps): React.ReactElement {
   const isPositive = change24h !== null && change24h >= 0;
   const changeColor = isPositive ? "text-cash-green" : "text-cash-red";
@@ -103,6 +114,36 @@ export function TokenHeader({
           </>
         )}
       </div>
+
+      {/* OHLC values when hovering candlestick chart */}
+      {hoverOhlc ? (
+        <div className="flex items-center gap-3 font-mono text-xs">
+          <span className="text-muted-foreground">
+            O{" "}
+            <span className="text-white">
+              {formatBalance(hoverOhlc.open, hoverOhlc.open < 1 ? 6 : 2)}
+            </span>
+          </span>
+          <span className="text-muted-foreground">
+            H{" "}
+            <span className="text-white">
+              {formatBalance(hoverOhlc.high, hoverOhlc.high < 1 ? 6 : 2)}
+            </span>
+          </span>
+          <span className="text-muted-foreground">
+            L{" "}
+            <span className="text-white">
+              {formatBalance(hoverOhlc.low, hoverOhlc.low < 1 ? 6 : 2)}
+            </span>
+          </span>
+          <span className="text-muted-foreground">
+            C{" "}
+            <span className="text-white">
+              {formatBalance(hoverOhlc.close, hoverOhlc.close < 1 ? 6 : 2)}
+            </span>
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }

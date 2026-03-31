@@ -29,10 +29,32 @@ export default function Home(): React.ReactElement {
   // Chart crosshair hover state — when hovering, override the header price
   const [hoverPrice, setHoverPrice] = useState<number | null>(null);
   const [hoverTimestamp, setHoverTimestamp] = useState<string | null>(null);
+  const [hoverOhlc, setHoverOhlc] = useState<{
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+  } | null>(null);
 
   const handleCrosshairMove = useCallback((data: CrosshairData): void => {
     setHoverPrice(data.price);
     setHoverTimestamp(data.timestamp);
+    if (
+      data.chartMode === "candle" &&
+      data.open != null &&
+      data.high != null &&
+      data.low != null &&
+      data.close != null
+    ) {
+      setHoverOhlc({
+        open: data.open,
+        high: data.high,
+        low: data.low,
+        close: data.close,
+      });
+    } else {
+      setHoverOhlc(null);
+    }
   }, []);
 
   // Derive display values — prefer hover price, then realtime WS price, then API price
@@ -70,6 +92,7 @@ export default function Home(): React.ReactElement {
               loading={marketLoading}
               hoverTimestamp={hoverTimestamp}
               flashDirection={flashDirection}
+              hoverOhlc={hoverOhlc}
             />
 
             {/* Price Chart */}
