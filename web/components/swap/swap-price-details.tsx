@@ -37,12 +37,40 @@ export function SwapPriceDetails({
     }
     return (
       <div className="mt-3">
-        <div className="flex w-full items-center justify-between rounded-xl bg-background border border-border px-3 py-2.5 text-xs">
+        {/* Expandable placeholder — interactive even without data */}
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex w-full items-center justify-between rounded-xl bg-background border border-border px-3 py-2.5 text-xs transition-colors hover:border-surface-hover"
+        >
           <span className="text-text-muted">
             Enter an amount to see price details
           </span>
-          <ChevronDown className="h-3.5 w-3.5 text-text-muted" />
-        </div>
+          <motion.div
+            animate={{ rotate: expanded ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown className="h-3.5 w-3.5 text-text-muted" />
+          </motion.div>
+        </button>
+
+        {/* Expanded placeholder rows */}
+        <AnimatePresence>
+          {expanded && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-2 space-y-2 rounded-xl bg-background border border-border px-3 py-3">
+                <DetailRow label="Exchange rate" value="—" mono />
+                <DetailRow label="Price impact" value="—" />
+                <DetailRow label="Minimum received" value="—" mono />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
