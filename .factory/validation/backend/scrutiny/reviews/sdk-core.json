@@ -1,0 +1,44 @@
+{
+  "featureId": "sdk-core",
+  "reviewedAt": "2026-03-31T02:23:58Z",
+  "commitId": "c85c422",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "Core SDK methods and tests are implemented, but two feature-contract requirements were missed: dual-module (ESM+CJS) build output and the requested getBalances(address) API shape.",
+    "issues": [
+      {
+        "file": "sdk/package.json",
+        "line": 8,
+        "severity": "blocking",
+        "description": "Feature description requires build output for both ESM and CJS with type declarations, but package exports only \"import\" + \"types\" and build is plain `tsc` (no CJS artifact path such as `require`/`index.cjs`)."
+      },
+      {
+        "file": "sdk/src/client.ts",
+        "line": 372,
+        "severity": "blocking",
+        "description": "Feature contract specifies `getBalances(address)`, but implementation requires `getBalances(address, baseAssetAddress, quoteAssetAddress)`, changing the promised SDK API and forcing callers to pass extra chain metadata parameters."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The backend-worker skill requires TDD (`Write tests FIRST` and run failing tests), but transcript shows implementation files were created before tests while handoff still marked `followedProcedure: true`.",
+      "evidence": "Skill: .factory/skills/backend-worker/SKILL.md:28-34. Transcript skeleton entry (worker-transcripts.jsonl line 19) shows `sdk/src/types.ts`, `sdk/src/client.ts`, and `sdk/src/index.ts` created before `sdk/src/client.test.ts`."
+    },
+    {
+      "area": "conventions",
+      "observation": "Validation assertions for backend SDK do not encode the feature requirement for dual ESM+CJS package output, so a stated requirement can regress while milestone assertions still pass.",
+      "evidence": "Feature requirement includes \"Ensure pnpm build produces ESM + CJS outputs\" (mission features.json:625), but VAL-BACKEND-001..005 in validation-contract.md:147-170 only cover method behavior and typed responses."
+    },
+    {
+      "area": "conventions",
+      "observation": "Feature commit included unrelated frontend generated config changes, suggesting lack of explicit commit-scoping guidance for workers.",
+      "evidence": "Commit c85c422 changed `web/next-env.d.ts` and `web/tsconfig.json` in addition to SDK files."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review result: fail. SDK feature implementation is substantial and tested, but it misses two blocking contract requirements (dual ESM+CJS output and getBalances API shape)."
+}

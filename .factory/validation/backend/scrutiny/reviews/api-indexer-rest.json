@@ -1,0 +1,45 @@
+{
+  "featureId": "api-indexer-rest",
+  "reviewedAt": "2026-03-31T02:25:13Z",
+  "commitId": "98e8a3c0050200a21ac4fa0193281f12e78fc721",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "REST routes and tests are comprehensive, but core indexer/state correctness is incomplete. The indexer does not actually poll Aptos events, and state updates for partially filled/filled orders can diverge from on-chain depth and balances.",
+    "issues": [
+      {
+        "file": "api/src/indexer/event-indexer.ts",
+        "line": 122,
+        "severity": "blocking",
+        "description": "RPC polling is effectively unimplemented: processEventType() is a no-op (lines 122-138), so start()/poll() never fetch or apply on-chain events. This does not satisfy the feature requirement that EventIndexer poll Aptos RPC and keep in-memory state in sync."
+      },
+      {
+        "file": "api/src/state/orderbook-state.ts",
+        "line": 215,
+        "severity": "blocking",
+        "description": "Depth can be overstated after partial fills. processOrderPlaced() adds full original quantity to depth (line 218), but processOrderFilled() only mutates order.remaining/status (lines 325-334) and never decrements depth for that filled order. Since OrderPlaced is emitted after matching with original quantity in contracts/sources/order_placement.move (event::emit at lines ~282 and ~409), resting depth should reflect remaining, not original quantity."
+      },
+      {
+        "file": "api/src/state/orderbook-state.ts",
+        "line": 271,
+        "severity": "blocking",
+        "description": "Balance cache is not reconciled on trade/fill events. processTrade() and processOrderFilled() do not update locked/available balances for buyer/seller, while locks are added on placement (updateLockedOnPlace at lines 421-439). This can leave /balances stale after fills and violates the requirement that indexed state be kept correct."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "backend-worker skill mandates TDD ('Write tests FIRST'), but this worker implemented most source files before adding tests; handoff still marked followedProcedure=true. Either the skill is too strict for current workflow or deviation capture is inaccurate.",
+      "evidence": "Transcript skeleton shows: 'Now let me create all the source files...' followed later by 'Now let me create comprehensive vitest tests.'; SKILL.md step 3 requires tests-first."
+    },
+    {
+      "area": "skills",
+      "observation": "Skill guidance for indexer implementation is too high-level for Aptos event polling, which likely contributed to a no-op polling path.",
+      "evidence": "api/src/indexer/event-indexer.ts lines 126-138 contains placeholder comments ('In production, we'd use the Aptos events API...') instead of concrete polling logic; backend-worker SKILL.md does not provide concrete polling API patterns/checklist."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature fails scrutiny due to blocking backend correctness gaps: no real RPC event polling and incorrect state reconciliation for fills/trades (depth and balances can drift from chain state)."
+}

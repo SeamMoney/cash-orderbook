@@ -1,0 +1,28 @@
+{
+  "featureId": "api-websocket-ratelimit",
+  "reviewedAt": "2026-03-31T02:24:25Z",
+  "commitId": "5efe61c",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "Rate-limiting middleware and tests are implemented, but the WebSocket runtime is not wired to live indexed state/events, so required real-time channel behavior is not delivered in actual service execution.",
+    "issues": [
+      {
+        "file": "api/src/ws.ts",
+        "line": 15,
+        "severity": "blocking",
+        "description": "WS process creates its own fresh OrderbookState and does not start/use EventIndexer or any bridge to runtime event streams. As a result, orderbook/trades/account channels do not receive live updates from order placement/fills/balance changes, so expected behavior ('delta updates on order placement', 'trades channel events', 'account:{address} balance updates') is not actually implemented outside unit tests."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "backend-worker skill requires tests-first (TDD) and manual endpoint verification, but transcript shows implementation files were created before new tests and no manual runtime verification commands (e.g., wscat/curl against running services) were executed; handoff still marks followedProcedure=true.",
+      "evidence": "Transcript skeleton: Create api/src/websocket/ws-server.ts and api/src/middleware/rate-limit.ts occurred before Create api/src/websocket/ws-server.test.ts and api/src/middleware/rate-limit.test.ts; no command like 'pnpm dev:ws' + wscat/curl appears."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature is marked fail due to missing runtime integration between WebSocket server and indexed order/trade/balance event flow. REST rate limiting appears correct with good test coverage, but core WS expected behaviors are only validated via direct test-time broadcast calls, not actual service wiring."
+}
