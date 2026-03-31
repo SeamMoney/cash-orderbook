@@ -7,15 +7,18 @@ import { TokenHeader } from "@/components/token-header";
 import { PriceChart, type CrosshairData } from "@/components/price-chart";
 import { TokenStatsGrid } from "@/components/token-stats-grid";
 import { SwapWidget } from "@/components/swap";
-import { TransactionsPlaceholder } from "@/components/placeholders/transactions-placeholder";
+import { TransactionsTable } from "@/components/transactions-table";
+import { TokenInfo } from "@/components/token-info";
 import { useMarket } from "@/hooks/use-market";
 import { usePriceChange } from "@/hooks/use-price-change";
 import { useMinDuration } from "@/hooks/use-min-duration";
+import { useRealtimeTrades } from "@/hooks/use-realtime-trades";
 
 export default function Home(): React.ReactElement {
   const [activeTab, setActiveTab] = useState<NavTab>("trade");
   const { market, loading: rawMarketLoading } = useMarket();
   const { change24h } = usePriceChange();
+  const { trades, loading: tradesLoading } = useRealtimeTrades(50);
 
   // Ensure stats skeleton is visible for at least 300ms on initial page load
   const marketLoading = useMinDuration(rawMarketLoading, 300);
@@ -66,8 +69,11 @@ export default function Home(): React.ReactElement {
             {/* Token Stats Grid */}
             <TokenStatsGrid market={market} loading={marketLoading} />
 
-            {/* Transactions Placeholder */}
-            <TransactionsPlaceholder />
+            {/* Transactions Table */}
+            <TransactionsTable trades={trades} loading={tradesLoading} />
+
+            {/* Token Info */}
+            <TokenInfo />
           </div>
 
           {/* Right Column (~35%) — Sticky Swap Widget */}
