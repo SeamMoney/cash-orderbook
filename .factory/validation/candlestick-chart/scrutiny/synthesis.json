@@ -1,75 +1,46 @@
 {
   "milestone": "candlestick-chart",
-  "round": 1,
-  "status": "fail",
+  "round": 2,
+  "status": "pass",
   "validatorsRun": {
     "test": {
       "passed": true,
-      "command": "pnpm -C \"/Users/maxmohammadi/cash-orderbook\" -r test",
+      "command": "cd \"/Users/maxmohammadi/cash-orderbook\" && pnpm -r test",
       "exitCode": 0
     },
     "typecheck": {
       "passed": true,
-      "command": "pnpm -C \"/Users/maxmohammadi/cash-orderbook\" -r typecheck",
+      "command": "cd \"/Users/maxmohammadi/cash-orderbook\" && pnpm -r typecheck",
       "exitCode": 0
     },
     "lint": {
       "passed": true,
-      "command": "pnpm -C \"/Users/maxmohammadi/cash-orderbook\" -r lint",
+      "command": "cd \"/Users/maxmohammadi/cash-orderbook\" && pnpm -r lint",
       "exitCode": 0
     }
   },
   "reviewsSummary": {
-    "total": 2,
-    "passed": 0,
-    "failed": 2,
-    "failedFeatures": [
-      "candlestick-chart-toggle",
-      "historical-data-import"
-    ]
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "failedFeatures": []
   },
-  "blockingIssues": [
-    {
-      "featureId": "candlestick-chart-toggle",
-      "severity": "blocking",
-      "description": "Real-time candlestick aggregation buckets by raw second instead of the active timeframe interval (1m/5m/15m/1h/1d), producing incorrect OHLC candles."
-    },
-    {
-      "featureId": "candlestick-chart-toggle",
-      "severity": "blocking",
-      "description": "Trade updates gated by `timeSec > lastUpdateTimestampRef.current` drop same-second trades, which can miss high/low/close updates."
-    },
-    {
-      "featureId": "historical-data-import",
-      "severity": "blocking",
-      "description": "Transition marker uses `series.setMarkers(...)` with lightweight-charts v5 where marker API should use `createSeriesMarkers(...)`; the New Venue marker does not render."
-    }
-  ],
+  "blockingIssues": [],
   "appliedUpdates": [
     {
-      "target": "services.yaml",
-      "description": "Added `commands.import-history` entry: `pnpm --filter @cash/scripts import-history`.",
-      "sourceFeature": "historical-data-import"
-    },
-    {
       "target": "library",
-      "description": "Added GeckoTerminal OHLCV retention behavior note to `.factory/library/geckoterminal-history-retention.md`.",
-      "sourceFeature": "historical-data-import"
+      "description": "Added lightweight-charts v5 marker API guidance to `.factory/library/lightweight-charts-v5-markers.md` documenting `createSeriesMarkers(...)` usage.",
+      "sourceFeature": "fix-candle-aggregation-and-marker"
     }
   ],
   "suggestedGuidanceUpdates": [
     {
       "target": "skills",
       "suggestion": "Ensure mission feature `skillName` values are validated against installed skill registry before worker assignment, or provide an explicit fallback policy in orchestrator-generated instructions.",
-      "evidence": "Both reviewed features declared `frontend-ui-worker` in mission metadata, but worker transcripts reported unavailable skill and fell back to other skills.",
+      "evidence": "Fix feature metadata still declares `frontend-ui-worker`, while the worker transcript reports that skill was unavailable and `frontend-trading` was used instead.",
       "isSystemic": true
     }
   ],
-  "rejectedObservations": [
-    {
-      "observation": "Second review repeated the same skill mismatch issue (`frontend-ui-worker` unavailable).",
-      "reason": "duplicate"
-    }
-  ],
-  "previousRound": null
+  "rejectedObservations": [],
+  "previousRound": ".factory/validation/candlestick-chart/scrutiny/synthesis.round1.json"
 }

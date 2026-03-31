@@ -1,0 +1,26 @@
+{
+  "featureId": "fix-candle-aggregation-and-marker",
+  "reviewedAt": "2026-03-31T21:58:58Z",
+  "commitId": "a3c880d",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Reviewed original failing commits (510c4ad, 1f57cbb) and fix commit (a3c880d) together. The fix correctly addresses all prior blocking findings: real-time candle updates are now bucketed by active timeframe interval, same-second trades are no longer dropped due to >= gating plus trade-id deduplication, and the transition marker now uses lightweight-charts v5 createSeriesMarkers API.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Mission feature metadata still points to `frontend-ui-worker`, but the worker executed `frontend-trading` and reported the configured skill as unavailable; this mismatch can cause workers to bypass the intended procedure.",
+      "evidence": "mission features.json:357 sets `\"skillName\": \"frontend-ui-worker\"` for `fix-candle-aggregation-and-marker`; handoff 2026-03-31T21-55-37-493Z__fix-candle-aggregation-and-marker__9a69a76a-08c1-4847-bbda-5d72fef1d4f3.json -> handoff.skillFeedback.deviations[0] says frontend-ui-worker was not available and frontend-trading was used."
+    },
+    {
+      "area": "knowledge",
+      "observation": "There is no shared library note capturing the lightweight-charts v5 marker API migration (`createSeriesMarkers` plugin vs series `setMarkers`), even though this API mismatch caused a prior blocking review failure.",
+      "evidence": "Prior failure documented at .factory/validation/candlestick-chart/scrutiny/reviews/historical-data-import.json (blocking issue on v5 marker API); fix transcript skeleton for session 9a69a76a-08c1-4847-bbda-5d72fef1d4f3 shows the worker re-investigating this API via typings/web search; .factory/library/ has no lightweight-charts marker API note."
+    }
+  ],
+  "addressesFailureFrom": "/Users/maxmohammadi/cash-orderbook/.factory/validation/candlestick-chart/scrutiny/synthesis.json",
+  "summary": "Pass: the fix commit resolves the three prior blockers (interval-aware bucketing, same-second trade handling, and v5 marker rendering). No remaining code-level blocking or non-blocking defects were found in scope for this fix."
+}
