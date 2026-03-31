@@ -1,7 +1,7 @@
 {
   "milestone": "swap-panora",
-  "round": 1,
-  "status": "fail",
+  "round": 2,
+  "status": "pass",
   "validatorsRun": {
     "test": {
       "passed": true,
@@ -20,49 +20,33 @@
     }
   },
   "reviewsSummary": {
-    "total": 3,
-    "passed": 2,
-    "failed": 1,
-    "failedFeatures": [
-      "panora-swap-routing"
-    ]
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "failedFeatures": []
   },
-  "blockingIssues": [
+  "blockingIssues": [],
+  "appliedUpdates": [
     {
-      "featureId": "panora-swap-routing",
-      "severity": "blocking",
-      "description": "getPanoraQuote() does not implement the required quote contract; feature requires a quote endpoint/shape but implementation posts to /swap and reuses swap payload semantics."
-    },
-    {
-      "featureId": "panora-swap-routing",
-      "severity": "blocking",
-      "description": "Routing path is synthesized as `${from} → ${to} via Panora` instead of parsing and displaying actual Panora route path details."
+      "target": "library",
+      "description": "Added factual Panora API authentication note in .factory/library/panora-api-auth-requirement.md after observing HTTP 401 without x-api-key for GET /swap/quote.",
+      "sourceFeature": "fix-panora-quote-and-routing"
     }
   ],
-  "appliedUpdates": [],
   "suggestedGuidanceUpdates": [
     {
       "target": "AGENTS.md",
       "suggestion": "Align mission feature skillName values with actually available runtime skills (e.g., avoid assigning `frontend-ui-worker` when only `frontend-worker` is installed in worker runtime).",
-      "evidence": "shared-constants-usd1, multi-stablecoin-selector, and panora-swap-routing review artifacts all recorded runtime fallback from unavailable `frontend-ui-worker` to `frontend-worker`.",
+      "evidence": "Fix feature metadata still references frontend-ui-worker while review/handoff evidence shows runtime fallback to frontend-worker.",
       "isSystemic": true
     },
     {
       "target": "AGENTS.md",
-      "suggestion": "Clarify and pin the Panora quote API contract in mission guidance/validation contract (endpoint, method, expected response fields, and when API key is required).",
-      "evidence": "Review for panora-swap-routing found contract mismatch between mission expectations and implementation choices, including endpoint/method ambiguity and route-path extraction expectations.",
+      "suggestion": "Update Panora guidance to state quote/swap endpoints may require x-api-key and to source this key from env-managed secrets, not assumptions about unauthenticated access.",
+      "evidence": "Mission AGENTS says no key needed, but scrutiny review observed 401 from GET /swap/quote without x-api-key.",
       "isSystemic": false
     }
   ],
-  "rejectedObservations": [
-    {
-      "observation": "Duplicate reports of the same frontend skill-name mismatch across multiple feature reviews.",
-      "reason": "duplicate"
-    },
-    {
-      "observation": "Claim that a hardcoded Panora API key alone constitutes a shared-state update candidate.",
-      "reason": "ambiguous"
-    }
-  ],
-  "previousRound": null
+  "rejectedObservations": [],
+  "previousRound": ".factory/validation/swap-panora/scrutiny/synthesis.round1.json"
 }

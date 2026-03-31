@@ -1,0 +1,26 @@
+{
+  "featureId": "fix-panora-quote-and-routing",
+  "reviewedAt": "2026-03-31T23:40:55Z",
+  "commitId": "fa3c7bb",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix commit resolves all previously reported issues from panora-swap-routing. Quotes now use GET /swap/quote, swap execution remains on POST /swap, route text now parses Panora route metadata when present (with fallback), exchange rate is per-unit, and USD equivalent uses Panora's toTokenAmountUSD field with fallback.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Feature metadata still references frontend-ui-worker while worker runtime used frontend-worker due runtime skill availability mismatch.",
+      "evidence": "features.json (fix-panora-quote-and-routing.skillName = frontend-ui-worker) vs fix handoff/transcript for session 822eaeb5-dc42-45bc-9d1b-5b080184411d showing fallback invocation of frontend-worker."
+    },
+    {
+      "area": "knowledge",
+      "observation": "Mission AGENTS guidance for Panora authentication appears stale/incorrect; it states no API key is needed, but live Panora quote requests return 401 without x-api-key.",
+      "evidence": "Mission AGENTS.md says 'No API key needed for basic usage'. Direct GET https://api.panora.exchange/swap/quote without key returned {\"statusCode\":401,\"message\":\"API key is required\"} during this review."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/swap-panora/scrutiny/reviews/panora-swap-routing.json",
+  "summary": "Fix review passed: both prior blocking issues and both prior non-blocking display correctness issues were addressed in commit fa3c7bb, with no new blocking regressions found."
+}
