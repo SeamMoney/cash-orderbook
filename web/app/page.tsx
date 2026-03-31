@@ -10,11 +10,15 @@ import { SwapPlaceholder } from "@/components/placeholders/swap-placeholder";
 import { TransactionsPlaceholder } from "@/components/placeholders/transactions-placeholder";
 import { useMarket } from "@/hooks/use-market";
 import { usePriceChange } from "@/hooks/use-price-change";
+import { useMinDuration } from "@/hooks/use-min-duration";
 
 export default function Home(): React.ReactElement {
   const [activeTab, setActiveTab] = useState<NavTab>("trade");
-  const { market, loading: marketLoading } = useMarket();
+  const { market, loading: rawMarketLoading } = useMarket();
   const { change24h } = usePriceChange();
+
+  // Ensure stats skeleton is visible for at least 300ms on initial page load
+  const marketLoading = useMinDuration(rawMarketLoading, 300);
 
   // Chart crosshair hover state — when hovering, override the header price
   const [hoverPrice, setHoverPrice] = useState<number | null>(null);
@@ -29,16 +33,16 @@ export default function Home(): React.ReactElement {
   const displayPrice = hoverPrice ?? market?.lastPrice ?? null;
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#000000]">
+    <div className="flex min-h-screen flex-col bg-background">
       <Nav activeTab={activeTab} onTabChange={setActiveTab} />
       <Toaster
         theme="dark"
         position="top-right"
         toastOptions={{
           style: {
-            background: "#111111",
-            border: "1px solid #1A1A1A",
-            color: "#FFFFFF",
+            background: "var(--color-card)",
+            border: "1px solid var(--color-border)",
+            color: "var(--color-foreground)",
           },
         }}
       />

@@ -9,6 +9,7 @@ import {
 } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCandles, type CandleInterval } from "@/hooks/use-candles";
+import { useMinDuration } from "@/hooks/use-min-duration";
 
 /** Time range tab options shown below the chart. */
 const TIME_RANGES: { label: string; interval: CandleInterval }[] = [
@@ -40,8 +41,11 @@ export function PriceChart({
 }: PriceChartProps): React.ReactElement {
   const [activeRange, setActiveRange] = useState(1); // default "1D"
   const interval = TIME_RANGES[activeRange].interval;
-  const { candles, loading, error } = useCandles(interval);
+  const { candles, loading: rawLoading, error } = useCandles(interval);
   const chartContainerRef = useRef<HTMLDivElement>(null);
+
+  // Ensure skeleton is visible for at least 300ms on initial page load
+  const loading = useMinDuration(rawLoading, 300);
 
   const hasData = candles.length > 0;
   const isEmpty = !loading && !hasData;
@@ -59,7 +63,7 @@ export function PriceChart({
     : "rgba(255, 59, 48, 0.0)";
 
   return (
-    <div className="rounded-2xl border border-[#1A1A1A] bg-[#111111] p-4">
+    <div className="rounded-2xl border border-border bg-card p-4">
       {/* Time range tabs */}
       <div className="mb-4 flex items-center gap-2">
         {TIME_RANGES.map((range, idx) => (
@@ -68,8 +72,8 @@ export function PriceChart({
             onClick={() => setActiveRange(idx)}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
               idx === activeRange
-                ? "bg-[#1A1A1A] text-white"
-                : "text-[#555555] hover:text-[#888888] cursor-pointer"
+                ? "bg-secondary text-white"
+                : "text-text-muted hover:text-muted-foreground cursor-pointer"
             }`}
             aria-label={`Show ${range.label} chart range`}
             aria-pressed={idx === activeRange}
@@ -106,7 +110,7 @@ function ChartSkeleton(): React.ReactElement {
     <div className="relative h-full w-full">
       <Skeleton className="h-full w-full" />
       <div className="absolute inset-0 flex items-center justify-center">
-        <p className="text-sm text-[#555555]">Loading chart...</p>
+        <p className="text-sm text-text-muted">Loading chart...</p>
       </div>
     </div>
   );
@@ -119,12 +123,12 @@ function ChartEmptyState({
   error: string | null;
 }): React.ReactElement {
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center rounded-lg border border-dashed border-[#1A1A1A] bg-[#0A0A0A]">
-      <div className="mb-2 text-2xl text-[#333333]">📈</div>
-      <p className="text-sm font-medium text-[#555555]">
+    <div className="flex h-full w-full flex-col items-center justify-center rounded-lg border border-dashed border-border bg-background">
+      <div className="mb-2 text-2xl opacity-20">📈</div>
+      <p className="text-sm font-medium text-text-muted">
         {error ? "Unable to load chart data" : "No chart data available"}
       </p>
-      <p className="mt-1 text-xs text-[#333333]">
+      <p className="mt-1 text-xs opacity-30">
         {error
           ? "Check that the API is running"
           : "Trade data will appear here"}

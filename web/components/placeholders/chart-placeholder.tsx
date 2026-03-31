@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
  */
 export function ChartPlaceholder(): React.ReactElement {
   return (
-    <div className="rounded-2xl border border-[#1A1A1A] bg-[#111111] p-4">
+    <div className="rounded-2xl border border-border bg-card p-4">
       {/* Time range tabs placeholder */}
       <div className="mb-4 flex items-center gap-2">
         {["1H", "1D", "1W", "1M", "1Y"].map((range) => (
@@ -16,8 +16,8 @@ export function ChartPlaceholder(): React.ReactElement {
             key={range}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
               range === "1D"
-                ? "bg-[#1A1A1A] text-white"
-                : "text-[#555555] hover:text-[#888888] cursor-pointer"
+                ? "bg-secondary text-white"
+                : "text-text-muted hover:text-muted-foreground cursor-pointer"
             }`}
           >
             {range}
@@ -30,7 +30,7 @@ export function ChartPlaceholder(): React.ReactElement {
         <Skeleton className="h-full w-full" />
         {/* Faux chart line overlay for visual context */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <p className="text-sm text-[#555555]">Chart loading...</p>
+          <p className="text-sm text-text-muted">Chart loading...</p>
         </div>
       </div>
     </div>

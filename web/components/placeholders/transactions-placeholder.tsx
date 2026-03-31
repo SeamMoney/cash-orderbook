@@ -9,15 +9,15 @@ import { Skeleton } from "@/components/ui/skeleton";
  */
 export function TransactionsPlaceholder(): React.ReactElement {
   return (
-    <div className="rounded-2xl border border-[#1A1A1A] bg-[#111111] p-4">
+    <div className="rounded-2xl border border-border bg-card p-4">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-medium text-white">Transactions</h3>
-        <span className="text-xs text-[#555555]">Recent activity</span>
+        <span className="text-xs text-text-muted">Recent activity</span>
       </div>
 
       {/* Table header */}
-      <div className="grid grid-cols-5 gap-2 border-b border-[#1A1A1A] pb-2 text-xs text-[#555555]">
+      <div className="grid grid-cols-5 gap-2 border-b border-border pb-2 text-xs text-text-muted">
         <span>Time</span>
         <span>Type</span>
         <span className="text-right">Price</span>
@@ -26,7 +26,7 @@ export function TransactionsPlaceholder(): React.ReactElement {
       </div>
 
       {/* Skeleton rows */}
-      <div className="divide-y divide-[#1A1A1A]">
+      <div className="divide-y divide-border">
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={`tx-skel-${i}`}

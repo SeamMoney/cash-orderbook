@@ -25,7 +25,7 @@ export function TokenHeader({
   hoverTimestamp,
 }: TokenHeaderProps): React.ReactElement {
   const isPositive = change24h !== null && change24h >= 0;
-  const changeColor = isPositive ? "text-[#00D54B]" : "text-[#FF3B30]";
+  const changeColor = isPositive ? "text-cash-green" : "text-cash-red";
   const changePrefix = isPositive ? "+" : "";
 
   return (
@@ -33,7 +33,7 @@ export function TokenHeader({
       {/* Top row: icon + name + ticker */}
       <div className="flex items-center gap-3">
         {/* Token Icon */}
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#00D54B]">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary">
           <span className="text-sm font-bold text-black">C</span>
         </div>
 
@@ -41,7 +41,7 @@ export function TokenHeader({
           <h1 className="text-xl font-bold tracking-tight text-white">
             CASH
           </h1>
-          <span className="text-sm font-medium text-[#888888]">$CASH</span>
+          <span className="text-sm font-medium text-muted-foreground">$CASH</span>
         </div>
       </div>
 
@@ -66,7 +66,7 @@ export function TokenHeader({
               </span>
             ) : null}
             {hoverTimestamp ? (
-              <span className="font-mono text-sm text-[#888888]">
+              <span className="font-mono text-sm text-muted-foreground">
                 {hoverTimestamp}
               </span>
             ) : null}

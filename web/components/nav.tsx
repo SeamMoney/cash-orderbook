@@ -25,7 +25,7 @@ export function Nav({
   onTabChange,
 }: NavProps): React.ReactElement {
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#1A1A1A] bg-[#000000]/90 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/90 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between px-4 sm:px-6">
         {/* Left: Logo */}
         <div className="flex items-center gap-6">
@@ -43,13 +43,13 @@ export function Nav({
               className={`relative px-4 py-1.5 text-sm font-medium rounded-full transition-colors ${
                 activeTab === tab.id
                   ? "text-white"
-                  : "text-[#888888] hover:text-white"
+                  : "text-muted-foreground hover:text-white"
               }`}
             >
               {activeTab === tab.id && (
                 <motion.div
                   layoutId="nav-tab-indicator"
-                  className="absolute inset-0 rounded-full bg-[#1A1A1A]"
+                  className="absolute inset-0 rounded-full bg-secondary"
                   transition={{
                     type: "spring",
                     stiffness: 400,
@@ -65,7 +65,7 @@ export function Nav({
         {/* Right: Search + Connect */}
         <div className="flex items-center gap-3">
           {/* Search placeholder */}
-          <div className="hidden md:flex items-center gap-2 rounded-full bg-[#111111] border border-[#1A1A1A] px-3 py-1.5 text-sm text-[#555555] w-[200px] cursor-pointer hover:border-[#333333] transition-colors">
+          <div className="hidden md:flex items-center gap-2 rounded-full bg-card border border-border px-3 py-1.5 text-sm text-text-muted w-[200px] cursor-pointer hover:border-surface-hover transition-colors">
             <Search className="h-3.5 w-3.5" />
             <span>Search tokens</span>
           </div>

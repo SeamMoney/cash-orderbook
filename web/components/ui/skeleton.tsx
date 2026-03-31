@@ -10,7 +10,7 @@ export function Skeleton({ className, ...props }: SkeletonProps): React.ReactEle
   return (
     <div
       className={cn(
-        "animate-pulse rounded-md bg-[#2A2A2A]",
+        "animate-pulse rounded-md bg-surface-raised",
         className,
       )}
       {...props}
@@ -26,7 +26,7 @@ export function OrderbookSkeleton(): React.ReactElement {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="grid grid-cols-6 gap-0 px-3 py-1.5 border-b border-[#2A2A2A]">
+      <div className="grid grid-cols-6 gap-0 px-3 py-1.5 border-b border-surface-raised">
         <Skeleton className="h-3 w-8 col-span-2" />
         <Skeleton className="h-3 w-6 ml-auto" />
         <Skeleton className="h-3 w-8 col-span-2 ml-auto" />
@@ -34,7 +34,7 @@ export function OrderbookSkeleton(): React.ReactElement {
       </div>
       {/* Body */}
       <div className="grid grid-cols-2 gap-0 flex-1">
-        <div className="flex flex-col gap-0.5 p-1 border-r border-[#2A2A2A]/50">
+        <div className="flex flex-col gap-0.5 p-1 border-r border-surface-raised/50">
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={`bid-skel-${i}`} className="flex items-center justify-between px-2 py-[3px]">
               <Skeleton className="h-3 w-16" />
@@ -61,7 +61,7 @@ export function OrderbookSkeleton(): React.ReactElement {
 export function TradeTickerSkeleton(): React.ReactElement {
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-[#2A2A2A]">
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-surface-raised">
         <Skeleton className="h-3 w-8" />
         <Skeleton className="h-3 w-6" />
         <Skeleton className="h-3 w-6" />

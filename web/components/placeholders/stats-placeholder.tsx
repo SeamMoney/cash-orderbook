@@ -19,9 +19,9 @@ export function StatsPlaceholder(): React.ReactElement {
       {stats.map((stat) => (
         <div
           key={stat.label}
-          className="rounded-xl border border-[#1A1A1A] bg-[#111111] p-4"
+          className="rounded-xl border border-border bg-card p-4"
         >
-          <p className="text-xs text-[#555555] mb-2">{stat.label}</p>
+          <p className="text-xs text-text-muted mb-2">{stat.label}</p>
           <Skeleton className="h-5 w-20 rounded-md" />
         </div>
       ))}
