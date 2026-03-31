@@ -1,0 +1,184 @@
+{
+  "groupId": "chart-token",
+  "testedAt": "2026-03-31T08:10:41Z",
+  "isolation": {
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "appUrl": "http://localhost:3102",
+    "browserSession": "chart-token-79476079"
+  },
+  "toolsUsed": ["agent-browser"],
+  "assertions": [
+    {
+      "id": "VAL-LAYOUT-004",
+      "title": "Token header with price and change",
+      "status": "fail",
+      "reason": "Token header shows icon/name/ticker and monospace price, but no 24h percentage change is rendered.",
+      "steps": [
+        {
+          "action": "Load / and inspect token header",
+          "expected": "CASH icon/name/ticker, current price, and 24h change percentage (green/red)",
+          "observed": "CASH icon/name/ticker and $0.000000 shown; no percentage change text found"
+        },
+        {
+          "action": "Check price typography",
+          "expected": "Price uses monospace font",
+          "observed": "Price span uses GeistMono via font-mono"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-chart/chart-token/VAL-LAYOUT-004-token-header.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /market -> 200"
+      },
+      "issues": "Missing 24h change percentage in token header."
+    },
+    {
+      "id": "VAL-LAYOUT-005",
+      "title": "Token stats grid",
+      "status": "fail",
+      "reason": "Stats grid is present, but Market cap and Total supply remain '--' instead of populated values.",
+      "steps": [
+        {
+          "action": "Inspect stats cards under chart",
+          "expected": "Market Cap, 24h Volume, Total Supply populated from API",
+          "observed": "24H volume shows $0.00; Market cap and Total supply show '--'"
+        },
+        {
+          "action": "Inspect market API payload",
+          "expected": "Contains fields needed to populate all required stats",
+          "observed": "/market returns pair/price/volume fields only; no marketCap/totalSupply fields"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-chart/chart-token/VAL-LAYOUT-005-stats-grid.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /market -> 200"
+      },
+      "issues": "Required stats are not fully populated in UI."
+    },
+    {
+      "id": "VAL-CHART-001",
+      "title": "Price chart renders",
+      "status": "blocked",
+      "reason": "No candle data returned, so line/gradient positivity rendering cannot be validated.",
+      "steps": [
+        {
+          "action": "Inspect chart area",
+          "expected": "Visible price line with green/red trend and gradient fill",
+          "observed": "Chart shows 'No chart data available' empty state"
+        },
+        {
+          "action": "Check candle API data",
+          "expected": "Non-empty candle series for rendering",
+          "observed": "Candle endpoints returned empty arrays"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-chart/chart-token/VAL-CHART-001-chart-render.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /candles?interval=5m -> 200 (empty), GET /candles?interval=1h -> 200 (empty)"
+      },
+      "issues": "Blocked by empty candle dataset."
+    },
+    {
+      "id": "VAL-CHART-002",
+      "title": "Time range selector",
+      "status": "pass",
+      "reason": "Range controls are visible, active state changes on click, and corresponding candle interval requests are issued.",
+      "steps": [
+        {
+          "action": "Click 1W, 1Y, then 1H",
+          "expected": "Active range highlight updates and chart requests corresponding interval data",
+          "observed": "Pressed state moved across selected ranges; candle requests observed for 15m, 1d, 1m, 1h"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-chart/chart-token/VAL-CHART-002-range-1w-active.png",
+          "layout-chart/chart-token/VAL-CHART-002-range-1h-active.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /candles?interval=15m -> 200, /candles?interval=1d -> 200, /candles?interval=1m -> 200, /candles?interval=1h -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CHART-003",
+      "title": "Chart hover interaction",
+      "status": "blocked",
+      "reason": "Hover tooltip/crosshair and header hover-price update cannot be validated without candle points.",
+      "steps": [
+        {
+          "action": "Hover within chart plot area",
+          "expected": "Crosshair/tooltip appears and header price updates to hovered point",
+          "observed": "No tooltip/crosshair; header remained at $0.000000 with no-data chart"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-chart/chart-token/VAL-CHART-003-hover-attempt.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Candle endpoints returned empty arrays during range tests"
+      },
+      "issues": "Blocked by empty candle dataset."
+    },
+    {
+      "id": "VAL-CHART-004",
+      "title": "Chart loading state",
+      "status": "fail",
+      "reason": "On reload, chart area did not show a visible chart skeleton/shimmer loading state before empty-state rendering.",
+      "steps": [
+        {
+          "action": "Reload page and capture immediate chart area",
+          "expected": "Skeleton/shimmer placeholder appears while chart data is loading",
+          "observed": "Chart displays no-data panel directly; no explicit chart loading skeleton observed"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-chart/chart-token/VAL-CHART-004-loading-state.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Chart-related requests complete quickly (200), but no chart loading skeleton observed"
+      },
+      "issues": "Chart loading placeholder not evident in tested flow."
+    },
+    {
+      "id": "VAL-ERROR-001",
+      "title": "Chart empty state",
+      "status": "pass",
+      "reason": "With no candle data, chart shows a graceful empty state message instead of a broken/blank box.",
+      "steps": [
+        {
+          "action": "View chart when candle responses are empty",
+          "expected": "Graceful empty state (message/placeholder)",
+          "observed": "No chart data message and placeholder content rendered correctly"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-chart/chart-token/VAL-ERROR-001-chart-empty-state.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /candles endpoints -> 200 with empty arrays"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [
+    {
+      "description": "Candle endpoints returned empty arrays across tested intervals, preventing validation of rendered line/crosshair hover behaviors.",
+      "affectedAssertions": ["VAL-CHART-001", "VAL-CHART-003"],
+      "quickFixAttempted": "Switched chart ranges (1W/1Y/1H) and reloaded page; dataset remained empty."
+    }
+  ],
+  "summary": "Tested 7 assertions: 2 passed, 3 failed, 2 blocked."
+}

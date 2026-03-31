@@ -1,0 +1,110 @@
+{
+  "groupId": "layout-theme",
+  "testedAt": "2026-03-31T08:10:03Z",
+  "isolation": {
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "appUrl": "http://localhost:3102",
+    "session": "layout-theme-79476079",
+    "assignedAssertions": [
+      "VAL-LAYOUT-001",
+      "VAL-LAYOUT-002",
+      "VAL-LAYOUT-003",
+      "VAL-LAYOUT-006"
+    ],
+    "guidanceSection": "Flow Validator Guidance: agent-browser"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-LAYOUT-001",
+      "title": "Dark theme with Cash App colors",
+      "status": "pass",
+      "reason": "Computed styles confirm pure-black page background, dark card/surface colors, Cash App green accent usage, and no legacy #212121 remnants.",
+      "evidence": {
+        "screenshots": [
+          "layout-chart/layout-theme/VAL-LAYOUT-001-theme-fullpage.png"
+        ],
+        "computedStyles": {
+          "bodyBackground": "rgb(0, 0, 0)",
+          "bodyTextColor": "rgb(255, 255, 255)",
+          "surfaceBackgroundSample": "rgb(26, 26, 26)",
+          "cashGreenFound": true,
+          "cashGreenSampleBackground": "rgb(0, 213, 75)",
+          "legacy212121Found": false
+        },
+        "consoleErrors": "none",
+        "network": "not applicable"
+      }
+    },
+    {
+      "id": "VAL-LAYOUT-002",
+      "title": "Navbar with logo, tabs, and wallet button",
+      "status": "pass",
+      "reason": "Header is sticky/full-width and shows CASH logo left, Trade/Explore center region, and Connect Wallet button on the right with proper spacing.",
+      "evidence": {
+        "screenshots": [
+          "layout-chart/layout-theme/VAL-LAYOUT-002-navbar.png"
+        ],
+        "layoutChecks": {
+          "headerPosition": "sticky",
+          "headerTop": "0px",
+          "headerWidthEqualsViewport": true,
+          "logoTradeWalletLeftToRightOrder": true
+        },
+        "consoleErrors": "none",
+        "network": "not applicable"
+      }
+    },
+    {
+      "id": "VAL-LAYOUT-003",
+      "title": "Two-column desktop layout",
+      "status": "pass",
+      "reason": "At 1280px viewport, desktop layout renders side-by-side columns at ~63/34 split and the right column contains sticky swap content.",
+      "evidence": {
+        "screenshots": [
+          "layout-chart/layout-theme/VAL-LAYOUT-003-two-column-1280.png"
+        ],
+        "layoutChecks": {
+          "viewportWidth": 1280,
+          "containerWidth": 1232,
+          "leftColumnWidth": 780,
+          "rightColumnWidth": 420,
+          "rightColumnStickyClass": "md:sticky md:top-[72px]",
+          "rightColumnStickyTop": "72px",
+          "stickyRemainsOnScroll": true
+        },
+        "consoleErrors": "none",
+        "network": "not applicable"
+      }
+    },
+    {
+      "id": "VAL-LAYOUT-006",
+      "title": "Geist font usage",
+      "status": "pass",
+      "reason": "Computed fonts show GeistSans for UI text and GeistMono applied to price/amount numeric elements.",
+      "evidence": {
+        "screenshots": [
+          "layout-chart/layout-theme/VAL-LAYOUT-006-fonts.png"
+        ],
+        "fontChecks": {
+          "bodyFontFamily": "GeistSans, \"GeistSans Fallback\", system-ui, sans-serif",
+          "bodyUsesGeistSans": true,
+          "geistSansElementCount": 137,
+          "geistMonoElementCount": 7,
+          "geistMonoSampleText": [
+            "$0.000000",
+            "$0.00",
+            "0"
+          ]
+        },
+        "consoleErrors": "none",
+        "network": "not applicable"
+      }
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 4 assertions (VAL-LAYOUT-001, VAL-LAYOUT-002, VAL-LAYOUT-003, VAL-LAYOUT-006): 4 passed, 0 failed, 0 blocked."
+}
