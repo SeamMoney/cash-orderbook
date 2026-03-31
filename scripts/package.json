@@ -11,6 +11,7 @@
     "register-market": "tsx src/register-market.ts",
     "seed-orderbook": "tsx src/seed-orderbook.ts",
     "integration-test": "tsx src/integration-test.ts",
+    "import-history": "tsx src/import-history.ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {

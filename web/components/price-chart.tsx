@@ -54,7 +54,7 @@ export function PriceChart({
   const [activeRange, setActiveRange] = useState(1); // default "1D"
   const [chartMode, setChartMode] = useState<ChartMode>("candle");
   const interval = TIME_RANGES[activeRange].interval;
-  const { candles, loading: rawLoading, error } = useCandles(interval);
+  const { candles, loading: rawLoading, error, transitionTimestamp } = useCandles(interval);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const { trades: realtimeTrades, wsStatus } = useRealtimeTrades(10);
 
@@ -145,6 +145,7 @@ export function PriceChart({
             onCrosshairMove={onCrosshairMove}
             realtimeTrades={realtimeTrades}
             wsConnected={wsStatus === "connected"}
+            transitionTimestamp={transitionTimestamp}
           />
         )}
       </div>
@@ -214,6 +215,7 @@ function LightweightChart({
   onCrosshairMove,
   realtimeTrades,
   wsConnected,
+  transitionTimestamp,
 }: {
   containerRef: RefObject<HTMLDivElement | null>;
   candles: CandleInput[];
@@ -224,6 +226,8 @@ function LightweightChart({
   onCrosshairMove?: (data: CrosshairData) => void;
   realtimeTrades?: RealtimeTrade[];
   wsConnected?: boolean;
+  /** Timestamp (ms) marking the transition from historical to live data. */
+  transitionTimestamp?: number | null;
 }): React.ReactElement {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ReturnType<
@@ -464,6 +468,41 @@ function LightweightChart({
         });
       }
 
+      // Add transition marker between historical and live data
+      if (transitionTimestamp && seriesRef.current) {
+        const transitionTimeSec = Math.floor(transitionTimestamp / 1000) as UTCTs;
+        // Check if the transition time falls within our candle data range
+        const candleTimestamps = candles.map((c) => Math.floor(c.timestamp / 1000));
+        const minTs = Math.min(...candleTimestamps);
+        const maxTs = Math.max(...candleTimestamps);
+
+        if (transitionTimeSec >= minTs && transitionTimeSec <= maxTs) {
+          const markerSeries = seriesRef.current as unknown as {
+            setMarkers: (markers: Array<{
+              time: UTCTs;
+              position: string;
+              color: string;
+              shape: string;
+              text: string;
+              size?: number;
+            }>) => void;
+          };
+
+          if (typeof markerSeries.setMarkers === "function") {
+            markerSeries.setMarkers([
+              {
+                time: transitionTimeSec,
+                position: "aboveBar",
+                color: "#888888",
+                shape: "arrowDown",
+                text: "New Venue",
+                size: 1,
+              },
+            ]);
+          }
+        }
+      }
+
       chart.timeScale().fitContent();
 
       // Handle resize
@@ -506,6 +545,7 @@ function LightweightChart({
     topGradient,
     bottomGradient,
     formatTimestamp,
+    transitionTimestamp,
   ]);
 
   // Append new data points from WebSocket trades to the chart series
