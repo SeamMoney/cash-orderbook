@@ -54,6 +54,8 @@ interface TokenSelectorModalProps {
   excludeSymbol?: string;
   /** Token symbol currently selected on this side (disabled / non-selectable) */
   selectedSymbol?: string;
+  /** Ref to the trigger button — focus is restored here on modal close */
+  triggerRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
 /** Height of each row in the virtualized list */
@@ -128,6 +130,7 @@ export function TokenSelectorModal({
   onSelect,
   balances,
   selectedSymbol,
+  triggerRef,
 }: TokenSelectorModalProps): React.ReactElement {
   const [search, setSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -213,6 +216,10 @@ export function TokenSelectorModal({
               onOpenAutoFocus={(e) => {
                 e.preventDefault();
                 searchInputRef.current?.focus();
+              }}
+              onCloseAutoFocus={(e) => {
+                e.preventDefault();
+                triggerRef?.current?.focus();
               }}
             >
               <motion.div

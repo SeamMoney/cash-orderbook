@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, forwardRef } from "react";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { ArrowDownUp, Loader2, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
@@ -74,6 +74,8 @@ export function SwapWidget(): React.ReactElement {
 
   // --- Token selector modal state ---
   const [selectorOpen, setSelectorOpen] = useState<SelectorSlot>(null);
+  const fromTokenBtnRef = useRef<HTMLButtonElement>(null);
+  const toTokenBtnRef = useRef<HTMLButtonElement>(null);
 
   // --- Limit tab state ---
   const [limitSide, setLimitSide] = useState<"buy" | "sell">("buy");
@@ -448,6 +450,7 @@ export function SwapWidget(): React.ReactElement {
                   className="flex-1 bg-transparent text-2xl font-mono text-white placeholder:text-text-muted outline-none min-w-0"
                 />
                 <TokenSelectorButton
+                  ref={fromTokenBtnRef}
                   symbol={fromToken}
                   onClick={() => setSelectorOpen("from")}
                 />
@@ -500,6 +503,7 @@ export function SwapWidget(): React.ReactElement {
                   </motion.p>
                 </AnimatePresence>
                 <TokenSelectorButton
+                  ref={toTokenBtnRef}
                   symbol={toToken}
                   onClick={() => setSelectorOpen("to")}
                 />
@@ -510,13 +514,6 @@ export function SwapWidget(): React.ReactElement {
                 </p>
               )}
             </div>
-
-            {/* Price Details (expandable) */}
-            <SwapPriceDetails
-              quote={quote}
-              direction={direction}
-              loading={depthLoading}
-            />
 
             {/* CTA Button */}
             <button
@@ -535,6 +532,13 @@ export function SwapWidget(): React.ReactElement {
                 swapCta.label
               )}
             </button>
+
+            {/* Price Details (expandable) — below CTA */}
+            <SwapPriceDetails
+              quote={quote}
+              direction={direction}
+              loading={depthLoading}
+            />
           </motion.div>
         ) : (
           <motion.div
@@ -672,6 +676,7 @@ export function SwapWidget(): React.ReactElement {
         selectedSymbol={
           selectorOpen === "from" ? fromToken : selectorOpen === "to" ? toToken : undefined
         }
+        triggerRef={selectorOpen === "from" ? fromTokenBtnRef : toTokenBtnRef}
       />
 
       {/* Wallet Selector Modal — opened by CTA when disconnected */}
@@ -687,19 +692,17 @@ export function SwapWidget(): React.ReactElement {
  * TokenSelectorButton — shows token icon + ticker with a chevron.
  * Clicking opens the token selector modal.
  */
-function TokenSelectorButton({
-  symbol,
-  onClick,
-}: {
-  symbol: TokenSymbol;
-  onClick: () => void;
-}): React.ReactElement {
+const TokenSelectorButton = forwardRef<
+  HTMLButtonElement,
+  { symbol: TokenSymbol; onClick: () => void }
+>(function TokenSelectorButton({ symbol, onClick }, ref): React.ReactElement {
   const token = TOKENS[symbol];
 
   if (!token) return <></>;
 
   return (
     <button
+      ref={ref}
       type="button"
       onClick={onClick}
       className="flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 shrink-0 hover:bg-surface-hover transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card"
@@ -715,4 +718,4 @@ function TokenSelectorButton({
       <ChevronDown className="h-3 w-3 text-text-muted" />
     </button>
   );
-}
+});
