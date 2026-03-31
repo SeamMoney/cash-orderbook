@@ -18,7 +18,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${GeistSans.variable} ${GeistMono.variable} antialiased bg-background text-foreground min-h-screen`}
+        className={`${GeistSans.variable} ${GeistMono.variable} antialiased bg-[#000000] text-foreground min-h-screen`}
       >
         <WalletProvider>{children}</WalletProvider>
       </body>
