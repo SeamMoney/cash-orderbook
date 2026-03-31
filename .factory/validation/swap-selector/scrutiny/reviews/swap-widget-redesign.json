@@ -1,0 +1,28 @@
+{
+  "featureId": "swap-widget-redesign",
+  "reviewedAt": "2026-03-31T11:35:03Z",
+  "commitId": "0789371fd7d490e290b82141800d4a577ca64d19",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The redesign largely matches the visual/interaction requirements, but swap execution has a blocking integration bug for the buy direction.",
+    "issues": [
+      {
+        "file": "web/components/swap/swap-widget.tsx",
+        "line": 213,
+        "severity": "blocking",
+        "description": "Market buy execution sends `quantity` from `inputAmount` ('You pay' USDC) instead of base-asset quantity. For buy mode, the input is USDC, but `place_market_order` quantity is base units (CASH). This causes incorrect order sizing/failures in buy flow. Evidence: contracts/sources/edge_case_tests.move:522-524 documents `place_market_order(..., 60_000_000, true)` as buying 60 CASH."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Feature metadata points to a skill that was not invokable in the worker runtime, causing a recoverable procedure deviation.",
+      "evidence": "features.json sets `skillName` to `frontend-ui-worker` for swap-widget-redesign, while the transcript skeleton shows an initial failed `Skill` call for `frontend-ui-worker` before switching to `frontend-worker`; handoff.skillFeedback.deviations records this mismatch."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed handoff, commit diff, transcript skeleton, and shared-state docs. The feature is visually complete, but market buy execution is wired with the wrong quantity unit, so this review fails pending fix."
+}

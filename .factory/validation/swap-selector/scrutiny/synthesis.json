@@ -1,0 +1,65 @@
+{
+  "milestone": "swap-selector",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "pnpm -r test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm -r typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm -r lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 3,
+    "passed": 1,
+    "failed": 2,
+    "failedFeatures": [
+      "swap-widget-redesign",
+      "token-selector-modal"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "swap-widget-redesign",
+      "severity": "blocking",
+      "description": "Market buy execution passes `quantity` from the quote-side input amount (USDC) instead of base-asset quantity (CASH), causing incorrect market buy sizing/failures."
+    },
+    {
+      "featureId": "token-selector-modal",
+      "severity": "blocking",
+      "description": "Token selector excludes `excludeSymbol` from both list and popular row; with only CASH/USDC this leaves one selectable token and prevents selecting the opposite token."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "skills",
+      "suggestion": "Ensure mission feature `skillName` values always map to actually installed/invokable skills (or provide a stable alias).",
+      "evidence": "All three reviewed swap-selector features were assigned `frontend-ui-worker`, but worker transcripts show `Skill \"frontend-ui-worker\" not found` and fallback to `frontend-worker`.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md and skill docs",
+      "suggestion": "Align validator expectations between mission guidance and frontend worker skills (whether `pnpm build` is mandatory for this mission phase).",
+      "evidence": "frontend-ui-worker guidance requires build, while mission AGENTS.md validation guidance lists typecheck/lint; this mismatch caused procedural deviations in reviewed work.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Add shared library note for react-window/react-virtualized-auto-sizer v2 API differences.",
+      "reason": "ambiguous scope for this scrutiny pass; recommendation captured but not applied directly."
+    }
+  ],
+  "previousRound": null
+}

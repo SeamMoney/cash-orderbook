@@ -1,0 +1,44 @@
+{
+  "featureId": "token-selector-modal",
+  "reviewedAt": "2026-03-31T11:35:24Z",
+  "commitId": "6c79485",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature adds the modal, search, animation, and virtualization scaffolding, but a core selection-path logic issue prevents users from selecting the opposite token, so required selector behavior is not fully met.",
+    "issues": [
+      {
+        "file": "web/components/swap/token-selector-modal.tsx",
+        "line": 137,
+        "severity": "blocking",
+        "description": "The selector filters out `excludeSymbol` from both the full list and popular row (`token.symbol === excludeSymbol` and `t.symbol !== excludeSymbol`). In swap-widget integration, `excludeSymbol` is always set to the opposite side token (`selectorOpen === \"from\" ? toToken : ...`), so with only CASH/USDC each modal instance shows exactly one token. This prevents selecting the opposite token from the modal and does not satisfy the expected behavior for a token selector that updates swap input (and the 'Popular tokens row (CASH, USDC)' requirement). Evidence at call site: web/components/swap/swap-widget.tsx:660-662."
+      },
+      {
+        "file": "web/package.json",
+        "line": 45,
+        "severity": "non_blocking",
+        "description": "Adds `@types/react-virtualized-auto-sizer` and `@types/react-window` even though both packages already ship their own types (pnpm-lock marks these as deprecated stub type packages). This is avoidable dependency/lockfile churn."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Feature metadata references `frontend-ui-worker`, but during execution that skill was unavailable and the worker had to fall back to `frontend-worker`.",
+      "evidence": "features.json:391 sets `skillName` to `frontend-ui-worker`; transcript lines 234-240 show `Skill frontend-ui-worker` -> not found, then lines 245-248 invoke `frontend-worker`."
+    },
+    {
+      "area": "skills",
+      "observation": "Validation expectations are inconsistent between skill guidance and mission guidance: the UI skill requires `pnpm build`, but mission validation guidance and worker verification only require typecheck/lint.",
+      "evidence": ".factory/skills/frontend-ui-worker/SKILL.md:25-30 includes `pnpm build`; mission AGENTS.md Testing & Validation lists typecheck/lint; transcript lines 1087-1104 show final verification ran typecheck/lint only."
+    },
+    {
+      "area": "knowledge",
+      "observation": "There is no shared library note documenting react-window v2 and react-virtualized-auto-sizer v2 API differences, and the worker spent significant time reverse-engineering typings before fixing implementation.",
+      "evidence": "Transcript lines 612-691 inspect node_modules type definitions and adjust to v2 APIs; `.factory/library/` contains no react-window/autosizer guidance."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed feature token-selector-modal at commit 6c79485 and marked it FAIL due to a blocking token-selection logic issue: the modal excludes the opposite token, leaving only one selectable token in a two-token market. Shared-state observations were recorded for skill name mismatch, validation-procedure inconsistency, and missing dependency API guidance."
+}
