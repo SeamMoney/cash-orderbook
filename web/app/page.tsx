@@ -6,7 +6,7 @@ import { Toaster } from "sonner";
 import { TokenHeader } from "@/components/token-header";
 import { PriceChart, type CrosshairData } from "@/components/price-chart";
 import { TokenStatsGrid } from "@/components/token-stats-grid";
-import { SwapPlaceholder } from "@/components/placeholders/swap-placeholder";
+import { SwapWidget } from "@/components/swap";
 import { TransactionsPlaceholder } from "@/components/placeholders/transactions-placeholder";
 import { useMarket } from "@/hooks/use-market";
 import { usePriceChange } from "@/hooks/use-price-change";
@@ -73,7 +73,7 @@ export default function Home(): React.ReactElement {
           {/* Right Column (~35%) — Sticky Swap Widget */}
           <div className="w-full md:w-[35%] mt-6 md:mt-0">
             <div className="md:sticky md:top-[72px]">
-              <SwapPlaceholder />
+              <SwapWidget />
             </div>
           </div>
         </div>

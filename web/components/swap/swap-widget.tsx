@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
-import { ArrowDownUp, Loader2 } from "lucide-react";
+import { ArrowDownUp, Loader2, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDepth } from "@/hooks/use-depth";
@@ -14,51 +14,86 @@ import {
   type SwapDirection,
   type SwapQuote,
 } from "@/lib/swap-quote";
-import { PriceQuote } from "@/components/swap/price-quote";
-import { SwapButton } from "@/components/swap/swap-button";
+import { SwapPriceDetails } from "@/components/swap/swap-price-details";
 import { formatBalance } from "@/lib/utils";
 
+/** Tab types for the swap widget */
+type SwapTab = "swap" | "limit";
+
 /** CASH/USDC token metadata */
-const ASSETS = {
-  CASH: { symbol: "CASH", name: "CASH", decimals: 6 },
-  USDC: { symbol: "USDC", name: "USDC", decimals: 6 },
+const TOKENS = {
+  CASH: {
+    symbol: "CASH",
+    name: "CASH",
+    decimals: 6,
+    gradient: "from-emerald-400 to-emerald-600",
+  },
+  USDC: {
+    symbol: "USDC",
+    name: "USD Coin",
+    decimals: 6,
+    gradient: "from-blue-400 to-blue-600",
+  },
 } as const;
 
+type TokenSymbol = keyof typeof TOKENS;
+
 /**
- * SwapWidget — the main swap interface component.
+ * SwapWidget — Uniswap-style swap card with Swap and Limit tabs.
  *
- * Shows from/to asset display, amount input with max button,
- * direction toggle, price quote, and swap execution button.
+ * Features:
+ * - Swap + Limit tab switching with animated indicator
+ * - "You pay" / "You receive" inputs with token selectors
+ * - Direction toggle that rotates on click
+ * - CTA button with state-aware labels
+ * - Limit order form with price, amount, buy/sell toggle
+ * - Expandable price details section
+ * - Toast notifications on execution
  */
 export function SwapWidget(): React.ReactElement {
   const { connected, account, signAndSubmitTransaction } = useWallet();
   const { depth, loading: depthLoading } = useDepth(3000);
 
-  const walletAddress = connected && account?.address
-    ? account.address.toString()
-    : undefined;
+  const walletAddress =
+    connected && account?.address ? account.address.toString() : undefined;
   const { balances, updateBalances } = useBalances(walletAddress);
 
   // Subscribe to WS account channel for real-time balance updates
   useAccountSubscription(walletAddress, updateBalances);
 
-  // Direction: "sell" = CASH → USDC, "buy" = USDC → CASH
+  // Active tab
+  const [activeTab, setActiveTab] = useState<SwapTab>("swap");
+
+  // --- Swap tab state ---
   const [direction, setDirection] = useState<SwapDirection>("sell");
   const [inputAmount, setInputAmount] = useState("");
   const [quote, setQuote] = useState<SwapQuote | null>(null);
   const [isSwapping, setIsSwapping] = useState(false);
+  const [directionRotation, setDirectionRotation] = useState(0);
+
+  // --- Limit tab state ---
+  const [limitSide, setLimitSide] = useState<"buy" | "sell">("buy");
+  const [limitPrice, setLimitPrice] = useState("");
+  const [limitAmount, setLimitAmount] = useState("");
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   // Debounce timer ref
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fromAsset = direction === "sell" ? ASSETS.CASH : ASSETS.USDC;
-  const toAsset = direction === "sell" ? ASSETS.USDC : ASSETS.CASH;
+  const fromToken: TokenSymbol = direction === "sell" ? "CASH" : "USDC";
+  const toToken: TokenSymbol = direction === "sell" ? "USDC" : "CASH";
 
   // Determine user's available balance for the "from" asset
   const fromBalance = balances
     ? direction === "sell"
       ? balances.cash.available
       : balances.usdc.available
+    : null;
+
+  const toBalance = balances
+    ? direction === "sell"
+      ? balances.usdc.available
+      : balances.cash.available
     : null;
 
   // Check if the input amount exceeds the user's available balance
@@ -103,12 +138,12 @@ export function SwapWidget(): React.ReactElement {
     setDirection((prev) => (prev === "sell" ? "buy" : "sell"));
     setInputAmount("");
     setQuote(null);
+    setDirectionRotation((prev) => prev + 180);
   }, []);
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>): void => {
       const value = e.target.value;
-      // Allow empty, digits, and one decimal point
       if (value === "" || /^\d*\.?\d*$/.test(value)) {
         setInputAmount(value);
       }
@@ -116,13 +151,41 @@ export function SwapWidget(): React.ReactElement {
     [],
   );
 
-  const handleMaxClick = useCallback((): void => {
-    if (!connected || fromBalance === null || fromBalance <= 0) {
-      toast.info("Max balance not available — connect wallet first");
-      return;
-    }
-    setInputAmount(fromBalance.toString());
-  }, [connected, fromBalance]);
+  const handleLimitPriceChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      const value = e.target.value;
+      if (value === "" || /^\d*\.?\d*$/.test(value)) {
+        setLimitPrice(value);
+      }
+    },
+    [],
+  );
+
+  const handleLimitAmountChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      const value = e.target.value;
+      if (value === "" || /^\d*\.?\d*$/.test(value)) {
+        setLimitAmount(value);
+      }
+    },
+    [],
+  );
+
+  // Compute USD equivalent for the "from" input
+  const fromUsdEquivalent =
+    quote && inputNum > 0
+      ? direction === "sell"
+        ? quote.outputAmount
+        : inputNum
+      : null;
+
+  // Compute USD equivalent for the "to" output
+  const toUsdEquivalent =
+    quote
+      ? direction === "sell"
+        ? quote.outputAmount
+        : quote.outputAmount * (quote.effectivePrice || 1)
+      : null;
 
   const handleSwap = useCallback(async (): Promise<void> => {
     if (!connected || !account || !signAndSubmitTransaction) {
@@ -144,10 +207,9 @@ export function SwapWidget(): React.ReactElement {
     setIsSwapping(true);
 
     try {
-      // Build market order payload via SDK helper
       const payload = buildPlaceOrderPayload({
         pairId: 0,
-        price: 0, // ignored for Market orders
+        price: 0,
         quantity: amount,
         side: direction === "buy" ? "buy" : "sell",
         orderType: "Market",
@@ -167,7 +229,6 @@ export function SwapWidget(): React.ReactElement {
         duration: 6000,
       });
 
-      // Reset form
       setInputAmount("");
       setQuote(null);
     } catch (err) {
@@ -193,121 +254,396 @@ export function SwapWidget(): React.ReactElement {
     direction,
   ]);
 
+  const handlePlaceLimitOrder = useCallback(async (): Promise<void> => {
+    if (!connected || !account || !signAndSubmitTransaction) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
+    const price = parseFloat(limitPrice);
+    const amount = parseFloat(limitAmount);
+
+    if (isNaN(price) || price <= 0) {
+      toast.error("Please enter a valid price");
+      return;
+    }
+    if (isNaN(amount) || amount <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+
+    setIsPlacingOrder(true);
+
+    try {
+      const payload = buildPlaceOrderPayload({
+        pairId: 0,
+        price,
+        quantity: amount,
+        side: limitSide,
+        orderType: "GTC",
+      });
+
+      const response = await signAndSubmitTransaction({
+        data: payload,
+      });
+
+      const txHash =
+        typeof response === "object" && response !== null && "hash" in response
+          ? (response as { hash: string }).hash
+          : String(response);
+
+      toast.success("Order placed", {
+        description: `${limitSide === "buy" ? "Buy" : "Sell"} ${amount} CASH @ ${price} USDC — Tx: ${txHash.slice(0, 10)}...${txHash.slice(-8)}`,
+        duration: 6000,
+      });
+
+      setLimitPrice("");
+      setLimitAmount("");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Transaction failed";
+      toast.error("Order failed", {
+        description: message,
+        duration: 8000,
+        action: {
+          label: "Retry",
+          onClick: () => void handlePlaceLimitOrder(),
+        },
+      });
+    } finally {
+      setIsPlacingOrder(false);
+    }
+  }, [
+    connected,
+    account,
+    signAndSubmitTransaction,
+    limitPrice,
+    limitAmount,
+    limitSide,
+  ]);
+
+  // CTA button state for Swap tab
+  const getSwapCtaState = (): { label: string; disabled: boolean } => {
+    if (!connected) return { label: "Connect Wallet", disabled: true };
+    if (!inputAmount || parseFloat(inputAmount) <= 0)
+      return { label: "Enter an amount", disabled: true };
+    if (insufficientBalance)
+      return { label: "Insufficient balance", disabled: true };
+    if (!quote) return { label: "Fetching quote...", disabled: true };
+    if (!quote.sufficientLiquidity)
+      return { label: "Insufficient liquidity", disabled: true };
+    if (isSwapping) return { label: "Swapping...", disabled: true };
+    return { label: "Swap", disabled: false };
+  };
+
+  // CTA button state for Limit tab
+  const getLimitCtaState = (): { label: string; disabled: boolean } => {
+    if (!connected) return { label: "Connect Wallet", disabled: true };
+    if (!limitPrice || parseFloat(limitPrice) <= 0)
+      return { label: "Enter a price", disabled: true };
+    if (!limitAmount || parseFloat(limitAmount) <= 0)
+      return { label: "Enter an amount", disabled: true };
+    if (isPlacingOrder) return { label: "Placing order...", disabled: true };
+    return { label: "Place Order", disabled: false };
+  };
+
+  const swapCta = getSwapCtaState();
+  const limitCta = getLimitCtaState();
+
   return (
-    <div className="w-full max-w-md mx-auto">
-      <div className="rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] p-5 shadow-xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">Swap</h2>
-          <span className="font-mono text-xs text-[#666666]">
-            CASH / USDC
-          </span>
-        </div>
-
-        {/* From Input */}
-        <div className="rounded-xl bg-[#212121] border border-[#2A2A2A] p-4 mb-2">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-[#888888]">From</span>
-            <button
-              onClick={handleMaxClick}
-              className="text-xs text-emerald-500 hover:text-emerald-400 transition-colors font-medium"
-            >
-              MAX
-            </button>
-          </div>
-          <div className="flex items-center gap-3">
-            <input
-              type="text"
-              inputMode="decimal"
-              placeholder="0.00"
-              value={inputAmount}
-              onChange={handleInputChange}
-              className="flex-1 bg-transparent text-2xl font-mono text-white placeholder:text-[#555555] outline-none"
-            />
-            <div className="flex items-center gap-2 rounded-lg bg-[#2A2A2A] px-3 py-2 shrink-0">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
-                <span className="text-[10px] font-bold text-white">
-                  {fromAsset.symbol[0]}
-                </span>
-              </div>
-              <span className="font-medium text-sm text-white">
-                {fromAsset.symbol}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Direction Toggle */}
-        <div className="flex justify-center -my-3 relative z-10">
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9, rotate: 180 }}
-            onClick={handleDirectionToggle}
-            className="rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] p-2 text-[#888888] hover:text-white hover:border-[#555555] transition-colors"
+    <div className="rounded-2xl border border-border bg-card p-5">
+      {/* Swap / Limit Tabs */}
+      <div className="mb-5 flex items-center gap-1 rounded-full bg-background p-1">
+        {(["swap", "limit"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`relative flex-1 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              activeTab === tab ? "text-white" : "text-text-muted hover:text-text-secondary"
+            }`}
           >
-            <ArrowDownUp className="h-4 w-4" />
-          </motion.button>
-        </div>
-
-        {/* To Output */}
-        <div className="rounded-xl bg-[#212121] border border-[#2A2A2A] p-4 mt-2">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-[#888888]">To (estimated)</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex-1">
-              <AnimatePresence mode="wait">
-                <motion.p
-                  key={quote?.outputAmount ?? "empty"}
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.15 }}
-                  className="text-2xl font-mono text-white"
-                >
-                  {quote
-                    ? formatBalance(quote.outputAmount, 6)
-                    : "0.00"}
-                </motion.p>
-              </AnimatePresence>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg bg-[#2A2A2A] px-3 py-2 shrink-0">
-              <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                  toAsset.symbol === "USDC"
-                    ? "bg-gradient-to-br from-blue-400 to-blue-600"
-                    : "bg-gradient-to-br from-emerald-400 to-emerald-600"
-                }`}
-              >
-                <span className="text-[10px] font-bold text-white">
-                  {toAsset.symbol[0]}
-                </span>
-              </div>
-              <span className="font-medium text-sm text-white">
-                {toAsset.symbol}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Price Quote Details */}
-        <PriceQuote
-          quote={quote}
-          direction={direction}
-          loading={depthLoading}
-        />
-
-        {/* Swap Button */}
-        <SwapButton
-          connected={connected}
-          hasQuote={quote !== null}
-          hasInput={inputAmount !== "" && parseFloat(inputAmount) > 0}
-          sufficientLiquidity={quote?.sufficientLiquidity ?? true}
-          insufficientBalance={!!insufficientBalance}
-          isSwapping={isSwapping}
-          onSwap={handleSwap}
-        />
+            {activeTab === tab && (
+              <motion.div
+                layoutId="swap-tab-indicator"
+                className="absolute inset-0 rounded-full bg-secondary"
+                transition={{
+                  type: "spring",
+                  stiffness: 400,
+                  damping: 30,
+                }}
+              />
+            )}
+            <span className="relative z-10 capitalize">{tab}</span>
+          </button>
+        ))}
       </div>
+
+      {/* Tab Content */}
+      <AnimatePresence mode="wait">
+        {activeTab === "swap" ? (
+          <motion.div
+            key="swap"
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 10 }}
+            transition={{ duration: 0.15 }}
+          >
+            {/* You Pay */}
+            <div className="rounded-xl bg-background border border-border p-4 mb-1">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-text-muted">You pay</span>
+                {connected && fromBalance !== null && (
+                  <span className="text-xs text-text-muted">
+                    Balance:{" "}
+                    <span className="font-mono text-text-secondary">
+                      {formatBalance(fromBalance, 4)}
+                    </span>
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={inputAmount}
+                  onChange={handleInputChange}
+                  className="flex-1 bg-transparent text-2xl font-mono text-white placeholder:text-text-muted outline-none min-w-0"
+                />
+                <TokenSelectorButton symbol={fromToken} />
+              </div>
+              {fromUsdEquivalent !== null && fromUsdEquivalent > 0 && (
+                <p className="mt-1 text-xs text-text-muted font-mono">
+                  ≈ ${formatBalance(fromUsdEquivalent, 2)}
+                </p>
+              )}
+            </div>
+
+            {/* Direction Toggle */}
+            <div className="flex justify-center -my-3 relative z-10">
+              <motion.button
+                animate={{ rotate: directionRotation }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={handleDirectionToggle}
+                className="rounded-xl border border-border bg-card p-2 text-text-muted hover:text-white hover:border-surface-hover transition-colors"
+              >
+                <ArrowDownUp className="h-4 w-4" />
+              </motion.button>
+            </div>
+
+            {/* You Receive */}
+            <div className="rounded-xl bg-background border border-border p-4 mt-1">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-text-muted">You receive</span>
+                {connected && toBalance !== null && (
+                  <span className="text-xs text-text-muted">
+                    Balance:{" "}
+                    <span className="font-mono text-text-secondary">
+                      {formatBalance(toBalance, 4)}
+                    </span>
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={quote?.outputAmount ?? "empty"}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.15 }}
+                    className="flex-1 text-2xl font-mono text-white min-w-0"
+                  >
+                    {quote ? formatBalance(quote.outputAmount, 6) : "0"}
+                  </motion.p>
+                </AnimatePresence>
+                <TokenSelectorButton symbol={toToken} />
+              </div>
+              {toUsdEquivalent !== null && toUsdEquivalent > 0 && (
+                <p className="mt-1 text-xs text-text-muted font-mono">
+                  ≈ ${formatBalance(toUsdEquivalent, 2)}
+                </p>
+              )}
+            </div>
+
+            {/* Price Details (expandable) */}
+            <SwapPriceDetails
+              quote={quote}
+              direction={direction}
+              loading={depthLoading}
+            />
+
+            {/* CTA Button */}
+            <button
+              onClick={handleSwap}
+              disabled={swapCta.disabled}
+              className="mt-4 w-full rounded-2xl py-3.5 text-base font-semibold transition-all
+                bg-primary text-primary-foreground hover:brightness-110
+                disabled:bg-secondary disabled:text-text-muted disabled:cursor-not-allowed"
+            >
+              {isSwapping ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {swapCta.label}
+                </span>
+              ) : (
+                swapCta.label
+              )}
+            </button>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="limit"
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.15 }}
+          >
+            {/* Buy/Sell Toggle */}
+            <div className="mb-4 flex items-center gap-1 rounded-full bg-background p-1">
+              {(["buy", "sell"] as const).map((side) => (
+                <button
+                  key={side}
+                  onClick={() => setLimitSide(side)}
+                  className={`relative flex-1 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
+                    limitSide === side
+                      ? side === "buy"
+                        ? "text-primary-foreground"
+                        : "text-white"
+                      : "text-text-muted hover:text-text-secondary"
+                  }`}
+                >
+                  {limitSide === side && (
+                    <motion.div
+                      layoutId="limit-side-indicator"
+                      className={`absolute inset-0 rounded-full ${
+                        side === "buy" ? "bg-cash-green" : "bg-cash-red"
+                      }`}
+                      transition={{
+                        type: "spring",
+                        stiffness: 400,
+                        damping: 30,
+                      }}
+                    />
+                  )}
+                  <span className="relative z-10 capitalize">{side}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Price Input */}
+            <div className="rounded-xl bg-background border border-border p-4 mb-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-text-muted">Price (USDC)</span>
+              </div>
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="0.00"
+                value={limitPrice}
+                onChange={handleLimitPriceChange}
+                className="w-full bg-transparent text-2xl font-mono text-white placeholder:text-text-muted outline-none"
+              />
+            </div>
+
+            {/* Amount Input */}
+            <div className="rounded-xl bg-background border border-border p-4 mb-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-text-muted">Amount (CASH)</span>
+                {connected && balances && (
+                  <span className="text-xs text-text-muted">
+                    Balance:{" "}
+                    <span className="font-mono text-text-secondary">
+                      {limitSide === "sell"
+                        ? formatBalance(balances.cash.available, 4)
+                        : formatBalance(balances.usdc.available, 4)}
+                    </span>
+                  </span>
+                )}
+              </div>
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="0.00"
+                value={limitAmount}
+                onChange={handleLimitAmountChange}
+                className="w-full bg-transparent text-2xl font-mono text-white placeholder:text-text-muted outline-none"
+              />
+            </div>
+
+            {/* Order Total */}
+            {limitPrice && limitAmount && parseFloat(limitPrice) > 0 && parseFloat(limitAmount) > 0 && (
+              <div className="rounded-xl bg-background border border-border p-3 mb-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-text-muted">Total</span>
+                  <span className="font-mono text-white">
+                    {formatBalance(
+                      parseFloat(limitPrice) * parseFloat(limitAmount),
+                      2,
+                    )}{" "}
+                    USDC
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Place Order CTA */}
+            <button
+              onClick={handlePlaceLimitOrder}
+              disabled={limitCta.disabled}
+              className={`mt-1 w-full rounded-2xl py-3.5 text-base font-semibold transition-all
+                disabled:bg-secondary disabled:text-text-muted disabled:cursor-not-allowed
+                ${
+                  !limitCta.disabled
+                    ? limitSide === "buy"
+                      ? "bg-cash-green text-primary-foreground hover:brightness-110"
+                      : "bg-cash-red text-white hover:brightness-110"
+                    : ""
+                }`}
+            >
+              {isPlacingOrder ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {limitCta.label}
+                </span>
+              ) : (
+                limitCta.label
+              )}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+/**
+ * TokenSelectorButton — shows token icon + ticker with a chevron.
+ * In a future feature, clicking opens the token selector modal.
+ */
+function TokenSelectorButton({
+  symbol,
+}: {
+  symbol: TokenSymbol;
+}): React.ReactElement {
+  const token = TOKENS[symbol];
+
+  return (
+    <button
+      type="button"
+      className="flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 shrink-0 hover:bg-surface-hover transition-colors"
+    >
+      <div
+        className={`h-5 w-5 rounded-full bg-gradient-to-br ${token.gradient} flex items-center justify-center`}
+      >
+        <span className="text-[10px] font-bold text-white">
+          {token.symbol[0]}
+        </span>
+      </div>
+      <span className="text-sm font-medium text-white">{token.symbol}</span>
+      <ChevronDown className="h-3 w-3 text-text-muted" />
+    </button>
   );
 }
