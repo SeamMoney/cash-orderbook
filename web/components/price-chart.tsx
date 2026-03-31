@@ -139,6 +139,7 @@ export function PriceChart({
             containerRef={chartContainerRef}
             candles={candles}
             chartMode={chartMode}
+            interval={interval}
             lineColor={lineColor}
             topGradient={topGradient}
             bottomGradient={bottomGradient}
@@ -204,11 +205,29 @@ interface CandleInput {
   timestamp: number;
 }
 
+/** Map candle intervals to their duration in seconds for real-time bucketing. */
+const INTERVAL_SECONDS: Record<CandleInterval, number> = {
+  "1m": 60,
+  "5m": 300,
+  "15m": 900,
+  "1h": 3600,
+  "1d": 86400,
+};
+
+/**
+ * Compute the start-of-interval bucket (in seconds) for a given timestamp.
+ * E.g. for a 5m interval, 12:03:22 → 12:00:00 (floored to the 5-min boundary).
+ */
+function intervalBucket(timestampSec: number, intervalSec: number): number {
+  return Math.floor(timestampSec / intervalSec) * intervalSec;
+}
+
 /** The actual lightweight-charts render component. Dynamically imports the library. */
 function LightweightChart({
   containerRef: _externalRef,
   candles,
   chartMode,
+  interval,
   lineColor,
   topGradient,
   bottomGradient,
@@ -220,6 +239,7 @@ function LightweightChart({
   containerRef: RefObject<HTMLDivElement | null>;
   candles: CandleInput[];
   chartMode: ChartMode;
+  interval: CandleInterval;
   lineColor: string;
   topGradient: string;
   bottomGradient: string;
@@ -237,6 +257,8 @@ function LightweightChart({
   // importing lightweight-charts types at module level (dynamic import).
   const seriesRef = useRef<Record<string, unknown> | null>(null);
   const lastUpdateTimestampRef = useRef<number>(0);
+  /** Set of trade IDs already processed to avoid duplicate updates. */
+  const processedTradeIdsRef = useRef<Set<string>>(new Set());
   /** Track current candle OHLC state for real-time aggregation in candlestick mode. */
   const currentCandleRef = useRef<{
     time: number;
@@ -270,7 +292,7 @@ function LightweightChart({
 
     const initChart = async (): Promise<void> => {
       // Dynamic import to avoid SSR issues
-      const { createChart, AreaSeries, CandlestickSeries, CrosshairMode } =
+      const { createChart, AreaSeries, CandlestickSeries, CrosshairMode, createSeriesMarkers } =
         await import("lightweight-charts");
 
       if (disposed || !chartContainerRef.current) return;
@@ -352,11 +374,13 @@ function LightweightChart({
         candleSeries.setData(chartData);
         seriesRef.current = candleSeries as unknown as Record<string, unknown>;
 
-        // Initialize currentCandleRef with the last candle for real-time aggregation
+        // Initialize currentCandleRef with the last candle for real-time aggregation.
+        // Bucket the time to the interval boundary so incoming trades compare correctly.
         if (chartData.length > 0) {
           const last = chartData[chartData.length - 1];
+          const intSec = INTERVAL_SECONDS[interval];
           currentCandleRef.current = {
-            time: last.time as number,
+            time: intervalBucket(last.time as number, intSec),
             open: last.open,
             high: last.high,
             low: last.low,
@@ -469,6 +493,7 @@ function LightweightChart({
       }
 
       // Add transition marker between historical and live data
+      // In lightweight-charts v5, use the createSeriesMarkers() plugin API
       if (transitionTimestamp && seriesRef.current) {
         const transitionTimeSec = Math.floor(transitionTimestamp / 1000) as UTCTs;
         // Check if the transition time falls within our candle data range
@@ -477,29 +502,18 @@ function LightweightChart({
         const maxTs = Math.max(...candleTimestamps);
 
         if (transitionTimeSec >= minTs && transitionTimeSec <= maxTs) {
-          const markerSeries = seriesRef.current as unknown as {
-            setMarkers: (markers: Array<{
-              time: UTCTs;
-              position: string;
-              color: string;
-              shape: string;
-              text: string;
-              size?: number;
-            }>) => void;
-          };
-
-          if (typeof markerSeries.setMarkers === "function") {
-            markerSeries.setMarkers([
+          createSeriesMarkers(
+            seriesRef.current as unknown as Parameters<typeof createSeriesMarkers>[0],
+            [
               {
                 time: transitionTimeSec,
-                position: "aboveBar",
+                position: "aboveBar" as const,
                 color: "#888888",
-                shape: "arrowDown",
+                shape: "arrowDown" as const,
                 text: "New Venue",
-                size: 1,
               },
-            ]);
-          }
+            ],
+          );
         }
       }
 
@@ -524,11 +538,15 @@ function LightweightChart({
 
     void initChart();
 
+    // Capture ref values for cleanup function (react-hooks/exhaustive-deps)
+    const processedIds = processedTradeIdsRef.current;
+
     return () => {
       disposed = true;
       seriesRef.current = null;
       currentCandleRef.current = null;
       lastUpdateTimestampRef.current = 0;
+      processedIds.clear();
       if (chartRef.current) {
         const chart = chartRef.current;
         const observer = (chart as unknown as { _observer?: ResizeObserver })
@@ -541,6 +559,7 @@ function LightweightChart({
   }, [
     candles,
     chartMode,
+    interval,
     lineColor,
     topGradient,
     bottomGradient,
@@ -553,10 +572,13 @@ function LightweightChart({
     if (!wsConnected || !realtimeTrades || realtimeTrades.length === 0) return;
     if (!seriesRef.current) return;
 
-    // Process only trades newer than the last update
+    // Process trades at or newer than the last update timestamp.
+    // Use trade IDs to avoid reprocessing the same trade on effect re-runs,
+    // while still allowing same-second trades to be folded into the current candle.
     const newTrades = realtimeTrades.filter((t) => {
+      if (processedTradeIdsRef.current.has(t.id)) return false;
       const timeSec = Math.floor(t.timestamp / 1000);
-      return timeSec > lastUpdateTimestampRef.current;
+      return timeSec >= lastUpdateTimestampRef.current;
     });
 
     if (newTrades.length === 0) return;
@@ -564,29 +586,39 @@ function LightweightChart({
     // Sort by timestamp ascending
     const sorted = [...newTrades].sort((a, b) => a.timestamp - b.timestamp);
 
+    // Cap processed IDs set to avoid unbounded memory growth
+    if (processedTradeIdsRef.current.size > 500) {
+      processedTradeIdsRef.current.clear();
+    }
+
     const updateFn = seriesRef.current.update as
       | ((data: Record<string, unknown>) => void)
       | undefined;
     if (!updateFn) return;
 
     if (chartMode === "candle") {
-      // In candlestick mode: aggregate trades into current candle's OHLC
+      // In candlestick mode: aggregate trades into interval-aligned candles.
+      // Bucket by the active timeframe (1m=60s, 5m=300s, etc.) so trades
+      // within the same interval period update one candle bar.
+      const intSec = INTERVAL_SECONDS[interval];
+
       for (const trade of sorted) {
         const timeSec = Math.floor(trade.timestamp / 1000);
+        const bucket = intervalBucket(timeSec, intSec);
 
         if (
           currentCandleRef.current &&
-          timeSec === currentCandleRef.current.time
+          bucket === currentCandleRef.current.time
         ) {
-          // Same candle period — update OHLC
+          // Same interval bucket — update OHLC
           const candle = currentCandleRef.current;
           candle.high = Math.max(candle.high, trade.price);
           candle.low = Math.min(candle.low, trade.price);
           candle.close = trade.price;
         } else {
-          // New candle period — start fresh
+          // New interval bucket — start a fresh candle
           currentCandleRef.current = {
-            time: timeSec,
+            time: bucket,
             open: trade.price,
             high: trade.price,
             low: trade.price,
@@ -603,6 +635,7 @@ function LightweightChart({
             close: currentCandleRef.current.close,
           });
           lastUpdateTimestampRef.current = timeSec;
+          processedTradeIdsRef.current.add(trade.id);
         } catch {
           // Silently ignore update errors (e.g., invalid time ordering)
         }
@@ -617,12 +650,13 @@ function LightweightChart({
             value: trade.price,
           });
           lastUpdateTimestampRef.current = timeSec;
+          processedTradeIdsRef.current.add(trade.id);
         } catch {
           // Silently ignore update errors (e.g., invalid time ordering)
         }
       }
     }
-  }, [realtimeTrades, wsConnected, chartMode]);
+  }, [realtimeTrades, wsConnected, chartMode, interval]);
 
   return (
     <div
