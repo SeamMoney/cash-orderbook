@@ -5,14 +5,16 @@ import { Nav, type NavTab } from "@/components/nav";
 import { Toaster } from "sonner";
 import { TokenHeader } from "@/components/token-header";
 import { PriceChart, type CrosshairData } from "@/components/price-chart";
-import { StatsPlaceholder } from "@/components/placeholders/stats-placeholder";
+import { TokenStatsGrid } from "@/components/token-stats-grid";
 import { SwapPlaceholder } from "@/components/placeholders/swap-placeholder";
 import { TransactionsPlaceholder } from "@/components/placeholders/transactions-placeholder";
 import { useMarket } from "@/hooks/use-market";
+import { usePriceChange } from "@/hooks/use-price-change";
 
 export default function Home(): React.ReactElement {
   const [activeTab, setActiveTab] = useState<NavTab>("trade");
   const { market, loading: marketLoading } = useMarket();
+  const { change24h } = usePriceChange();
 
   // Chart crosshair hover state — when hovering, override the header price
   const [hoverPrice, setHoverPrice] = useState<number | null>(null);
@@ -25,12 +27,6 @@ export default function Home(): React.ReactElement {
 
   // Derive display values
   const displayPrice = hoverPrice ?? market?.lastPrice ?? null;
-  const change24h =
-    market && market.lastPrice > 0 && market.volume24h >= 0
-      ? // Compute a synthetic 24h change for display
-        // The API doesn't return change24h directly, so show 0.00 as fallback
-        0
-      : null;
 
   return (
     <div className="flex min-h-screen flex-col bg-[#000000]">
@@ -63,8 +59,8 @@ export default function Home(): React.ReactElement {
             {/* Price Chart */}
             <PriceChart onCrosshairMove={handleCrosshairMove} />
 
-            {/* Stats Placeholder */}
-            <StatsPlaceholder />
+            {/* Token Stats Grid */}
+            <TokenStatsGrid market={market} loading={marketLoading} />
 
             {/* Transactions Placeholder */}
             <TransactionsPlaceholder />
