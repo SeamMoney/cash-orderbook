@@ -11,6 +11,7 @@ commands:
   register-market: pnpm --filter @cash/scripts register-market
   seed-orderbook: pnpm --filter @cash/scripts seed-orderbook
   integration-test: pnpm --filter @cash/scripts integration-test
+  import-history: pnpm --filter @cash/scripts import-history
   dev-all: pnpm dev
 
 services:

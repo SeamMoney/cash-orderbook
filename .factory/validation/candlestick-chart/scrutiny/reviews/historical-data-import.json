@@ -1,0 +1,38 @@
+{
+  "featureId": "historical-data-import",
+  "reviewedAt": "2026-03-31T21:47:04Z",
+  "commitId": "1f57cbb",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "Historical import, JSON seeding, and merge logic are implemented, but the transition marker implementation is broken at runtime for lightweight-charts v5, so required marker behavior is not reliably delivered.",
+    "issues": [
+      {
+        "file": "web/components/price-chart.tsx",
+        "line": 492,
+        "severity": "blocking",
+        "description": "The chart tries to call `setMarkers()` on the series object, but in lightweight-charts v5 marker APIs are provided via `createSeriesMarkers(series, ...)` (plugin API), not on `ISeriesApi`. Because `markerSeries.setMarkers` is undefined, the guarded call is skipped and the \"New Venue\" transition marker is never rendered."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Feature metadata requires `frontend-ui-worker`, but the transcript shows `frontend-trading` was invoked and handoff says `frontend-ui-worker` was unavailable. This suggests a skill-resolution mismatch that can cause workers to bypass assigned skill procedures.",
+      "evidence": "features.json:321 (`\"skillName\": \"frontend-ui-worker\"`), worker-transcripts.jsonl skeleton (Skill call uses `frontend-trading`), handoff.skillFeedback.deviations[0] claims `frontend-ui-worker` was not found."
+    },
+    {
+      "area": "services",
+      "observation": "A new operational command for this feature exists but is not registered in shared service command inventory.",
+      "evidence": "scripts/package.json adds `\"import-history\": \"tsx src/import-history.ts\"`, but `.factory/services.yaml` command list has no `import-history` entry."
+    },
+    {
+      "area": "knowledge",
+      "observation": "The discovered GeckoTerminal history-retention limitation for this pool is not recorded in shared library docs, so future workers may re-investigate the same discrepancy.",
+      "evidence": "handoff.discoveredIssues notes data only back to Aug 2025 despite older pool creation; `web/data/historical-candles.json` earliest timestamp is 1754438400000; `.factory/library/*` contains no retention note (only generic GeckoTerminal mention in architecture.md)."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review result: FAIL. The feature largely implements import and merge requirements, but the transition marker path is incorrect for lightweight-charts v5 and prevents the required marker from appearing."
+}

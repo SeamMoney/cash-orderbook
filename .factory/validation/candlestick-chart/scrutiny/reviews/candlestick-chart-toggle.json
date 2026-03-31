@@ -1,0 +1,34 @@
+{
+  "featureId": "candlestick-chart-toggle",
+  "reviewedAt": "2026-03-31T21:45:58Z",
+  "commitId": "510c4ad",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature delivers the Candle/Line toggle UI, candlestick styling, and OHLC crosshair wiring, but the real-time candle aggregation logic is incorrect for interval-based candles and can silently miss trades, so expected real-time OHLC behavior is not reliably met.",
+    "issues": [
+      {
+        "file": "web/components/price-chart.tsx",
+        "line": 535,
+        "severity": "blocking",
+        "description": "Candlestick aggregation buckets by raw second (`Math.floor(trade.timestamp / 1000)`) and starts a new candle whenever that second changes, instead of bucketing by the active chart interval (1m/5m/15m/1h/1d). This creates second-level candles in candlestick mode and breaks timeframe-consistent OHLC updates."
+      },
+      {
+        "file": "web/components/price-chart.tsx",
+        "line": 517,
+        "severity": "blocking",
+        "description": "New trades are filtered with `timeSec > lastUpdateTimestampRef.current`. Any later trade arriving in the same second as the last processed trade is dropped, so high/low/close can miss valid updates for the current candle."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Feature metadata references `frontend-ui-worker`, but the worker session could not invoke that skill and had to fall back to `frontend-worker`, indicating a mismatch between mission feature config and runnable skill registry.",
+      "evidence": "features.json for `candlestick-chart-toggle` sets `skillName` to `frontend-ui-worker`; transcript skeleton for session `e1aff43c-452d-4d28-a11f-0683ce538730` contains `Error: Skill \"frontend-ui-worker\" not found` before invoking `frontend-worker`."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Fail: core toggle/crosshair functionality is present, but real-time candlestick updates are not interval-correct and can drop same-second trades, causing incorrect OHLC behavior."
+}

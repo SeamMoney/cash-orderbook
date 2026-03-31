@@ -1,0 +1,75 @@
+{
+  "milestone": "candlestick-chart",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "pnpm -C \"/Users/maxmohammadi/cash-orderbook\" -r test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm -C \"/Users/maxmohammadi/cash-orderbook\" -r typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm -C \"/Users/maxmohammadi/cash-orderbook\" -r lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 2,
+    "passed": 0,
+    "failed": 2,
+    "failedFeatures": [
+      "candlestick-chart-toggle",
+      "historical-data-import"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "candlestick-chart-toggle",
+      "severity": "blocking",
+      "description": "Real-time candlestick aggregation buckets by raw second instead of the active timeframe interval (1m/5m/15m/1h/1d), producing incorrect OHLC candles."
+    },
+    {
+      "featureId": "candlestick-chart-toggle",
+      "severity": "blocking",
+      "description": "Trade updates gated by `timeSec > lastUpdateTimestampRef.current` drop same-second trades, which can miss high/low/close updates."
+    },
+    {
+      "featureId": "historical-data-import",
+      "severity": "blocking",
+      "description": "Transition marker uses `series.setMarkers(...)` with lightweight-charts v5 where marker API should use `createSeriesMarkers(...)`; the New Venue marker does not render."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "services.yaml",
+      "description": "Added `commands.import-history` entry: `pnpm --filter @cash/scripts import-history`.",
+      "sourceFeature": "historical-data-import"
+    },
+    {
+      "target": "library",
+      "description": "Added GeckoTerminal OHLCV retention behavior note to `.factory/library/geckoterminal-history-retention.md`.",
+      "sourceFeature": "historical-data-import"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "skills",
+      "suggestion": "Ensure mission feature `skillName` values are validated against installed skill registry before worker assignment, or provide an explicit fallback policy in orchestrator-generated instructions.",
+      "evidence": "Both reviewed features declared `frontend-ui-worker` in mission metadata, but worker transcripts reported unavailable skill and fell back to other skills.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Second review repeated the same skill mismatch issue (`frontend-ui-worker` unavailable).",
+      "reason": "duplicate"
+    }
+  ],
+  "previousRound": null
+}
