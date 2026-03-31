@@ -238,10 +238,16 @@ export function SwapWidget(): React.ReactElement {
     setIsSwapping(true);
 
     try {
+      // For sell-side, the user enters CASH amount → pass directly as quantity.
+      // For buy-side, the user enters USDC amount, but the contract expects
+      // base-asset (CASH) quantity. Use the quote's outputAmount which is the
+      // estimated CASH the user will receive (computed by walking asks).
+      const baseQuantity = direction === "buy" ? quote.outputAmount : amount;
+
       const payload = buildPlaceOrderPayload({
         pairId: 0,
         price: 0,
-        quantity: amount,
+        quantity: baseQuantity,
         side: direction === "buy" ? "buy" : "sell",
         orderType: "Market",
       });
@@ -663,8 +669,8 @@ export function SwapWidget(): React.ReactElement {
         }}
         onSelect={handleTokenSelect}
         balances={balances}
-        excludeSymbol={
-          selectorOpen === "from" ? toToken : selectorOpen === "to" ? fromToken : undefined
+        selectedSymbol={
+          selectorOpen === "from" ? fromToken : selectorOpen === "to" ? toToken : undefined
         }
       />
 

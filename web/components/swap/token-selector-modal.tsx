@@ -50,8 +50,10 @@ interface TokenSelectorModalProps {
   onOpenChange: (open: boolean) => void;
   onSelect: (token: TokenInfo) => void;
   balances: UserBalances | null;
-  /** Token symbol to exclude from the list (the other side of the pair) */
+  /** Token symbol to exclude from the list (the other side of the pair) — kept for API compat but no longer filters the list */
   excludeSymbol?: string;
+  /** Token symbol currently selected on this side (disabled / non-selectable) */
+  selectedSymbol?: string;
 }
 
 /** Height of each row in the virtualized list */
@@ -62,6 +64,8 @@ interface TokenRowProps {
   tokens: TokenInfo[];
   getBalance: (symbol: string) => number | null;
   onSelect: (token: TokenInfo) => void;
+  /** Symbol of the token already selected on the current side (shown as disabled) */
+  selectedSymbol?: string;
 }
 
 /** Row component for the virtualized list */
@@ -71,17 +75,26 @@ function TokenRow({
   tokens,
   getBalance,
   onSelect,
+  selectedSymbol,
 }: RowComponentProps<TokenRowProps>): ReactElement | null {
   const token = tokens[index];
   if (!token) return null;
 
   const balance = getBalance(token.symbol);
+  const isCurrentSide = token.symbol === selectedSymbol;
 
   return (
     <div style={style} className="px-2">
       <button
-        onClick={() => onSelect(token)}
-        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card"
+        onClick={() => {
+          if (!isCurrentSide) onSelect(token);
+        }}
+        disabled={isCurrentSide}
+        className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card ${
+          isCurrentSide
+            ? "opacity-40 cursor-not-allowed"
+            : "hover:bg-surface-hover"
+        }`}
       >
         <TokenIcon token={token} size="md" />
         <div className="flex flex-1 flex-col items-start min-w-0">
@@ -114,7 +127,7 @@ export function TokenSelectorModal({
   onOpenChange,
   onSelect,
   balances,
-  excludeSymbol,
+  selectedSymbol,
 }: TokenSelectorModalProps): React.ReactElement {
   const [search, setSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -130,27 +143,23 @@ export function TokenSelectorModal({
     }
   }, [open]);
 
-  // Filter tokens by search query
+  // Filter tokens by search query — all tokens always visible (no exclusion)
   const filteredTokens = useMemo(() => {
     const query = search.toLowerCase().trim();
     return SUPPORTED_TOKENS.filter((token) => {
-      if (excludeSymbol && token.symbol === excludeSymbol) return false;
       if (!query) return true;
       return (
         token.symbol.toLowerCase().includes(query) ||
         token.name.toLowerCase().includes(query)
       );
     });
-  }, [search, excludeSymbol]);
+  }, [search]);
 
-  // Popular tokens (excluding the other side token)
+  // Popular tokens — always show both CASH and USDC
   const popularTokens = useMemo(
     () =>
-      SUPPORTED_TOKENS.filter(
-        (t) =>
-          POPULAR_SYMBOLS.includes(t.symbol) && t.symbol !== excludeSymbol,
-      ),
-    [excludeSymbol],
+      SUPPORTED_TOKENS.filter((t) => POPULAR_SYMBOLS.includes(t.symbol)),
+    [],
   );
 
   const handleSelect = useCallback(
@@ -177,8 +186,9 @@ export function TokenSelectorModal({
       tokens: filteredTokens,
       getBalance,
       onSelect: handleSelect,
+      selectedSymbol,
     }),
-    [filteredTokens, getBalance, handleSelect],
+    [filteredTokens, getBalance, handleSelect, selectedSymbol],
   );
 
   return (
@@ -249,18 +259,28 @@ export function TokenSelectorModal({
                   <div className="px-5 pb-3">
                     <p className="mb-2 text-xs text-text-muted">Popular</p>
                     <div className="flex flex-wrap gap-2">
-                      {popularTokens.map((token) => (
-                        <button
-                          key={token.symbol}
-                          onClick={() => handleSelect(token)}
-                          className="flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm transition-colors hover:border-primary hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card"
-                        >
-                          <TokenIcon token={token} size="sm" />
-                          <span className="font-medium text-white">
-                            {token.symbol}
-                          </span>
-                        </button>
-                      ))}
+                      {popularTokens.map((token) => {
+                        const isCurrentSide = token.symbol === selectedSymbol;
+                        return (
+                          <button
+                            key={token.symbol}
+                            onClick={() => {
+                              if (!isCurrentSide) handleSelect(token);
+                            }}
+                            disabled={isCurrentSide}
+                            className={`flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card ${
+                              isCurrentSide
+                                ? "opacity-40 cursor-not-allowed"
+                                : "hover:border-primary hover:bg-surface-hover"
+                            }`}
+                          >
+                            <TokenIcon token={token} size="sm" />
+                            <span className="font-medium text-white">
+                              {token.symbol}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
