@@ -1,0 +1,169 @@
+{
+  "groupId": "browser-multi",
+  "testedAt": "2026-03-31T23:49:20Z",
+  "isolation": {
+    "surface": "agent-browser",
+    "appUrl": "http://localhost:3102",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "session": "swap-panora-browser-79476079",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056"
+  },
+  "toolsUsed": ["agent-browser"],
+  "assertions": [
+    {
+      "id": "VAL-MULTI-001",
+      "title": "Six tokens in selector",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Open pay-token selector from swap widget",
+          "expected": "Selector lists at least CASH, USD1, USDC, USDT, USDe, GHO",
+          "observed": "Selector displayed CASH, USD1, USDC, USDT, USDe, GHO with distinct icon letters/colors"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "swap-panora/browser/VAL-MULTI-001-token-selector.png"
+        ],
+        "consoleErrors": "none observed during selector interaction",
+        "network": "UI-only selector validation; no assertion-specific network dependency"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MULTI-002",
+      "title": "CASH pre-populated as base",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Load app on /",
+          "expected": "Swap defaults to USD1 pay token and CASH receive/base token",
+          "observed": "Default widget showed You pay = USD1 and You receive = CASH"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "swap-panora/browser/VAL-MULTI-002-default-state.png"
+        ],
+        "consoleErrors": "background 429 polling noise present globally, no crash",
+        "network": "Background GET /market and related polling requests from app"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MULTI-003",
+      "title": "USD1 as primary quote",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect default token pair and visible pricing labels",
+          "expected": "Primary pair is CASH/USD1 with USD1-denominated quote context",
+          "observed": "Swap defaults to USD1 -> CASH and token header/price display remained USD-denominated for CASH"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "swap-panora/browser/VAL-MULTI-003-usd1-primary-quote.png"
+        ],
+        "consoleErrors": "background 429 polling noise present globally",
+        "network": "Recurring GET /market polling from localhost:3100"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MULTI-004",
+      "title": "Panora quote for non-USD1 pair",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Switch pay token to USDT and enter amount 25",
+          "expected": "Non-USD1 quote appears with Panora routing indicator",
+          "observed": "Quote appeared (1 USDT ≈ 43,488.707515 CASH)"
+        },
+        {
+          "action": "Expand price details",
+          "expected": "Route section shows Panora path",
+          "observed": "Route displayed as 'USDT → CASH via Panora'"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "swap-panora/browser/VAL-MULTI-004-panora-quote.png",
+          "swap-panora/browser/VAL-MULTI-004-panora-route-details.png"
+        ],
+        "consoleErrors": "background 429 polling noise; quote UI remained functional",
+        "network": "Panora route text rendered in UI details ('via Panora'); agent-browser request listing did not expose response status for Panora URL"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-MULTI-005",
+      "title": "Smart routing display",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Set pay token to USD1 and enter amount 25",
+          "expected": "Price details should show Direct (orderbook) for CASH/USD1",
+          "observed": "CTA remained 'Enter an amount to see price details'; direct route label never surfaced"
+        },
+        {
+          "action": "Set pay token to USDT and expand details",
+          "expected": "Routed path shown for non-USD1 pair",
+          "observed": "Route shown as 'USDT → CASH via Panora'"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "swap-panora/browser/VAL-MULTI-005-direct-routing-retry.png",
+          "swap-panora/browser/VAL-MULTI-005-routed-path-details.png"
+        ],
+        "consoleErrors": "repeated 'Failed to load resource: 429 (Too Many Requests)' while validating direct CASH/USD1 quote",
+        "network": "High-frequency GET /market polling from localhost:3100 with 429 errors prevented reliable direct quote rendering"
+      },
+      "issues": "Direct-route half of assertion could not be validated due persistent API rate-limit behavior; routed half validated."
+    },
+    {
+      "id": "VAL-MULTI-007",
+      "title": "Panora API error handling",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Block Panora domain in-browser via network route and request USDT->CASH quote",
+          "expected": "User-friendly error state without UI crash",
+          "observed": "Swap displayed warning '⚠ Failed to fetch' and button label 'Route unavailable'"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "swap-panora/browser/VAL-MULTI-007-panora-error-state.png"
+        ],
+        "consoleErrors": "No fatal runtime crash; fallback UI rendered under forced fetch failure",
+        "network": "Panora calls intentionally aborted using agent-browser network route '**api.panora.exchange/**'"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Local API polling produced sustained HTTP 429 responses, creating noisy console output and interfering with direct CASH/USD1 quote visibility.",
+      "resolved": false,
+      "resolution": "Retried token/amount flow with waits; issue persisted.",
+      "affectedAssertions": ["VAL-MULTI-003", "VAL-MULTI-005"]
+    },
+    {
+      "description": "agent-browser network request listing did not provide response status details for Panora calls in this run.",
+      "resolved": true,
+      "resolution": "Used visible routing text plus forced Panora request blocking to validate normal and error states.",
+      "affectedAssertions": ["VAL-MULTI-004", "VAL-MULTI-007"]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Direct CASH/USD1 route indicator could not be validated because local API quote/polling path remained rate-limited (429), preventing direct price-details state from materializing.",
+      "affectedAssertions": ["VAL-MULTI-005"],
+      "quickFixAttempted": "Repeated USD1 input flow after token resets and backoff waits; direct details remained unavailable while 429 errors continued."
+    }
+  ],
+  "summary": "Tested 6 assertions: 5 passed, 0 failed, 1 blocked (VAL-MULTI-005 direct-route portion blocked by persistent local API 429 rate limiting)."
+}

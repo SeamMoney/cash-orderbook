@@ -18,6 +18,9 @@
 - **Surface:** `agent-browser`
 - **Configured max concurrent validators:** **3**
 - **Reasoning:** Browser validators are lightweight on this machine, but limiting to 3 reduces contention with local Next.js/API/WebSocket dev services and avoids flaky timing issues in hover/viewport assertions.
+- **Surface:** `curl`
+- **Configured max concurrent validators:** **1**
+- **Reasoning:** `pnpm -r typecheck` and workspace-wide source inspection are CPU/memory intensive and operate on shared build caches; serialize to avoid flaky overlap with browser validators.
 
 ## Flow Validator Guidance: agent-browser
 
@@ -26,6 +29,13 @@
 - Use the same app URL (`http://localhost:3102`) and keep network/service processes untouched.
 - If an assertion depends on API/WS behavior, verify fallback behavior before marking blocked/fail.
 - Capture screenshots/console observations for each assertion outcome in your flow report.
+
+## Flow Validator Guidance: curl
+
+- Restrict actions to read-only validation commands (`pnpm -r typecheck`, `rg`/`grep` constants checks, health probes).
+- Do not start/stop shared services from curl validators; use existing running services only.
+- Run from repository root with absolute paths when reading artifacts.
+- Report exact command output snippets proving constant exports and successful type checking.
 
 ## Setup Requirements
 

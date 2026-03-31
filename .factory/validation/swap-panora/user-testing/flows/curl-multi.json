@@ -1,0 +1,72 @@
+{
+  "groupId": "curl-multi",
+  "testedAt": "2026-03-31T23:46:28Z",
+  "isolation": {
+    "surface": "curl/CLI",
+    "repoRoot": "/Users/maxmohammadi/cash-orderbook",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "assignedAssertions": ["VAL-MULTI-006"],
+    "readOnly": true
+  },
+  "toolsUsed": ["cli", "pnpm", "rg", "python3"],
+  "assertions": [
+    {
+      "id": "VAL-MULTI-006",
+      "title": "Token addresses in shared constants",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Run `pnpm -r typecheck` from repo root",
+          "expected": "TypeScript compilation succeeds across workspace",
+          "observed": "Typecheck completed for shared/api/sdk/scripts/web with process exit code 0"
+        },
+        {
+          "action": "Inspect `shared/src/index.ts` exported constants",
+          "expected": "`USD1_TOKEN_ADDRESS` exported; USD1 decimals=8; USDC/USDT decimals=6; stablecoin address constants present in shared/src",
+          "observed": "Found `USD1_DECIMALS = 8`, `USDC_DECIMALS = 6`, `USDT_DECIMALS = 6`, and exported address constants `USD1_TOKEN_ADDRESS`, `USDC_TOKEN_ADDRESS`, `USDT_TOKEN_ADDRESS`, `USDE_TOKEN_ADDRESS` (plus `GHO_TOKEN_ADDRESS` placeholder). STABLECOINS registry references these addresses with matching decimals."
+        }
+      ],
+      "evidence": {
+        "terminalSnapshots": [
+          "swap-panora/curl/VAL-MULTI-006-typecheck.log",
+          "swap-panora/curl/VAL-MULTI-006-constants.log",
+          "swap-panora/curl/VAL-MULTI-006-stablecoins-snippet.log"
+        ],
+        "commandResults": [
+          {
+            "command": "cd /Users/maxmohammadi/cash-orderbook && pnpm -r typecheck",
+            "exitCode": 0,
+            "keyOutput": [
+              "Scope: 5 of 6 workspace projects",
+              "shared/api/sdk/scripts/web typecheck: Done"
+            ]
+          },
+          {
+            "command": "rg -n \"export const (USDC_DECIMALS|USD1_DECIMALS|USDT_DECIMALS|USD1_TOKEN_ADDRESS|USDC_TOKEN_ADDRESS|USDT_TOKEN_ADDRESS|USDE_TOKEN_ADDRESS|GHO_TOKEN_ADDRESS|STABLECOINS)\" shared/src/index.ts -A 1",
+            "exitCode": 0,
+            "keyOutput": [
+              "USD1_DECIMALS = 8",
+              "USDC_DECIMALS = 6",
+              "USDT_DECIMALS = 6",
+              "USD1/USDC/USDT/USDE token address constants exported"
+            ]
+          },
+          {
+            "command": "python3 snippet extraction of shared/src/index.ts lines 123-170",
+            "exitCode": 0,
+            "keyOutput": [
+              "STABLECOINS includes USD1/USDC/USDT/USDe/GHO",
+              "Registry uses address constants and decimals 8 (USD1), 6 (USDC/USDT)"
+            ]
+          }
+        ],
+        "network": "n/a",
+        "consoleErrors": "n/a"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 1 assertion (VAL-MULTI-006): passed. Typecheck succeeded and required shared constants/decimals/address exports were verified in shared/src."
+}

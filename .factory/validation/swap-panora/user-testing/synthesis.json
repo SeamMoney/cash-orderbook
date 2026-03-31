@@ -1,0 +1,34 @@
+{
+  "milestone": "swap-panora",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 7,
+    "passed": 6,
+    "failed": 0,
+    "blocked": 1
+  },
+  "passedAssertions": [
+    "VAL-MULTI-001",
+    "VAL-MULTI-002",
+    "VAL-MULTI-003",
+    "VAL-MULTI-004",
+    "VAL-MULTI-006",
+    "VAL-MULTI-007"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [
+    {
+      "id": "VAL-MULTI-005",
+      "blockedBy": "Direct CASH/USD1 route indicator could not be validated because local API /market polling repeatedly returned HTTP 429, preventing direct price-details state from materializing."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added Validation Concurrency and Flow Validator Guidance entries for curl/CLI surface (max concurrency=1, read-only command boundaries) for swap-panora validation partitioning.",
+      "source": "setup"
+    }
+  ],
+  "previousRound": null
+}
