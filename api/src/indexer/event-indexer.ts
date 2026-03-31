@@ -44,6 +44,23 @@ const EVENT_TYPE_MAP: Record<string, string> = {
 const EVENT_TYPES = Object.keys(EVENT_TYPE_MAP);
 
 /**
+ * An event fetched from RPC with transaction ordering metadata,
+ * used for cross-type sorting before processing.
+ */
+interface IndexedEvent {
+  /** Full event type string (e.g. "0xCAFE::order_placement::OrderPlaced") */
+  fullType: string;
+  /** Short event type name (e.g. "OrderPlaced") */
+  shortType: string;
+  /** Raw event data payload */
+  data: Record<string, unknown>;
+  /** Transaction version — primary sort key for on-chain ordering */
+  transactionVersion: number;
+  /** Event index within the transaction — secondary sort key */
+  eventIndex: number;
+}
+
+/**
  * Map SDK network type to Aptos SDK Network enum.
  */
 function toAptosNetwork(network: string): Network {
@@ -128,15 +145,60 @@ export class EventIndexer {
   /**
    * Poll for new events from the contract.
    * Skips if a previous poll is still in progress (prevents overlap).
+   *
+   * Fetches all event types, merges into a single array, and sorts by
+   * (transaction_version, event_index) to ensure on-chain ordering is
+   * preserved regardless of per-type fetch order. This prevents issues
+   * like OrderFilled being processed before TradeEvent from the same tx.
    */
   private async poll(): Promise<void> {
     if (this.isPolling) return;
     this.isPolling = true;
 
     try {
-      for (const moduleEventType of EVENT_TYPES) {
+      // Fetch all event types in parallel
+      const fetchPromises = EVENT_TYPES.map((moduleEventType) => {
         const fullType = `${this.contractAddress}::${moduleEventType}`;
-        await this.fetchAndProcessEvents(fullType, EVENT_TYPE_MAP[moduleEventType]);
+        const shortType = EVENT_TYPE_MAP[moduleEventType];
+        return this.fetchEvents(fullType, shortType);
+      });
+
+      const results = await Promise.all(fetchPromises);
+
+      // Merge all fetched events into a single array
+      const allEvents: IndexedEvent[] = [];
+      for (const events of results) {
+        allEvents.push(...events);
+      }
+
+      if (allEvents.length === 0) return;
+
+      // Sort by (transaction_version, event_index) to preserve on-chain order
+      allEvents.sort((a, b) => {
+        if (a.transactionVersion !== b.transactionVersion) {
+          return a.transactionVersion - b.transactionVersion;
+        }
+        return a.eventIndex - b.eventIndex;
+      });
+
+      // Process events in sorted order
+      for (const event of allEvents) {
+        this.processEvent(event.shortType, event.data);
+      }
+
+      // Update cursors for each event type based on how many we fetched
+      for (const events of results) {
+        if (events.length > 0) {
+          const fullType = events[0].fullType;
+          const cursor = this.cursors.get(fullType) ?? 0;
+          this.cursors.set(fullType, cursor + events.length);
+        }
+      }
+
+      // Update the global last indexed version from the last sorted event
+      const lastEvent = allEvents[allEvents.length - 1];
+      if (lastEvent.transactionVersion > this.state.getLastIndexedVersion()) {
+        this.state.setLastIndexedVersion(lastEvent.transactionVersion);
       }
     } catch (error) {
       // Silently handle poll errors — the indexer is best-effort.
@@ -151,12 +213,12 @@ export class EventIndexer {
 
   /**
    * Fetch events of a specific type from Aptos RPC using cursor-based pagination.
-   * Processes each event through processEvent() and updates the cursor.
+   * Returns raw events with transaction ordering metadata for cross-type sorting.
    */
-  private async fetchAndProcessEvents(
+  private async fetchEvents(
     fullEventType: string,
     shortType: string,
-  ): Promise<void> {
+  ): Promise<IndexedEvent[]> {
     try {
       const cursor = this.cursors.get(fullEventType) ?? 0;
 
@@ -172,30 +234,26 @@ export class EventIndexer {
         },
       });
 
-      if (!events || events.length === 0) return;
+      if (!events || events.length === 0) return [];
 
-      for (const event of events) {
-        const data = event.data as Record<string, unknown>;
-        this.processEvent(shortType, data);
-      }
-
-      // Advance cursor by the number of events processed
-      this.cursors.set(fullEventType, cursor + events.length);
-
-      // Update the global last indexed version from the last event's transaction version
-      const lastEvent = events[events.length - 1];
-      if (lastEvent && typeof lastEvent.transaction_version === "number") {
-        const version = lastEvent.transaction_version;
-        if (version > this.state.getLastIndexedVersion()) {
-          this.state.setLastIndexedVersion(version);
-        }
-      }
+      return events.map((event) => ({
+        fullType: fullEventType,
+        shortType,
+        data: event.data as Record<string, unknown>,
+        transactionVersion: typeof event.transaction_version === "number"
+          ? event.transaction_version
+          : Number(event.transaction_version ?? 0),
+        eventIndex: typeof (event as Record<string, unknown>).event_index === "number"
+          ? (event as Record<string, unknown>).event_index as number
+          : Number((event as Record<string, unknown>).event_index ?? 0),
+      }));
     } catch (error) {
       // Individual event type fetch errors are non-fatal — other event types
       // will still be processed. Log for debugging.
       if (process.env.NODE_ENV !== "test") {
         console.error(`[EventIndexer] Error fetching ${fullEventType}:`, error);
       }
+      return [];
     }
   }
 
