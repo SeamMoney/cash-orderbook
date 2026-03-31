@@ -1,0 +1,33 @@
+{
+  "featureId": "frontend-scaffold-wallet",
+  "reviewedAt": "2026-03-31T04:06:04Z",
+  "commitId": "42941367714da78e919e148c9d395499a72dbc99",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The scaffold delivers the Next.js 16 shell, dark-theme layout, wallet provider, and wallet selector modal, but it does not implement the required connected-state balance display.",
+    "issues": [
+      {
+        "file": "web/components/wallet/connect-button.tsx",
+        "line": 61,
+        "severity": "blocking",
+        "description": "In connected state, the button only renders a truncated address and no CASH/USDC balances. This violates the feature expectedBehavior and VAL-FRONTEND-004 requirement that connected UI show truncated address plus balances."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The frontend-worker skill's manual verification checklist does not explicitly require checking connected-state CASH/USDC balances, which likely allowed this miss to pass while still marking followedProcedure=true.",
+      "evidence": ".factory/skills/frontend-worker/SKILL.md step 8 only says 'Verify wallet connection flow'; validation-contract.md:259-261 explicitly requires address + CASH/USDC balances."
+    },
+    {
+      "area": "knowledge",
+      "observation": "Pre-commit/commit-time scanning appears to flag embedded base64-like image literals; this friction is not documented in shared library guidance.",
+      "evidence": "Worker transcript skeleton for session 0eb18bb6-df8f-4284-b065-3440d26a3cce shows commit retry after identifying placeholder data URI as the blocker and replacing it."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review failed due to one blocking functional gap: connected wallet UI omits CASH/USDC balances. Core scaffold and modal behavior are present, but VAL-FRONTEND-004 is not met by commit 42941367714da78e919e148c9d395499a72dbc99."
+}

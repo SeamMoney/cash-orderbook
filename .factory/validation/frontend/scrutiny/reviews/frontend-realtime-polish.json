@@ -1,0 +1,34 @@
+{
+  "featureId": "frontend-realtime-polish",
+  "reviewedAt": "2026-03-31T04:07:03Z",
+  "commitId": "113fced",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "Real-time WebSocket orderbook/trade updates, reconnection handling, connection status UI, loading skeletons, and responsive layout polish were implemented, but not all explicit feature requirements were completed.",
+    "issues": [
+      {
+        "file": "web/hooks/use-realtime-orderbook.ts",
+        "line": 46,
+        "severity": "blocking",
+        "description": "The feature spec requires subscribing to 'orderbook', 'trades', and 'account:{address}', but frontend subscriptions cover only 'orderbook' here and 'trades' in the companion hook; no account-channel subscription/handler exists in web code, so account/balance real-time updates are missing."
+      },
+      {
+        "file": "web/components/orderbook/orderbook-view.tsx",
+        "line": 25,
+        "severity": "blocking",
+        "description": "The spec requires network errors to show a retry option, but this view does not consume `error` from realtime hooks and exposes no retry UI/action when depth/trade network fetches fail."
+      },
+      {
+        "file": "web/components/orderbook/orderbook-ladder.tsx",
+        "line": 16,
+        "severity": "non_blocking",
+        "description": "The spec calls for number-flow price-change animation (@number-flow/react or manual), but prices are rendered as static `toFixed` strings (same pattern in trade ticker), with no number-flow transition implementation."
+      }
+    ]
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "Review failed: major realtime polish pieces landed, but explicit requirements remain unmet (missing account:{address} subscription path, missing network-error retry UX, and missing number-flow price transitions)."
+}

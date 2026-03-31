@@ -1,0 +1,39 @@
+{
+  "featureId": "frontend-orderbook-view",
+  "reviewedAt": "2026-03-31T04:07:16Z",
+  "commitId": "e5b97e207ef08dd2c2f602f49bf6093a6aa480ec",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "UI coverage is strong (ladder, depth chart, ticker, order form, my orders, and navigation are implemented), but the order submission path does not satisfy the feature contract requirement to use the SDK.",
+    "issues": [
+      {
+        "file": "web/components/orderbook/order-form.tsx",
+        "line": 100,
+        "severity": "blocking",
+        "description": "Feature contract specifies the order form submit path should use the SDK, but this implementation directly calls wallet `signAndSubmitTransaction` with raw Move function strings (`order_placement::place_market_order` / `place_limit_order`). This does not fulfill the required SDK integration path."
+      },
+      {
+        "file": "web/components/orderbook/my-orders.tsx",
+        "line": 10,
+        "severity": "non_blocking",
+        "description": "`OpenOrder.orderId` is typed as `number`, but shared/API contracts expose `orderId` as `string` (`shared/src/index.ts` and `api/src/routes/orders.ts`). This type mismatch can cause fragile cancel handling for large IDs and weakens type safety."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The frontend-worker skill procedure does not explicitly require using `@cash/orderbook-sdk` for order/cancel flows, even though the architecture expects frontend→SDK→RPC and the skill's own example handoff mentions SDK usage. This likely allowed direct raw transaction construction.",
+      "evidence": ".factory/skills/frontend-worker/SKILL.md lines 35-47 (wallet/WebSocket steps) omit SDK usage requirement, while lines 69-70 example references SDK; architecture.md line 69 defines `User → Frontend → SDK → Aptos RPC`."
+    },
+    {
+      "area": "conventions",
+      "observation": "Top-level AGENTS conventions do not state a frontend transaction-layer rule (SDK-first), while architecture documentation does. This split guidance can produce inconsistent implementations.",
+      "evidence": "AGENTS.md lines 68-76 list TypeScript/frontend conventions without SDK interaction rule; .factory/library/architecture.md line 69 documents SDK in the canonical data flow."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed feature frontend-orderbook-view (commit e5b97e2). Implementation delivers the requested orderbook UI components and navigation behavior, but fails the feature contract on SDK usage for order placement. Report marked fail with one blocking issue and one non-blocking type-safety issue."
+}

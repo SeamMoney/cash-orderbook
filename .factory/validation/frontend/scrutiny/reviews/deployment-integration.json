@@ -1,0 +1,56 @@
+{
+  "featureId": "deployment-integration",
+  "reviewedAt": "2026-03-31T04:06:49Z",
+  "commitId": "aa66975",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "Deployment and seeding scripts were added, and root dev startup was wired, but the integration workflow does not implement the required on-chain end-to-end flow (deposit/place/match/withdraw) or frontend state verification. The feature therefore does not fully satisfy its expectedBehavior.",
+    "issues": [
+      {
+        "file": "scripts/src/integration-test.ts",
+        "line": 11,
+        "severity": "blocking",
+        "description": "The integration test claims full on-chain coverage when APTOS_PRIVATE_KEY/CONTRACT_ADDRESS are provided, but the script never performs SDK-driven deposit/order/match/withdraw operations. It only runs service smoke checks, so required end-to-end behavior is not implemented."
+      },
+      {
+        "file": "scripts/src/integration-test.ts",
+        "line": 136,
+        "severity": "blocking",
+        "description": "Frontend validation is limited to HTTP 200 from the web root; there is no verification that seeded depth/trades appear in the UI, which is explicitly required by the feature expectedBehavior."
+      },
+      {
+        "file": "scripts/src/seed-orderbook.test.ts",
+        "line": 13,
+        "severity": "non_blocking",
+        "description": "The test re-implements generatePriceLevels instead of importing the production function from seed-orderbook.ts, so regressions in the real script logic may not be detected."
+      },
+      {
+        "file": "scripts/src/integration-test.ts",
+        "line": 318,
+        "severity": "non_blocking",
+        "description": "Rate-limit verification soft-passes when no 429 responses are observed, which can produce false positives for an integration check intended to validate rate limiting behavior."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The backend-worker skill mandates strict tests-first (TDD), but this feature's transcript shows scripts created first and tests added later; this is recurring for deployment/ops scripts and suggests the skill procedure should explicitly allow script-first workflows with utility-level tests.",
+      "evidence": "worker-transcripts.jsonl skeleton for session 85edea34-5089-4c34-b4b2-6081ec079f6e shows Create on scripts/deploy-mainnet.sh, register-market.ts, seed-orderbook.ts, integration-test.ts before seed-orderbook.test.ts; handoff.skillFeedback.suggestedChanges also calls this out."
+    },
+    {
+      "area": "services",
+      "observation": "WebSocket healthcheck in services.yaml is a placeholder fallback and does not truly verify WS readiness.",
+      "evidence": ".factory/services.yaml:27 uses `curl -sf http://localhost:3101/health 2>/dev/null || echo \"ws check\"`, but the WS server is websocket-native and this command can report success without validating a WS handshake."
+    },
+    {
+      "area": "knowledge",
+      "observation": "The discovered Aptos events-v1 deprecation risk from the handoff is not captured in shared library docs, so future workers may repeat the same investigation.",
+      "evidence": "handoff for deployment-integration lists deprecated indexer events API as a discovered issue; .factory/library/backend-event-ordering.md documents ordering concerns but not the events-v1 deprecation/migration note."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review failed: key deployment/seeding pieces exist, but the integration workflow does not execute or verify the required on-chain E2E flow and frontend trade/depth updates, leaving core feature expectations unmet."
+}

@@ -1,0 +1,34 @@
+{
+  "featureId": "frontend-swap-interface",
+  "reviewedAt": "2026-03-31T04:06:25Z",
+  "commitId": "b56ae648c9773d81d0fb0d9810e432e032cf4d5e",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The UI structure and quote calculation pieces are present, but two feature-critical requirements were missed: transaction submission does not use @cash/orderbook-sdk and the swap action is not disabled on insufficient user balance.",
+    "issues": [
+      {
+        "file": "web/components/swap/swap-widget.tsx",
+        "line": 128,
+        "severity": "blocking",
+        "description": "Feature spec requires using @cash/orderbook-sdk for market-order submission, but the implementation directly calls wallet signAndSubmitTransaction with a manually constructed entry-function payload instead."
+      },
+      {
+        "file": "web/components/swap/swap-widget.tsx",
+        "line": 93,
+        "severity": "blocking",
+        "description": "Insufficient-balance gating is not implemented. The code explicitly leaves balance handling as a placeholder, and SwapButton is driven by quote liquidity rather than wallet/account balance, so the required 'disabled when balance insufficient' behavior is missing."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "frontend-worker skill guidance is internally inconsistent for transaction submission: procedure directs workers to use useWallet/signAndSubmitTransaction, while feature specs and the skill example handoff reference @cash/orderbook-sdk usage. This mismatch likely contributed to the requirement miss.",
+      "evidence": ".factory/skills/frontend-worker/SKILL.md:41 says to use signAndSubmitTransaction directly; SKILL.md:70 example says transaction submission is connected to @cash/orderbook-sdk."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review failed due to two blocking requirement gaps: missing SDK-based transaction submission and missing insufficient-balance disable behavior."
+}
