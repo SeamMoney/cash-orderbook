@@ -1,0 +1,81 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: #212121;
+  --color-foreground: #FFFFFF;
+  --color-card: #1A1A1A;
+  --color-card-foreground: #FFFFFF;
+  --color-popover: #1A1A1A;
+  --color-popover-foreground: #FFFFFF;
+  --color-primary: #FFFFFF;
+  --color-primary-foreground: #212121;
+  --color-secondary: #2A2A2A;
+  --color-secondary-foreground: #FFFFFF;
+  --color-muted: #2A2A2A;
+  --color-muted-foreground: #888888;
+  --color-accent: #2A2A2A;
+  --color-accent-foreground: #FFFFFF;
+  --color-destructive: oklch(0.577 0.245 27.325);
+  --color-destructive-foreground: #FFFFFF;
+  --color-border: #2A2A2A;
+  --color-input: #2A2A2A;
+  --color-ring: #555555;
+  --color-chart-1: #10b981;
+  --color-chart-2: #f43f5e;
+  --color-chart-3: #F59E0B;
+  --color-chart-4: #06b6d4;
+  --color-chart-5: #8b5cf6;
+
+  --color-sidebar-background: #1A1A1A;
+  --color-sidebar-foreground: #FFFFFF;
+  --color-sidebar-primary: #FFFFFF;
+  --color-sidebar-primary-foreground: #212121;
+  --color-sidebar-accent: #2A2A2A;
+  --color-sidebar-accent-foreground: #FFFFFF;
+  --color-sidebar-border: #2A2A2A;
+  --color-sidebar-ring: #555555;
+
+  --radius: 0.625rem;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* Global styles */
+body {
+  background-color: #212121;
+  color: #FFFFFF;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* Scrollbar styling for dark mode */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2A2A2A;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555555;
+}
+
+/* Shimmer animation */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
