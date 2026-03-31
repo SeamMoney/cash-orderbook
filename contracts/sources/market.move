@@ -26,9 +26,10 @@ module cash_orderbook::market {
         markets: Table<u64, Market>,
     }
 
-    /// The orderbook for a specific market, stored at the resource account address.
+    /// The orderbook for a specific market.
     /// Contains separate BigOrderedMaps for bids and asks.
-    struct OrderBook has key {
+    /// Stored inside OrderBookRegistry (not as a standalone resource).
+    struct OrderBook has store {
         /// The pair_id this orderbook belongs to
         pair_id: u64,
         /// Bid orders (buy side), keyed by OrderKey.
@@ -38,6 +39,13 @@ module cash_orderbook::market {
         /// Ask orders (sell side), keyed by OrderKey.
         /// Ascending price order (natural BigOrderedMap ordering).
         asks: BigOrderedMap<OrderKey, Order>,
+    }
+
+    /// Registry of all orderbooks, stored at the resource account address.
+    /// Maps pair_id to its dedicated OrderBook.
+    struct OrderBookRegistry has key {
+        /// Mapping: pair_id -> OrderBook
+        books: Table<u64, OrderBook>,
     }
 
     // ========== Events ==========
@@ -74,7 +82,7 @@ module cash_orderbook::market {
         lot_size: u64,
         tick_size: u64,
         min_size: u64,
-    ) acquires MarketRegistry {
+    ) acquires MarketRegistry, OrderBookRegistry {
         // Verify admin
         types::assert_admin(admin);
 
@@ -99,7 +107,7 @@ module cash_orderbook::market {
             min_size,
         );
 
-        // Get or initialize the MarketRegistry
+        // Get or initialize the MarketRegistry and OrderBookRegistry
         let resource_addr = types::get_resource_account_address();
         if (!exists<MarketRegistry>(resource_addr)) {
             let resource_signer = types::get_resource_signer();
@@ -107,20 +115,24 @@ module cash_orderbook::market {
                 markets: table::new(),
             });
         };
+        if (!exists<OrderBookRegistry>(resource_addr)) {
+            let resource_signer = types::get_resource_signer();
+            move_to(&resource_signer, OrderBookRegistry {
+                books: table::new(),
+            });
+        };
 
         // Add market to registry
         let registry = borrow_global_mut<MarketRegistry>(resource_addr);
         table::add(&mut registry.markets, pair_id, market);
 
-        // Create empty OrderBook at the resource account
-        if (!exists<OrderBook>(resource_addr)) {
-            let resource_signer = types::get_resource_signer();
-            move_to(&resource_signer, OrderBook {
-                pair_id,
-                bids: big_ordered_map::new(),
-                asks: big_ordered_map::new(),
-            });
-        };
+        // Create a NEW empty OrderBook for this market and add to the book registry
+        let ob_registry = borrow_global_mut<OrderBookRegistry>(resource_addr);
+        table::add(&mut ob_registry.books, pair_id, OrderBook {
+            pair_id,
+            bids: big_ordered_map::new(),
+            asks: big_ordered_map::new(),
+        });
 
         // Emit MarketCreated event
         event::emit(MarketCreated {
@@ -210,39 +222,44 @@ module cash_orderbook::market {
         types::set_market_status(market, status);
     }
 
-    /// Add an order to the bids side of the order book.
-    public(friend) fun add_bid(key: OrderKey, order: Order) acquires OrderBook {
+    /// Add an order to the bids side of the order book for a specific market.
+    public(friend) fun add_bid(pair_id: u64, key: OrderKey, order: Order) acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global_mut<OrderBook>(resource_addr);
+        let ob_registry = borrow_global_mut<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow_mut(&mut ob_registry.books, pair_id);
         big_ordered_map::add(&mut order_book.bids, key, order);
     }
 
-    /// Add an order to the asks side of the order book.
-    public(friend) fun add_ask(key: OrderKey, order: Order) acquires OrderBook {
+    /// Add an order to the asks side of the order book for a specific market.
+    public(friend) fun add_ask(pair_id: u64, key: OrderKey, order: Order) acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global_mut<OrderBook>(resource_addr);
+        let ob_registry = borrow_global_mut<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow_mut(&mut ob_registry.books, pair_id);
         big_ordered_map::add(&mut order_book.asks, key, order);
     }
 
-    /// Check if the bids side is empty.
-    public(friend) fun bids_is_empty(): bool acquires OrderBook {
+    /// Check if the bids side is empty for a specific market.
+    public(friend) fun bids_is_empty(pair_id: u64): bool acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global<OrderBook>(resource_addr);
+        let ob_registry = borrow_global<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow(&ob_registry.books, pair_id);
         big_ordered_map::is_empty(&order_book.bids)
     }
 
-    /// Check if the asks side is empty.
-    public(friend) fun asks_is_empty(): bool acquires OrderBook {
+    /// Check if the asks side is empty for a specific market.
+    public(friend) fun asks_is_empty(pair_id: u64): bool acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global<OrderBook>(resource_addr);
+        let ob_registry = borrow_global<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow(&ob_registry.books, pair_id);
         big_ordered_map::is_empty(&order_book.asks)
     }
 
-    /// Get the best (highest) bid price. Returns 0 if no bids.
+    /// Get the best (highest) bid price for a specific market. Returns 0 if no bids.
     /// Bids use inverted price keys, so the begin iterator (lowest key) = highest price.
-    public(friend) fun get_best_bid_price(): u64 acquires OrderBook {
+    public(friend) fun get_best_bid_price(pair_id: u64): u64 acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global<OrderBook>(resource_addr);
+        let ob_registry = borrow_global<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow(&ob_registry.books, pair_id);
         if (big_ordered_map::is_empty(&order_book.bids)) {
             return 0
         };
@@ -251,10 +268,11 @@ module cash_orderbook::market {
         types::order_price(best_bid)
     }
 
-    /// Get the best (lowest) ask price. Returns 0 if no asks.
-    public(friend) fun get_best_ask_price(): u64 acquires OrderBook {
+    /// Get the best (lowest) ask price for a specific market. Returns 0 if no asks.
+    public(friend) fun get_best_ask_price(pair_id: u64): u64 acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global<OrderBook>(resource_addr);
+        let ob_registry = borrow_global<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow(&ob_registry.books, pair_id);
         if (big_ordered_map::is_empty(&order_book.asks)) {
             return 0
         };
@@ -265,9 +283,10 @@ module cash_orderbook::market {
 
     /// Calculate the total fillable quantity on the asks side at or below the given price.
     /// Used for FOK buy order validation.
-    public(friend) fun get_fillable_ask_quantity(max_price: u64): u64 acquires OrderBook {
+    public(friend) fun get_fillable_ask_quantity(pair_id: u64, max_price: u64): u64 acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global<OrderBook>(resource_addr);
+        let ob_registry = borrow_global<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow(&ob_registry.books, pair_id);
         if (big_ordered_map::is_empty(&order_book.asks)) {
             return 0
         };
@@ -287,9 +306,10 @@ module cash_orderbook::market {
 
     /// Calculate the total fillable quantity on the bids side at or above the given price.
     /// Used for FOK sell order validation.
-    public(friend) fun get_fillable_bid_quantity(min_price: u64): u64 acquires OrderBook {
+    public(friend) fun get_fillable_bid_quantity(pair_id: u64, min_price: u64): u64 acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global<OrderBook>(resource_addr);
+        let ob_registry = borrow_global<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow(&ob_registry.books, pair_id);
         if (big_ordered_map::is_empty(&order_book.bids)) {
             return 0
         };
@@ -324,89 +344,100 @@ module cash_orderbook::market {
         (types::market_base_asset(market), types::market_quote_asset(market))
     }
 
-    /// Remove the front (best) ask from the book. Returns (key, order).
+    /// Remove the front (best) ask from the book for a specific market. Returns (key, order).
     /// The best ask is the one with the lowest price (begin of asks BigOrderedMap).
-    public(friend) fun pop_front_ask(): (OrderKey, Order) acquires OrderBook {
+    public(friend) fun pop_front_ask(pair_id: u64): (OrderKey, Order) acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global_mut<OrderBook>(resource_addr);
+        let ob_registry = borrow_global_mut<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow_mut(&mut ob_registry.books, pair_id);
         big_ordered_map::pop_front(&mut order_book.asks)
     }
 
-    /// Remove the front (best) bid from the book. Returns (key, order).
+    /// Remove the front (best) bid from the book for a specific market. Returns (key, order).
     /// The best bid uses inverted price, so begin = highest real price.
-    public(friend) fun pop_front_bid(): (OrderKey, Order) acquires OrderBook {
+    public(friend) fun pop_front_bid(pair_id: u64): (OrderKey, Order) acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global_mut<OrderBook>(resource_addr);
+        let ob_registry = borrow_global_mut<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow_mut(&mut ob_registry.books, pair_id);
         big_ordered_map::pop_front(&mut order_book.bids)
     }
 
-    /// Peek at the best ask (lowest price) without removing.
+    /// Peek at the best ask (lowest price) for a specific market without removing.
     /// Returns (price, remaining_quantity, owner) or aborts if empty.
-    public(friend) fun peek_best_ask(): (u64, u64, address) acquires OrderBook {
+    public(friend) fun peek_best_ask(pair_id: u64): (u64, u64, address) acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global<OrderBook>(resource_addr);
+        let ob_registry = borrow_global<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow(&ob_registry.books, pair_id);
         let iter = big_ordered_map::internal_new_begin_iter(&order_book.asks);
         let order = big_ordered_map::iter_borrow(iter, &order_book.asks);
         (types::order_price(order), types::order_remaining_quantity(order), types::order_owner(order))
     }
 
-    /// Peek at the best bid (highest price) without removing.
+    /// Peek at the best bid (highest price) for a specific market without removing.
     /// Returns (price, remaining_quantity, owner) or aborts if empty.
-    public(friend) fun peek_best_bid(): (u64, u64, address) acquires OrderBook {
+    public(friend) fun peek_best_bid(pair_id: u64): (u64, u64, address) acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global<OrderBook>(resource_addr);
+        let ob_registry = borrow_global<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow(&ob_registry.books, pair_id);
         let iter = big_ordered_map::internal_new_begin_iter(&order_book.bids);
         let order = big_ordered_map::iter_borrow(iter, &order_book.bids);
         (types::order_price(order), types::order_remaining_quantity(order), types::order_owner(order))
     }
 
-    /// Re-insert a partially filled ask order back to the book.
-    public(friend) fun reinsert_ask(key: OrderKey, order: Order) acquires OrderBook {
+    /// Re-insert a partially filled ask order back to the book for a specific market.
+    public(friend) fun reinsert_ask(pair_id: u64, key: OrderKey, order: Order) acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global_mut<OrderBook>(resource_addr);
+        let ob_registry = borrow_global_mut<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow_mut(&mut ob_registry.books, pair_id);
         big_ordered_map::add(&mut order_book.asks, key, order);
     }
 
-    /// Re-insert a partially filled bid order back to the book.
-    public(friend) fun reinsert_bid(key: OrderKey, order: Order) acquires OrderBook {
+    /// Re-insert a partially filled bid order back to the book for a specific market.
+    public(friend) fun reinsert_bid(pair_id: u64, key: OrderKey, order: Order) acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global_mut<OrderBook>(resource_addr);
+        let ob_registry = borrow_global_mut<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow_mut(&mut ob_registry.books, pair_id);
         big_ordered_map::add(&mut order_book.bids, key, order);
     }
 
-    /// Remove a specific bid from the book by key. Returns the Order.
-    public(friend) fun remove_bid(key: OrderKey): Order acquires OrderBook {
+    /// Remove a specific bid from the book by key for a specific market. Returns the Order.
+    public(friend) fun remove_bid(pair_id: u64, key: OrderKey): Order acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global_mut<OrderBook>(resource_addr);
+        let ob_registry = borrow_global_mut<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow_mut(&mut ob_registry.books, pair_id);
         big_ordered_map::remove(&mut order_book.bids, &key)
     }
 
-    /// Remove a specific ask from the book by key. Returns the Order.
-    public(friend) fun remove_ask(key: OrderKey): Order acquires OrderBook {
+    /// Remove a specific ask from the book by key for a specific market. Returns the Order.
+    public(friend) fun remove_ask(pair_id: u64, key: OrderKey): Order acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global_mut<OrderBook>(resource_addr);
+        let ob_registry = borrow_global_mut<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow_mut(&mut ob_registry.books, pair_id);
         big_ordered_map::remove(&mut order_book.asks, &key)
     }
 
-    /// Check if a bid exists at the given key.
-    public(friend) fun contains_bid(key: &OrderKey): bool acquires OrderBook {
+    /// Check if a bid exists at the given key for a specific market.
+    public(friend) fun contains_bid(pair_id: u64, key: &OrderKey): bool acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global<OrderBook>(resource_addr);
+        let ob_registry = borrow_global<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow(&ob_registry.books, pair_id);
         big_ordered_map::contains(&order_book.bids, key)
     }
 
-    /// Check if an ask exists at the given key.
-    public(friend) fun contains_ask(key: &OrderKey): bool acquires OrderBook {
+    /// Check if an ask exists at the given key for a specific market.
+    public(friend) fun contains_ask(pair_id: u64, key: &OrderKey): bool acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global<OrderBook>(resource_addr);
+        let ob_registry = borrow_global<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow(&ob_registry.books, pair_id);
         big_ordered_map::contains(&order_book.asks, key)
     }
 
-    /// Get all bid orders as a vector (bids are stored with inverted price keys).
+    /// Get all bid orders as a vector for a specific market (bids are stored with inverted price keys).
     /// Returns orders in descending price order (highest price first).
-    public(friend) fun get_all_bids(): vector<Order> acquires OrderBook {
+    public(friend) fun get_all_bids(pair_id: u64): vector<Order> acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global<OrderBook>(resource_addr);
+        let ob_registry = borrow_global<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow(&ob_registry.books, pair_id);
         let result = vector::empty<Order>();
         if (big_ordered_map::is_empty(&order_book.bids)) {
             return result
@@ -420,11 +451,12 @@ module cash_orderbook::market {
         result
     }
 
-    /// Get all ask orders as a vector.
+    /// Get all ask orders as a vector for a specific market.
     /// Returns orders in ascending price order (lowest price first).
-    public(friend) fun get_all_asks(): vector<Order> acquires OrderBook {
+    public(friend) fun get_all_asks(pair_id: u64): vector<Order> acquires OrderBookRegistry {
         let resource_addr = types::get_resource_account_address();
-        let order_book = borrow_global<OrderBook>(resource_addr);
+        let ob_registry = borrow_global<OrderBookRegistry>(resource_addr);
+        let order_book = table::borrow(&ob_registry.books, pair_id);
         let result = vector::empty<Order>();
         if (big_ordered_map::is_empty(&order_book.asks)) {
             return result
@@ -441,13 +473,19 @@ module cash_orderbook::market {
     // ========== Test Helpers ==========
 
     #[test_only]
-    /// Initialize market registry for tests (public entry for other modules' tests)
+    /// Initialize market registry and orderbook registry for tests (public entry for other modules' tests)
     public fun init_market_registry_for_test() {
         let resource_addr = types::get_resource_account_address();
         if (!exists<MarketRegistry>(resource_addr)) {
             let resource_signer = types::get_resource_signer();
             move_to(&resource_signer, MarketRegistry {
                 markets: table::new(),
+            });
+        };
+        if (!exists<OrderBookRegistry>(resource_addr)) {
+            let resource_signer = types::get_resource_signer();
+            move_to(&resource_signer, OrderBookRegistry {
+                books: table::new(),
             });
         };
     }
@@ -510,7 +548,7 @@ module cash_orderbook::market {
 
     #[test(deployer = @cash_orderbook)]
     /// Test successful market registration by admin
-    fun test_register_market_success(deployer: &signer) acquires MarketRegistry {
+    fun test_register_market_success(deployer: &signer) acquires MarketRegistry, OrderBookRegistry {
         let (base_metadata, quote_metadata) = setup_market_test_env(deployer);
 
         // Register a market
@@ -538,14 +576,14 @@ module cash_orderbook::market {
         // Verify market is active
         assert!(is_market_active(0), 107);
 
-        // Verify OrderBook exists
+        // Verify OrderBookRegistry exists with this market's book
         let resource_addr = types::get_resource_account_address();
-        assert!(exists<OrderBook>(resource_addr), 108);
+        assert!(exists<OrderBookRegistry>(resource_addr), 108);
     }
 
     #[test(deployer = @cash_orderbook)]
     /// Test that registering multiple markets assigns incrementing pair_ids
-    fun test_register_multiple_markets(deployer: &signer) acquires MarketRegistry {
+    fun test_register_multiple_markets(deployer: &signer) acquires MarketRegistry, OrderBookRegistry {
         let (base_metadata, quote_metadata) = setup_market_test_env(deployer);
 
         // Register first market
@@ -573,7 +611,7 @@ module cash_orderbook::market {
     fun test_register_market_unauthorized(
         deployer: &signer,
         non_admin: &signer,
-    ) acquires MarketRegistry {
+    ) acquires MarketRegistry, OrderBookRegistry {
         let (base_metadata, quote_metadata) = setup_market_test_env(deployer);
 
         // Non-admin tries to register — should fail
@@ -583,7 +621,7 @@ module cash_orderbook::market {
     #[test(deployer = @cash_orderbook)]
     #[expected_failure(abort_code = 4, location = cash_orderbook::market)] // E_INVALID_AMOUNT
     /// Test that zero lot_size is rejected
-    fun test_register_market_zero_lot_size(deployer: &signer) acquires MarketRegistry {
+    fun test_register_market_zero_lot_size(deployer: &signer) acquires MarketRegistry, OrderBookRegistry {
         let (base_metadata, quote_metadata) = setup_market_test_env(deployer);
         register_market(deployer, base_metadata, quote_metadata, 0, 1_000, 10_000);
     }
@@ -591,7 +629,7 @@ module cash_orderbook::market {
     #[test(deployer = @cash_orderbook)]
     #[expected_failure(abort_code = 4, location = cash_orderbook::market)] // E_INVALID_AMOUNT
     /// Test that zero tick_size is rejected
-    fun test_register_market_zero_tick_size(deployer: &signer) acquires MarketRegistry {
+    fun test_register_market_zero_tick_size(deployer: &signer) acquires MarketRegistry, OrderBookRegistry {
         let (base_metadata, quote_metadata) = setup_market_test_env(deployer);
         register_market(deployer, base_metadata, quote_metadata, 1_000, 0, 10_000);
     }
@@ -599,7 +637,7 @@ module cash_orderbook::market {
     #[test(deployer = @cash_orderbook)]
     #[expected_failure(abort_code = 4, location = cash_orderbook::market)] // E_INVALID_AMOUNT
     /// Test that zero min_size is rejected
-    fun test_register_market_zero_min_size(deployer: &signer) acquires MarketRegistry {
+    fun test_register_market_zero_min_size(deployer: &signer) acquires MarketRegistry, OrderBookRegistry {
         let (base_metadata, quote_metadata) = setup_market_test_env(deployer);
         register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 0);
     }
@@ -625,7 +663,7 @@ module cash_orderbook::market {
 
     #[test(deployer = @cash_orderbook)]
     /// Test assert_market_active with an active market
-    fun test_assert_market_active_success(deployer: &signer) acquires MarketRegistry {
+    fun test_assert_market_active_success(deployer: &signer) acquires MarketRegistry, OrderBookRegistry {
         let (base_metadata, quote_metadata) = setup_market_test_env(deployer);
         register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
 

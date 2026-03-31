@@ -610,4 +610,217 @@ module cash_orderbook::edge_case_tests {
             j = j + 1;
         };
     }
+
+    // ========== Multi-Market Isolation Tests ==========
+
+    /// Setup environment with deployer and two users, and register TWO markets.
+    /// Market 0: base_asset_A / quote_asset_A
+    /// Market 1: base_asset_B / quote_asset_B
+    /// Returns (base_meta_A, quote_meta_A, pair_id_A, base_meta_B, quote_meta_B, pair_id_B)
+    fun setup_two_markets(
+        deployer: &signer,
+        user1: &signer,
+        user2: &signer,
+    ): (Object<Metadata>, Object<Metadata>, u64, Object<Metadata>, Object<Metadata>, u64) {
+        let deployer_addr = signer::address_of(deployer);
+        let user1_addr = signer::address_of(user1);
+        let user2_addr = signer::address_of(user2);
+        test_account::create_account_for_test(deployer_addr);
+        test_account::create_account_for_test(user1_addr);
+        test_account::create_account_for_test(user2_addr);
+
+        types::init_module_for_test(deployer);
+        let resource_addr = types::get_resource_account_address();
+        test_account::create_account_for_test(resource_addr);
+
+        let aptos_framework = test_account::create_signer_for_test(@0x1);
+        timestamp::set_time_has_started_for_testing(&aptos_framework);
+
+        // ---- Market A assets ----
+        let base_a_ref = object::create_named_object(deployer, b"BASE_A");
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            &base_a_ref, std::option::none(), string::utf8(b"Base A"), string::utf8(b"BA"), 6, string::utf8(b""), string::utf8(b""),
+        );
+        let base_a = object::object_from_constructor_ref<Metadata>(&base_a_ref);
+        let base_a_mint = fungible_asset::generate_mint_ref(&base_a_ref);
+
+        let quote_a_ref = object::create_named_object(deployer, b"QUOTE_A");
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            &quote_a_ref, std::option::none(), string::utf8(b"Quote A"), string::utf8(b"QA"), 6, string::utf8(b""), string::utf8(b""),
+        );
+        let quote_a = object::object_from_constructor_ref<Metadata>(&quote_a_ref);
+        let quote_a_mint = fungible_asset::generate_mint_ref(&quote_a_ref);
+
+        // ---- Market B assets ----
+        let base_b_ref = object::create_named_object(deployer, b"BASE_B");
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            &base_b_ref, std::option::none(), string::utf8(b"Base B"), string::utf8(b"BB"), 6, string::utf8(b""), string::utf8(b""),
+        );
+        let base_b = object::object_from_constructor_ref<Metadata>(&base_b_ref);
+        let base_b_mint = fungible_asset::generate_mint_ref(&base_b_ref);
+
+        let quote_b_ref = object::create_named_object(deployer, b"QUOTE_B");
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            &quote_b_ref, std::option::none(), string::utf8(b"Quote B"), string::utf8(b"QB"), 6, string::utf8(b""), string::utf8(b""),
+        );
+        let quote_b = object::object_from_constructor_ref<Metadata>(&quote_b_ref);
+        let quote_b_mint = fungible_asset::generate_mint_ref(&quote_b_ref);
+
+        // Mint and deposit for user1: both market A and B assets
+        let fa = fungible_asset::mint(&base_a_mint, 100_000_000_000);
+        primary_fungible_store::deposit(user1_addr, fa);
+        let fa = fungible_asset::mint(&quote_a_mint, 100_000_000_000);
+        primary_fungible_store::deposit(user1_addr, fa);
+        let fa = fungible_asset::mint(&base_b_mint, 100_000_000_000);
+        primary_fungible_store::deposit(user1_addr, fa);
+        let fa = fungible_asset::mint(&quote_b_mint, 100_000_000_000);
+        primary_fungible_store::deposit(user1_addr, fa);
+        accounts::deposit(user1, base_a, 50_000_000_000);
+        accounts::deposit(user1, quote_a, 50_000_000_000);
+        accounts::deposit(user1, base_b, 50_000_000_000);
+        accounts::deposit(user1, quote_b, 50_000_000_000);
+
+        // Mint and deposit for user2: both market A and B assets
+        let fa = fungible_asset::mint(&base_a_mint, 100_000_000_000);
+        primary_fungible_store::deposit(user2_addr, fa);
+        let fa = fungible_asset::mint(&quote_a_mint, 100_000_000_000);
+        primary_fungible_store::deposit(user2_addr, fa);
+        let fa = fungible_asset::mint(&base_b_mint, 100_000_000_000);
+        primary_fungible_store::deposit(user2_addr, fa);
+        let fa = fungible_asset::mint(&quote_b_mint, 100_000_000_000);
+        primary_fungible_store::deposit(user2_addr, fa);
+        accounts::deposit(user2, base_a, 50_000_000_000);
+        accounts::deposit(user2, quote_a, 50_000_000_000);
+        accounts::deposit(user2, base_b, 50_000_000_000);
+        accounts::deposit(user2, quote_b, 50_000_000_000);
+
+        // Register Market A (pair_id = 0)
+        market::register_market(deployer, base_a, quote_a, 1_000, 1_000, 10_000);
+        // Register Market B (pair_id = 1)
+        market::register_market(deployer, base_b, quote_b, 2_000, 2_000, 20_000);
+
+        (base_a, quote_a, 0, base_b, quote_b, 1)
+    }
+
+    #[test(deployer = @cash_orderbook, user1 = @0xBEEF, user2 = @0xCAFE1)]
+    /// Multi-market isolation: orders on market A do NOT appear in market B's book.
+    /// Place bids and asks on both markets, verify each market's orderbook is independent.
+    fun test_multi_market_isolation(deployer: &signer, user1: &signer, user2: &signer) {
+        let (_ba, _qa, pair_a, _bb, _qb, pair_b) = setup_two_markets(deployer, user1, user2);
+
+        // Place orders on Market A: 3 bids, 2 asks
+        order_placement::place_limit_order(user1, pair_a, 1_000_000, 10_000_000, true, types::order_type_gtc());
+        order_placement::place_limit_order(user1, pair_a, 2_000_000, 10_000_000, true, types::order_type_gtc());
+        order_placement::place_limit_order(user1, pair_a, 3_000_000, 10_000_000, true, types::order_type_gtc());
+        order_placement::place_limit_order(user1, pair_a, 5_000_000, 10_000_000, false, types::order_type_gtc());
+        order_placement::place_limit_order(user1, pair_a, 6_000_000, 10_000_000, false, types::order_type_gtc());
+
+        // Place orders on Market B: 1 bid, 3 asks
+        order_placement::place_limit_order(user2, pair_b, 10_000_000, 20_000_000, true, types::order_type_gtc());
+        order_placement::place_limit_order(user2, pair_b, 15_000_000, 20_000_000, false, types::order_type_gtc());
+        order_placement::place_limit_order(user2, pair_b, 20_000_000, 20_000_000, false, types::order_type_gtc());
+        order_placement::place_limit_order(user2, pair_b, 25_000_000, 20_000_000, false, types::order_type_gtc());
+
+        // Verify Market A's orderbook: 3 bids, 2 asks
+        let (bids_a, asks_a) = views::get_orderbook(pair_a);
+        assert!(vector::length(&bids_a) == 3, 2000);
+        assert!(vector::length(&asks_a) == 2, 2001);
+
+        // Verify bids_a are in descending price order: 3.0, 2.0, 1.0
+        assert!(types::order_price(vector::borrow(&bids_a, 0)) == 3_000_000, 2002);
+        assert!(types::order_price(vector::borrow(&bids_a, 1)) == 2_000_000, 2003);
+        assert!(types::order_price(vector::borrow(&bids_a, 2)) == 1_000_000, 2004);
+
+        // Verify asks_a are in ascending price order: 5.0, 6.0
+        assert!(types::order_price(vector::borrow(&asks_a, 0)) == 5_000_000, 2005);
+        assert!(types::order_price(vector::borrow(&asks_a, 1)) == 6_000_000, 2006);
+
+        // Verify Market B's orderbook: 1 bid, 3 asks
+        let (bids_b, asks_b) = views::get_orderbook(pair_b);
+        assert!(vector::length(&bids_b) == 1, 2010);
+        assert!(vector::length(&asks_b) == 3, 2011);
+
+        // Verify bids_b: single bid at 10.0
+        assert!(types::order_price(vector::borrow(&bids_b, 0)) == 10_000_000, 2012);
+
+        // Verify asks_b in ascending: 15.0, 20.0, 25.0
+        assert!(types::order_price(vector::borrow(&asks_b, 0)) == 15_000_000, 2013);
+        assert!(types::order_price(vector::borrow(&asks_b, 1)) == 20_000_000, 2014);
+        assert!(types::order_price(vector::borrow(&asks_b, 2)) == 25_000_000, 2015);
+
+        // Verify user orders are isolated per market
+        let user1_orders_a = views::get_user_orders(signer::address_of(user1), pair_a);
+        let user1_orders_b = views::get_user_orders(signer::address_of(user1), pair_b);
+        assert!(vector::length(&user1_orders_a) == 5, 2020); // 3 bids + 2 asks on market A
+        assert!(vector::length(&user1_orders_b) == 0, 2021); // user1 placed nothing on market B
+
+        let user2_orders_a = views::get_user_orders(signer::address_of(user2), pair_a);
+        let user2_orders_b = views::get_user_orders(signer::address_of(user2), pair_b);
+        assert!(vector::length(&user2_orders_a) == 0, 2022); // user2 placed nothing on market A
+        assert!(vector::length(&user2_orders_b) == 4, 2023); // 1 bid + 3 asks on market B
+    }
+
+    #[test(deployer = @cash_orderbook, user1 = @0xBEEF, user2 = @0xCAFE1)]
+    /// Multi-market isolation: cancel on one market doesn't affect the other.
+    fun test_multi_market_cancel_isolation(deployer: &signer, user1: &signer, user2: &signer) {
+        let (_ba, _qa, pair_a, _bb, _qb, pair_b) = setup_two_markets(deployer, user1, user2);
+
+        // Place orders on both markets
+        order_placement::place_limit_order(user1, pair_a, 2_000_000, 10_000_000, true, types::order_type_gtc()); // order_id 0
+        order_placement::place_limit_order(user2, pair_b, 10_000_000, 20_000_000, true, types::order_type_gtc()); // order_id 1
+
+        // Verify both books have orders
+        let (bids_a, _) = views::get_orderbook(pair_a);
+        let (bids_b, _) = views::get_orderbook(pair_b);
+        assert!(vector::length(&bids_a) == 1, 2100);
+        assert!(vector::length(&bids_b) == 1, 2101);
+
+        // Cancel the order on market A
+        cancel::cancel_order(user1, pair_a, 0);
+
+        // Market A should be empty
+        let (bids_a2, _) = views::get_orderbook(pair_a);
+        assert!(vector::length(&bids_a2) == 0, 2102);
+
+        // Market B should still have its order
+        let (bids_b2, _) = views::get_orderbook(pair_b);
+        assert!(vector::length(&bids_b2) == 1, 2103);
+        assert!(types::order_price(vector::borrow(&bids_b2, 0)) == 10_000_000, 2104);
+    }
+
+    #[test(deployer = @cash_orderbook, user1 = @0xBEEF, user2 = @0xCAFE1)]
+    /// Multi-market isolation: matching on one market doesn't affect the other.
+    fun test_multi_market_matching_isolation(deployer: &signer, user1: &signer, user2: &signer) {
+        let (base_a, quote_a, pair_a, _bb, _qb, pair_b) = setup_two_markets(deployer, user1, user2);
+        let user1_addr = signer::address_of(user1);
+        let user2_addr = signer::address_of(user2);
+        let base_a_addr = object::object_address(&base_a);
+        let quote_a_addr = object::object_address(&quote_a);
+
+        // Maker places sell on Market A
+        order_placement::place_limit_order(user1, pair_a, 2_000_000, 50_000_000, false, types::order_type_gtc());
+
+        // Place a bid on Market B (unrelated)
+        order_placement::place_limit_order(user2, pair_b, 10_000_000, 20_000_000, true, types::order_type_gtc());
+
+        // Taker buys on Market A — should match with user1's sell
+        order_placement::place_limit_order(user2, pair_a, 2_000_000, 50_000_000, true, types::order_type_gtc());
+
+        // Market A should be fully matched (empty)
+        let (bids_a, asks_a) = views::get_orderbook(pair_a);
+        assert!(vector::length(&bids_a) == 0, 2200);
+        assert!(vector::length(&asks_a) == 0, 2201);
+
+        // Market B should still have its order untouched
+        let (bids_b, _) = views::get_orderbook(pair_b);
+        assert!(vector::length(&bids_b) == 1, 2202);
+
+        // Verify settlement happened correctly on Market A
+        // user2 bought 50 base_a at 2.0 = 100 quote_a
+        let user2_base_a = accounts::get_available_balance(user2_addr, base_a_addr);
+        assert!(user2_base_a == 50_050_000_000, 2203); // 50000 + 50
+
+        let user1_quote_a = accounts::get_available_balance(user1_addr, quote_a_addr);
+        assert!(user1_quote_a == 50_100_000_000, 2204); // 50000 + 100
+    }
 }

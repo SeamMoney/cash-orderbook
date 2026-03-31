@@ -155,11 +155,11 @@ module cash_orderbook::order_placement {
         if (order_type == types::order_type_post_only()) {
             let would_cross = if (is_bid) {
                 // Buy PostOnly: would cross if there's an ask at or below our price
-                let best_ask = market::get_best_ask_price();
+                let best_ask = market::get_best_ask_price(pair_id);
                 best_ask > 0 && price >= best_ask
             } else {
                 // Sell PostOnly: would cross if there's a bid at or above our price
-                let best_bid = market::get_best_bid_price();
+                let best_bid = market::get_best_bid_price(pair_id);
                 best_bid > 0 && best_bid >= price
             };
             if (would_cross) {
@@ -176,9 +176,9 @@ module cash_orderbook::order_placement {
         // 6. FOK check: verify there's enough opposing liquidity to fully fill
         if (order_type == types::order_type_fok()) {
             let fillable = if (is_bid) {
-                market::get_fillable_ask_quantity(price)
+                market::get_fillable_ask_quantity(pair_id, price)
             } else {
-                market::get_fillable_bid_quantity(price)
+                market::get_fillable_bid_quantity(pair_id, price)
             };
             if (fillable < quantity) {
                 // Can't fully fill — unlock funds and abort (including fee reserve)
@@ -274,7 +274,7 @@ module cash_orderbook::order_placement {
                     let still_needed_fee = fees::calculate_max_fee(still_needed_quote);
                     types::set_locked_quote(&mut order, still_needed_quote + still_needed_fee);
                 };
-                insert_order_to_book(order, is_bid, price, now, order_id);
+                insert_order_to_book(order, is_bid, price, now, order_id, pair_id);
             };
         };
 
@@ -489,16 +489,17 @@ module cash_orderbook::order_placement {
         price: u64,
         timestamp: u64,
         order_id: u64,
+        pair_id: u64,
     ) {
         if (is_bid) {
             // Bids: invert price so BigOrderedMap ascending order = descending price
             let inverted_price = MAX_PRICE - price;
             let key = types::new_order_key(inverted_price, timestamp, order_id);
-            market::add_bid(key, order);
+            market::add_bid(pair_id, key, order);
         } else {
             // Asks: natural ascending price order
             let key = types::new_order_key(price, timestamp, order_id);
-            market::add_ask(key, order);
+            market::add_ask(pair_id, key, order);
         };
     }
 
@@ -613,7 +614,7 @@ module cash_orderbook::order_placement {
         assert!(available == 5_000_000_000 - expected_lock, 101);
 
         // Verify: order is on the bids side of the book
-        assert!(!market::bids_is_empty(), 102);
+        assert!(!market::bids_is_empty(pair_id), 102);
     }
 
     #[test(deployer = @cash_orderbook, user = @0xBEEF)]
@@ -637,7 +638,7 @@ module cash_orderbook::order_placement {
         assert!(available == 5_000_000_000 - quantity, 201);
 
         // Verify: order is on the asks side
-        assert!(!market::asks_is_empty(), 202);
+        assert!(!market::asks_is_empty(pair_id), 202);
     }
 
     // ===== IOC Limit Order Tests =====
@@ -661,7 +662,7 @@ module cash_orderbook::order_placement {
         assert!(available == 5_000_000_000, 301);
 
         // Verify: no orders on book
-        assert!(market::bids_is_empty(), 302);
+        assert!(market::bids_is_empty(pair_id), 302);
     }
 
     #[test(deployer = @cash_orderbook, user = @0xBEEF)]
@@ -677,7 +678,7 @@ module cash_orderbook::order_placement {
         assert!(accounts::get_locked_balance(user_addr, base_addr) == 0, 350);
 
         // Verify: no orders on asks side
-        assert!(market::asks_is_empty(), 351);
+        assert!(market::asks_is_empty(pair_id), 351);
     }
 
     // ===== FOK Limit Order Tests =====
@@ -733,7 +734,7 @@ module cash_orderbook::order_placement {
 
         // PostOnly buy at 1.0 USDC — no asks, should rest
         place_limit_order(user, pair_id, 1_000_000, 50_000_000, true, types::order_type_post_only());
-        assert!(!market::bids_is_empty(), 500);
+        assert!(!market::bids_is_empty(pair_id), 500);
     }
 
     #[test(deployer = @cash_orderbook, user = @0xBEEF)]
@@ -747,8 +748,8 @@ module cash_orderbook::order_placement {
         // PostOnly sell at 2.0 — bid at 1.0 < 2.0, no cross, should rest
         place_limit_order(user, pair_id, 2_000_000, 50_000_000, false, types::order_type_post_only());
 
-        assert!(!market::bids_is_empty(), 600);
-        assert!(!market::asks_is_empty(), 601);
+        assert!(!market::bids_is_empty(pair_id), 600);
+        assert!(!market::asks_is_empty(pair_id), 601);
     }
 
     #[test(deployer = @cash_orderbook, user = @0xBEEF)]
@@ -818,7 +819,7 @@ module cash_orderbook::order_placement {
         assert!(accounts::get_locked_balance(user_addr, quote_addr) == 0, 700);
 
         // Verify: no orders on bids
-        assert!(market::bids_is_empty(), 701);
+        assert!(market::bids_is_empty(pair_id), 701);
     }
 
     #[test(deployer = @cash_orderbook, user = @0xBEEF)]
@@ -834,7 +835,7 @@ module cash_orderbook::order_placement {
         assert!(accounts::get_locked_balance(user_addr, base_addr) == 0, 800);
 
         // Verify: no orders on asks
-        assert!(market::asks_is_empty(), 801);
+        assert!(market::asks_is_empty(pair_id), 801);
     }
 
     #[test(deployer = @cash_orderbook, user = @0xBEEF)]
@@ -849,9 +850,9 @@ module cash_orderbook::order_placement {
         place_market_order(user, pair_id, 30_000_000, true);
 
         // bids empty (market order doesn't rest)
-        assert!(market::bids_is_empty(), 900);
+        assert!(market::bids_is_empty(pair_id), 900);
         // asks still has the sell
-        assert!(!market::asks_is_empty(), 901);
+        assert!(!market::asks_is_empty(pair_id), 901);
     }
 
     // ===== Error Case Tests =====
@@ -949,8 +950,8 @@ module cash_orderbook::order_placement {
         place_limit_order(user, pair_id, 4_000_000, 10_000_000, false, types::order_type_gtc());
 
         // Verify both sides have orders
-        assert!(!market::bids_is_empty(), 1000);
-        assert!(!market::asks_is_empty(), 1001);
+        assert!(!market::bids_is_empty(pair_id), 1000);
+        assert!(!market::asks_is_empty(pair_id), 1001);
     }
 
     #[test(deployer = @cash_orderbook, user = @0xBEEF)]
@@ -1101,8 +1102,8 @@ module cash_orderbook::order_placement {
         place_limit_order(taker, pair_id, 2_000_000, 100_000_000, true, types::order_type_gtc());
 
         // Verify: book is empty (both orders fully filled)
-        assert!(market::bids_is_empty(), 2001);
-        assert!(market::asks_is_empty(), 2002);
+        assert!(market::bids_is_empty(pair_id), 2001);
+        assert!(market::asks_is_empty(pair_id), 2002);
 
         // Verify settlement:
         // Taker (buyer) gets 100 CASH, pays 200 USDC (100 * 2.0)
@@ -1142,8 +1143,8 @@ module cash_orderbook::order_placement {
         place_limit_order(taker, pair_id, 1_500_000, 100_000_000, false, types::order_type_gtc());
 
         // Book is empty
-        assert!(market::bids_is_empty(), 2100);
-        assert!(market::asks_is_empty(), 2101);
+        assert!(market::bids_is_empty(pair_id), 2100);
+        assert!(market::asks_is_empty(pair_id), 2101);
 
         // Settlement: fill at 1.5 USDC, 100 CASH
         // quote_amount = (1_500_000 * 100_000_000) / 1_000_000 = 150_000_000 (150 USDC)
@@ -1179,9 +1180,9 @@ module cash_orderbook::order_placement {
         place_limit_order(taker, pair_id, 2_000_000, 100_000_000, true, types::order_type_gtc());
 
         // Asks empty (maker fully filled)
-        assert!(market::asks_is_empty(), 2200);
+        assert!(market::asks_is_empty(pair_id), 2200);
         // Bids NOT empty (taker rests remaining 50 CASH)
-        assert!(!market::bids_is_empty(), 2201);
+        assert!(!market::bids_is_empty(pair_id), 2201);
 
         // Settlement: 50 CASH at 2.0 = 100 USDC transferred
         // Taker: 5000 + 50 = 5050 CASH available, locked 100 USDC for remaining 50 CASH
@@ -1219,9 +1220,9 @@ module cash_orderbook::order_placement {
         place_limit_order(taker, pair_id, 1_500_000, 50_000_000, true, types::order_type_gtc());
 
         // Asks NOT empty (maker has 150 remaining)
-        assert!(!market::asks_is_empty(), 2300);
+        assert!(!market::asks_is_empty(pair_id), 2300);
         // Bids empty (taker fully filled, not resting)
-        assert!(market::bids_is_empty(), 2301);
+        assert!(market::bids_is_empty(pair_id), 2301);
 
         // Settlement: 50 CASH at 1.5 = 75 USDC
         // Taker: 5000 + 50 = 5050 CASH, 5000 - 75 = 4925 USDC
@@ -1258,9 +1259,9 @@ module cash_orderbook::order_placement {
         place_limit_order(taker, pair_id, 3_000_000, 60_000_000, true, types::order_type_gtc());
 
         // Asks: only the 3.0 sell should remain (30 CASH)
-        assert!(!market::asks_is_empty(), 2400);
+        assert!(!market::asks_is_empty(pair_id), 2400);
         // Bids: empty (taker fully filled)
-        assert!(market::bids_is_empty(), 2401);
+        assert!(market::bids_is_empty(pair_id), 2401);
 
         // Settlement: 30@1.0 = 30 USDC + 30@2.0 = 60 USDC = total 90 USDC paid
         let taker_base = accounts::get_available_balance(taker_addr, base_addr);
@@ -1302,7 +1303,7 @@ module cash_orderbook::order_placement {
         place_limit_order(taker, pair_id, 2_000_000, 40_000_000, true, types::order_type_gtc());
 
         // The first sell (40) should be fully consumed, second sell (60) remains
-        assert!(!market::asks_is_empty(), 2500);
+        assert!(!market::asks_is_empty(pair_id), 2500);
 
         // Taker got 40 CASH, paid 80 USDC (40 * 2.0)
         assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_040_000_000, 2501);
@@ -1312,7 +1313,7 @@ module cash_orderbook::order_placement {
         place_limit_order(taker, pair_id, 2_000_000, 40_000_000, true, types::order_type_gtc());
 
         // Second sell should have 20 remaining on book
-        assert!(!market::asks_is_empty(), 2503);
+        assert!(!market::asks_is_empty(pair_id), 2503);
 
         // Taker: 5040 + 40 = 5080 CASH
         assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_080_000_000, 2504);
@@ -1336,8 +1337,8 @@ module cash_orderbook::order_placement {
         place_limit_order(user, pair_id, 2_000_000, 50_000_000, true, types::order_type_gtc());
 
         // Both orders should be on book (no match occurred)
-        assert!(!market::bids_is_empty(), 2600);
-        assert!(!market::asks_is_empty(), 2601);
+        assert!(!market::bids_is_empty(pair_id), 2600);
+        assert!(!market::asks_is_empty(pair_id), 2601);
 
         // Balances: base locked for sell + quote locked for buy
         assert!(accounts::get_locked_balance(user_addr, base_addr) == 50_000_000, 2602);
@@ -1356,8 +1357,8 @@ module cash_orderbook::order_placement {
         place_limit_order(user, pair_id, 1_500_000, 50_000_000, false, types::order_type_gtc());
 
         // Both orders on book
-        assert!(!market::bids_is_empty(), 2700);
-        assert!(!market::asks_is_empty(), 2701);
+        assert!(!market::bids_is_empty(pair_id), 2700);
+        assert!(!market::asks_is_empty(pair_id), 2701);
     }
 
     // ===== VAL-CONTRACT-017: Settlement Correctness =====
@@ -1411,9 +1412,9 @@ module cash_orderbook::order_placement {
         assert!(accounts::get_locked_balance(taker_addr, quote_addr) == 0, 2902);
 
         // Maker sell has 50 remaining
-        assert!(!market::asks_is_empty(), 2903);
+        assert!(!market::asks_is_empty(pair_id), 2903);
         // No bids (market order doesn't rest)
-        assert!(market::bids_is_empty(), 2904);
+        assert!(market::bids_is_empty(pair_id), 2904);
     }
 
     #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
@@ -1436,7 +1437,7 @@ module cash_orderbook::order_placement {
         assert!(accounts::get_locked_balance(taker_addr, base_addr) == 0, 3002);
 
         // Maker bid has 20 remaining
-        assert!(!market::bids_is_empty(), 3003);
+        assert!(!market::bids_is_empty(pair_id), 3003);
     }
 
     // ===== IOC with Matching =====
@@ -1456,8 +1457,8 @@ module cash_orderbook::order_placement {
         place_limit_order(taker, pair_id, 1_500_000, 100_000_000, true, types::order_type_ioc());
 
         // Book is empty (maker consumed, taker IOC cancelled remainder)
-        assert!(market::bids_is_empty(), 3100);
-        assert!(market::asks_is_empty(), 3101);
+        assert!(market::bids_is_empty(pair_id), 3100);
+        assert!(market::asks_is_empty(pair_id), 3101);
 
         // Taker: got 30 CASH, paid 45 USDC (30 * 1.5)
         assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_030_000_000, 3102);
@@ -1482,8 +1483,8 @@ module cash_orderbook::order_placement {
         place_limit_order(taker, pair_id, 2_000_000, 100_000_000, true, types::order_type_fok());
 
         // Book empty
-        assert!(market::bids_is_empty(), 3200);
-        assert!(market::asks_is_empty(), 3201);
+        assert!(market::bids_is_empty(pair_id), 3200);
+        assert!(market::asks_is_empty(pair_id), 3201);
 
         // Taker: 5000 + 100 = 5100 CASH, 5000 - 200 = 4800 USDC
         assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_100_000_000, 3202);
@@ -1552,7 +1553,7 @@ module cash_orderbook::order_placement {
         assert!(accounts::get_locked_balance(taker_addr, quote_addr) == 0, 3502);
 
         // 10 CASH remain on asks at 3.0
-        assert!(!market::asks_is_empty(), 3503);
+        assert!(!market::asks_is_empty(pair_id), 3503);
     }
 
     // ===== Self-trade prevention with third party =====
@@ -1575,9 +1576,9 @@ module cash_orderbook::order_placement {
         place_limit_order(taker, pair_id, 2_000_000, 50_000_000, true, types::order_type_gtc());
 
         // Taker's own sell at 1.0 should still be on the book
-        assert!(!market::asks_is_empty(), 3600);
+        assert!(!market::asks_is_empty(pair_id), 3600);
         // Bids empty (taker buy fully filled)
-        assert!(market::bids_is_empty(), 3601);
+        assert!(market::bids_is_empty(pair_id), 3601);
 
         // Taker: started with 5000 CASH, locked 50 CASH for sell,
         // then received 50 CASH from the buy fill = 5050 available (minus the locked)
@@ -1854,7 +1855,7 @@ module cash_orderbook::order_placement {
         assert!(locked == 150_000_000, 6000);
 
         // Order is on the bids side
-        assert!(!market::bids_is_empty(), 6001);
+        assert!(!market::bids_is_empty(pair_id), 6001);
     }
 
     #[test(deployer = @cash_orderbook, owner = @0xBEEF, delegate = @0xDEAD)]
@@ -1907,7 +1908,7 @@ module cash_orderbook::order_placement {
 
         // First verify delegation works
         place_limit_order_delegated(delegate, owner_addr, pair_id, 1_500_000, 50_000_000, true, types::order_type_gtc());
-        assert!(!market::bids_is_empty(), 6400);
+        assert!(!market::bids_is_empty(pair_id), 6400);
 
         // Revoke delegation
         test_subaccounts::revoke_delegation(owner, delegate_addr);
@@ -1930,7 +1931,7 @@ module cash_orderbook::order_placement {
         assert!(accounts::get_locked_balance(owner_addr, base_addr) == 50_000_000, 6500);
 
         // Order is on the asks side
-        assert!(!market::asks_is_empty(), 6501);
+        assert!(!market::asks_is_empty(pair_id), 6501);
     }
 
     // ========== FEE LOCK ACCOUNTING REGRESSION TESTS ==========
@@ -2069,8 +2070,8 @@ module cash_orderbook::order_placement {
         place_limit_order(taker, pair_id, 2_000_000, 100_000_000, true, types::order_type_gtc());
 
         // Verify: trade executed without E_INSUFFICIENT_BALANCE!
-        assert!(market::bids_is_empty(), 7000);
-        assert!(market::asks_is_empty(), 7001);
+        assert!(market::bids_is_empty(pair_id), 7000);
+        assert!(market::asks_is_empty(pair_id), 7001);
 
         // Taker (buyer): gets 100 CASH, pays 200 USDC + 0.6 taker_fee
         assert!(accounts::get_available_balance(taker_addr, base_addr) == 100_000_000, 7002);
@@ -2119,7 +2120,7 @@ module cash_orderbook::order_placement {
         place_market_order(taker, pair_id, 50_000_000, true);
 
         // Verify: trade executed without abort
-        assert!(market::asks_is_empty(), 7100);
+        assert!(market::asks_is_empty(pair_id), 7100);
 
         // Taker: got 50 CASH, paid 50 USDC + 0.25 taker_fee
         assert!(accounts::get_available_balance(taker_addr, base_addr) == 50_000_000, 7101);
@@ -2173,8 +2174,8 @@ module cash_orderbook::order_placement {
         place_limit_order(taker, pair_id, 1_500_000, 100_000_000, false, types::order_type_gtc());
 
         // Verify: trade executed without abort
-        assert!(market::bids_is_empty(), 7201);
-        assert!(market::asks_is_empty(), 7202);
+        assert!(market::bids_is_empty(pair_id), 7201);
+        assert!(market::asks_is_empty(pair_id), 7202);
 
         // Maker (buyer): gets 100 CASH, pays 150 USDC + 0.3 maker_fee from locked.
         // Excess fee reserve (0.75 - 0.3 = 0.45) unlocked back to available.
@@ -2278,8 +2279,8 @@ module cash_orderbook::order_placement {
         // Actually: 50_000_000 * 30 / 10_000 = 150_000
         // maker_fee = 50_000_000 * 10 / 10_000 = 50_000
 
-        assert!(market::bids_is_empty(), 7400);
-        assert!(market::asks_is_empty(), 7401);
+        assert!(market::bids_is_empty(pair_id), 7400);
+        assert!(market::asks_is_empty(pair_id), 7401);
 
         // Taker: 50 CASH received
         assert!(accounts::get_available_balance(taker_addr, base_addr) == 50_000_000, 7402);

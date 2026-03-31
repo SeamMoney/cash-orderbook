@@ -24,8 +24,8 @@ module cash_orderbook::views {
         // Verify market exists
         assert!(market::market_exists(pair_id), types::e_market_not_listed());
 
-        let bids = market::get_all_bids();
-        let asks = market::get_all_asks();
+        let bids = market::get_all_bids(pair_id);
+        let asks = market::get_all_asks(pair_id);
 
         (bids, asks)
     }
@@ -59,7 +59,7 @@ module cash_orderbook::views {
         let result = vector::empty<types::Order>();
 
         // Search bids
-        let bids = market::get_all_bids();
+        let bids = market::get_all_bids(pair_id);
         let i = 0;
         let bid_len = vector::length(&bids);
         while (i < bid_len) {
@@ -71,7 +71,7 @@ module cash_orderbook::views {
         };
 
         // Search asks
-        let asks = market::get_all_asks();
+        let asks = market::get_all_asks(pair_id);
         let j = 0;
         let ask_len = vector::length(&asks);
         while (j < ask_len) {

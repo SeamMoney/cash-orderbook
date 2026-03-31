@@ -96,9 +96,9 @@ module cash_orderbook::matching {
         let skipped_keys = vector::empty<OrderKey>();
         let skipped_orders = vector::empty<Order>();
 
-        while (types::order_remaining_quantity(taker_order) > 0 && !market::asks_is_empty()) {
+        while (types::order_remaining_quantity(taker_order) > 0 && !market::asks_is_empty(pair_id)) {
             // Peek at the best ask
-            let (ask_price, _ask_qty, ask_owner) = market::peek_best_ask();
+            let (ask_price, _ask_qty, ask_owner) = market::peek_best_ask(pair_id);
 
             // Price check: for limit buy, taker.price >= maker.price
             // For market buy, always match (no price limit)
@@ -107,7 +107,7 @@ module cash_orderbook::matching {
             };
 
             // Pop the best ask from the book
-            let (maker_key, maker_order) = market::pop_front_ask();
+            let (maker_key, maker_order) = market::pop_front_ask(pair_id);
 
             // Self-trade prevention: skip if same owner
             if (ask_owner == taker_owner) {
@@ -144,7 +144,7 @@ module cash_orderbook::matching {
             // If maker has remaining quantity, update and re-insert
             if (maker_remaining > fill_qty) {
                 types::set_remaining_quantity(&mut maker_order, maker_remaining - fill_qty);
-                market::reinsert_ask(maker_key, maker_order);
+                market::reinsert_ask(pair_id, maker_key, maker_order);
             };
             // If maker is fully filled, it stays removed from the book (already popped)
         };
@@ -155,7 +155,7 @@ module cash_orderbook::matching {
         while (i < len) {
             let key = *vector::borrow(&skipped_keys, i);
             let order = *vector::borrow(&skipped_orders, i);
-            market::reinsert_ask(key, order);
+            market::reinsert_ask(pair_id, key, order);
             i = i + 1;
         };
     }
@@ -176,9 +176,9 @@ module cash_orderbook::matching {
         let skipped_keys = vector::empty<OrderKey>();
         let skipped_orders = vector::empty<Order>();
 
-        while (types::order_remaining_quantity(taker_order) > 0 && !market::bids_is_empty()) {
+        while (types::order_remaining_quantity(taker_order) > 0 && !market::bids_is_empty(pair_id)) {
             // Peek at the best bid (highest price due to inverted keys)
-            let (bid_price, _bid_qty, bid_owner) = market::peek_best_bid();
+            let (bid_price, _bid_qty, bid_owner) = market::peek_best_bid(pair_id);
 
             // Price check: for limit sell, taker.price <= maker.price
             // For market sell, always match (no price limit)
@@ -187,7 +187,7 @@ module cash_orderbook::matching {
             };
 
             // Pop the best bid from the book
-            let (maker_key, maker_order) = market::pop_front_bid();
+            let (maker_key, maker_order) = market::pop_front_bid(pair_id);
 
             // Self-trade prevention: skip if same owner
             if (bid_owner == taker_owner) {
@@ -232,7 +232,7 @@ module cash_orderbook::matching {
                     let new_locked = ((old_locked as u128) * (new_remaining as u128) / (maker_remaining as u128) as u64);
                     types::set_locked_quote(&mut maker_order, new_locked);
                 };
-                market::reinsert_bid(maker_key, maker_order);
+                market::reinsert_bid(pair_id, maker_key, maker_order);
             };
             // If maker is fully filled, it stays removed from the book
         };
@@ -243,7 +243,7 @@ module cash_orderbook::matching {
         while (i < len) {
             let key = *vector::borrow(&skipped_keys, i);
             let order = *vector::borrow(&skipped_orders, i);
-            market::reinsert_bid(key, order);
+            market::reinsert_bid(pair_id, key, order);
             i = i + 1;
         };
     }

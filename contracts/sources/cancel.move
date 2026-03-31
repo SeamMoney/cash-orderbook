@@ -95,7 +95,7 @@ module cash_orderbook::cancel {
 
         // Search for the order in bids and asks
         // First try bids
-        let bids = market::get_all_bids();
+        let bids = market::get_all_bids(pair_id);
         let found = false;
         let i = 0;
         let len = vector::length(&bids);
@@ -113,7 +113,7 @@ module cash_orderbook::cancel {
                 // Remove from bids (inverted price key)
                 let inverted_price = MAX_PRICE - price;
                 let key = types::new_order_key(inverted_price, timestamp, order_id);
-                market::remove_bid(key);
+                market::remove_bid(pair_id, key);
 
                 // Unlock quote funds using the stored locked_quote amount.
                 // This is deterministic regardless of fee config changes since
@@ -142,7 +142,7 @@ module cash_orderbook::cancel {
 
         if (!found) {
             // Try asks
-            let asks = market::get_all_asks();
+            let asks = market::get_all_asks(pair_id);
             let j = 0;
             let ask_len = vector::length(&asks);
             while (j < ask_len) {
@@ -158,7 +158,7 @@ module cash_orderbook::cancel {
 
                     // Remove from asks (natural price key)
                     let key = types::new_order_key(price, timestamp, order_id);
-                    market::remove_ask(key);
+                    market::remove_ask(pair_id, key);
 
                     // Unlock base funds
                     if (remaining_qty > 0) {
@@ -284,7 +284,7 @@ module cash_orderbook::cancel {
         cancel_order(user, pair_id, 0);
 
         // Verify: book is empty
-        assert!(market::bids_is_empty(), 101);
+        assert!(market::bids_is_empty(pair_id), 101);
 
         // Verify: funds unlocked
         let locked_after = accounts::get_locked_balance(user_addr, quote_addr);
@@ -314,7 +314,7 @@ module cash_orderbook::cancel {
         cancel_order(user, pair_id, 0);
 
         // Verify: asks empty
-        assert!(market::asks_is_empty(), 201);
+        assert!(market::asks_is_empty(pair_id), 201);
 
         // Verify: funds unlocked
         assert!(accounts::get_locked_balance(user_addr, base_addr) == 0, 202);
@@ -360,7 +360,7 @@ module cash_orderbook::cancel {
 
         // Cancel should still work
         cancel_order(user, pair_id, 0);
-        assert!(market::bids_is_empty(), 300);
+        assert!(market::bids_is_empty(pair_id), 300);
     }
 
     #[test(deployer = @cash_orderbook, user = @0xBEEF)]
@@ -394,10 +394,10 @@ module cash_orderbook::cancel {
         assert!(accounts::get_locked_balance(user_addr, quote_addr) == 40_000_000, 401);
 
         // Book should still have 2 orders
-        assert!(!market::bids_is_empty(), 402);
+        assert!(!market::bids_is_empty(pair_id), 402);
 
         // Best bid should be at 3.0 (order_id=2)
-        let best_bid_price = market::get_best_bid_price();
+        let best_bid_price = market::get_best_bid_price(pair_id);
         assert!(best_bid_price == 3_000_000, 403);
     }
 
@@ -485,14 +485,14 @@ module cash_orderbook::cancel {
         cash_orderbook::order_placement::place_limit_order(
             owner, pair_id, 1_500_000, 100_000_000, true, types::order_type_gtc()
         );
-        assert!(!market::bids_is_empty(), 500);
+        assert!(!market::bids_is_empty(pair_id), 500);
         assert!(accounts::get_locked_balance(owner_addr, quote_addr) == 150_000_000, 501);
 
         // Delegate cancels the order on owner's behalf
         cancel_order_delegated(delegate, owner_addr, pair_id, 0);
 
         // Order removed, funds unlocked
-        assert!(market::bids_is_empty(), 502);
+        assert!(market::bids_is_empty(pair_id), 502);
         assert!(accounts::get_locked_balance(owner_addr, quote_addr) == 0, 503);
         assert!(accounts::get_available_balance(owner_addr, quote_addr) == 5_000_000_000, 504);
     }
@@ -524,13 +524,13 @@ module cash_orderbook::cancel {
         cash_orderbook::order_placement::place_limit_order(
             owner, pair_id, 2_000_000, 50_000_000, false, types::order_type_gtc()
         );
-        assert!(!market::asks_is_empty(), 600);
+        assert!(!market::asks_is_empty(pair_id), 600);
         assert!(accounts::get_locked_balance(owner_addr, base_addr) == 50_000_000, 601);
 
         // Delegate cancels
         cancel_order_delegated(delegate, owner_addr, pair_id, 0);
 
-        assert!(market::asks_is_empty(), 602);
+        assert!(market::asks_is_empty(pair_id), 602);
         assert!(accounts::get_locked_balance(owner_addr, base_addr) == 0, 603);
     }
 
@@ -575,7 +575,7 @@ module cash_orderbook::cancel {
         cancel_order(user, pair_id, 0);
 
         // Verify: book is empty
-        assert!(market::bids_is_empty(), 803);
+        assert!(market::bids_is_empty(pair_id), 803);
 
         // Verify: ALL locked funds unlocked (including fee reserve)
         let locked_after_cancel = accounts::get_locked_balance(user_addr, quote_addr);
@@ -678,7 +678,7 @@ module cash_orderbook::cancel {
         cancel_order(maker, pair_id, 0);
 
         // Verify: book is empty
-        assert!(market::bids_is_empty(), 1002);
+        assert!(market::bids_is_empty(pair_id), 1002);
 
         // Verify: ALL locked funds unlocked
         assert!(accounts::get_locked_balance(maker_addr, quote_addr) == 0, 1003);
@@ -816,7 +816,7 @@ module cash_orderbook::cancel {
         cancel_order(user, pair_id, 0);
 
         // Step 5: Verify: book empty, all funds returned
-        assert!(market::bids_is_empty(), 1302);
+        assert!(market::bids_is_empty(pair_id), 1302);
         assert!(accounts::get_locked_balance(user_addr, quote_addr) == 0, 1303);
         assert!(accounts::get_available_balance(user_addr, quote_addr) == initial_available, 1304);
     }
@@ -902,7 +902,7 @@ module cash_orderbook::cancel {
         // Step 5: Cancel remaining bid — must unlock stored 120_360_000
         cancel_order(maker, pair_id, 0);
 
-        assert!(market::bids_is_empty(), 1502);
+        assert!(market::bids_is_empty(pair_id), 1502);
         assert!(accounts::get_locked_balance(maker_addr, quote_addr) == 0, 1503);
     }
 
