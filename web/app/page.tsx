@@ -34,7 +34,7 @@ export default function Home(): React.ReactElement {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="flex flex-1 flex-col items-center justify-center px-4"
+            className="flex flex-1 flex-col items-center justify-center px-4 py-8 lg:py-0"
           >
             <div className="w-full max-w-md space-y-6">
               {/* Tagline */}
@@ -80,7 +80,7 @@ export default function Home(): React.ReactElement {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="flex flex-1 flex-col px-4 py-4 sm:px-6"
+            className="flex flex-1 flex-col px-3 py-3 sm:px-4 sm:py-4 lg:px-6"
           >
             <OrderbookView />
           </motion.main>

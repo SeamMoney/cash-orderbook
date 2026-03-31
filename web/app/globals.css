@@ -79,3 +79,22 @@ body {
   0% { background-position: -200% center; }
   100% { background-position: 200% center; }
 }
+
+/* Price flash animations for orderbook updates */
+@keyframes flash-green {
+  0% { background-color: rgba(16, 185, 129, 0.25); }
+  100% { background-color: transparent; }
+}
+
+@keyframes flash-red {
+  0% { background-color: rgba(244, 63, 94, 0.25); }
+  100% { background-color: transparent; }
+}
+
+.animate-flash-green {
+  animation: flash-green 400ms ease-out;
+}
+
+.animate-flash-red {
+  animation: flash-red 400ms ease-out;
+}

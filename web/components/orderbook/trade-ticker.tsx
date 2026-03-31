@@ -90,8 +90,13 @@ export function TradeTicker({
             ))}
           </AnimatePresence>
         ) : (
-          <div className="flex items-center justify-center py-8 text-xs text-[#555555]">
-            No trades yet
+          <div className="flex flex-col items-center justify-center py-8 gap-1">
+            <span className="text-xs text-[#555555]">
+              No trades yet
+            </span>
+            <span className="text-[10px] text-[#444444]">
+              Trades will appear here in real-time
+            </span>
           </div>
         )}
       </div>

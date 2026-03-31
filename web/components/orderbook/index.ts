@@ -6,3 +6,4 @@ export { OrderForm } from "./order-form";
 export { MyOrders } from "./my-orders";
 export type { OpenOrder } from "./my-orders";
 export { OrderbookView } from "./orderbook-view";
+export { ConnectionStatus } from "@/components/connection-status";

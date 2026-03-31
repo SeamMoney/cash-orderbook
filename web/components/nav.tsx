@@ -35,12 +35,12 @@ export function Nav({
           </span>
 
           {/* View Tabs */}
-          <div className="relative ml-4 flex items-center gap-0 rounded-lg bg-[#1A1A1A] p-1">
+          <div className="relative ml-2 sm:ml-4 flex items-center gap-0 rounded-lg bg-[#1A1A1A] p-1">
             {NAV_ITEMS.map((item) => (
               <button
                 key={item.id}
                 onClick={() => onViewChange(item.id)}
-                className={`relative z-10 px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                className={`relative z-10 px-3 sm:px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
                   activeView === item.id
                     ? "text-white"
                     : "text-[#666666] hover:text-[#888888]"

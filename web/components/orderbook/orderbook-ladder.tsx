@@ -9,6 +9,8 @@ interface OrderbookLadderProps {
   asks: DepthLevel[];
   onPriceClick: (price: number) => void;
   maxRows?: number;
+  /** Map of price → "up" | "down" for flash animation */
+  priceFlashes?: Map<number, "up" | "down">;
 }
 
 function formatPrice(price: number): string {
@@ -21,17 +23,26 @@ function formatQty(qty: number): string {
   return qty.toFixed(2);
 }
 
+/** Inline flash background class based on direction */
+function getFlashClass(flash: "up" | "down" | undefined): string {
+  if (flash === "up") return "animate-flash-green";
+  if (flash === "down") return "animate-flash-red";
+  return "";
+}
+
 /**
  * OrderbookLadder — two-column grid: bids (left, emerald) and asks (right, rose).
  * Each row: price (Geist Mono), quantity, depth bar (background width proportional to cumulative depth).
  * Click on price row fills order form price.
  * Sorted: bids descending, asks ascending.
+ * Price flash animation: green on price increase, red on decrease.
  */
 export function OrderbookLadder({
   bids,
   asks,
   onPriceClick,
   maxRows = 15,
+  priceFlashes,
 }: OrderbookLadderProps): React.ReactElement {
   const displayBids = useMemo(() => bids.slice(0, maxRows), [bids, maxRows]);
   const displayAsks = useMemo(() => asks.slice(0, maxRows), [asks, maxRows]);
@@ -81,6 +92,14 @@ export function OrderbookLadder({
 
       {/* Body */}
       <div className="flex-1 overflow-hidden">
+        {displayBids.length === 0 && displayAsks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full py-12 gap-1">
+            <span className="text-sm text-[#555555]">No orders yet</span>
+            <span className="text-[10px] text-[#444444]">
+              Place an order or wait for the book to fill
+            </span>
+          </div>
+        ) : (
         <div className="grid grid-cols-2 gap-0 h-full">
           {/* Bids (left, green) — sorted descending by price */}
           <div className="flex flex-col border-r border-[#2A2A2A]/50">
@@ -93,7 +112,7 @@ export function OrderbookLadder({
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="relative flex items-center justify-between px-3 py-[3px] cursor-pointer hover:bg-emerald-500/10 group"
+                    className={`relative flex items-center justify-between px-3 py-[3px] cursor-pointer hover:bg-emerald-500/10 group ${getFlashClass(priceFlashes?.get(level.price))}`}
                     onClick={() => handlePriceClick(level.price)}
                   >
                     {/* Depth bar */}
@@ -130,7 +149,7 @@ export function OrderbookLadder({
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="relative flex items-center justify-between px-3 py-[3px] cursor-pointer hover:bg-rose-500/10 group"
+                    className={`relative flex items-center justify-between px-3 py-[3px] cursor-pointer hover:bg-rose-500/10 group ${getFlashClass(priceFlashes?.get(level.price))}`}
                     onClick={() => handlePriceClick(level.price)}
                   >
                     {/* Depth bar */}
@@ -156,6 +175,7 @@ export function OrderbookLadder({
             </AnimatePresence>
           </div>
         </div>
+        )}
       </div>
 
       {/* Spread */}
