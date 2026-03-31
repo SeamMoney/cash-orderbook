@@ -1,105 +1,28 @@
-# User Testing
+# User Testing — CASH Orderbook Frontend
 
-## Validation Surfaces
+## Testing Surface
 
-### Surface 1: CLI (Move contracts)
-- **Tool**: `aptos move test --coverage`
-- **What**: Contract unit tests covering all order types, matching, settlement, admin, errors
-- **Setup**: `cd contracts && aptos move test --named-addresses cash_orderbook=0xCAFE`
-- **When**: After contracts milestone
+**Primary surface**: Browser (agent-browser with Playwright 1.58.2)
+**URL**: http://localhost:3102
+**Backend API**: http://localhost:3100 (optional — UI should handle gracefully when down)
+**WebSocket**: ws://localhost:3101 (optional — real-time features degrade gracefully)
 
-### Surface 2: HTTP (Backend API)
-- **Tool**: curl, vitest
-- **What**: REST API endpoints, SDK functions, WebSocket connections
-- **Setup**: Start API service on port 3100, WS on 3101
-- **When**: After backend milestone
+## Resource Classification
 
-### Surface 3: Browser (Frontend)
-- **Tool**: agent-browser (Playwright 1.58.2)
-- **What**: Full trading UI — swap interface, orderbook view, wallet connection, order flow
-- **Setup**: Start all services (API 3100, WS 3101, Web 3102)
-- **When**: After frontend milestone
+| Surface | Cost | Concurrent | Notes |
+|---------|------|------------|-------|
+| agent-browser | Low | 4 max | 32GB RAM, 10 cores. Each browser ~200MB. |
 
-## Validation Concurrency
+## Setup Requirements
 
-### agent-browser
-- Machine: 32GB RAM, 10 CPU cores, ~19GB available
-- Each browser instance: ~300-500MB RAM
-- Dev server (Next.js): ~200-400MB
-- API + WS: ~100-200MB
-- **Max concurrent validators: 4** (conservative, leaves headroom for services + compilation)
-
-### curl/CLI
-- Lightweight, no concurrency limit needed
-- **Max concurrent: 5**
-
-### vitest
-- Test execution is CPU-heavy and reads shared workspace dependencies/cache.
-- Safe to run alongside one live API/WS flow, but avoid multiple vitest suites concurrently to reduce nondeterminism.
-- **Max concurrent: 1**
-
-### aptos-cli (Move validation)
-- `aptos move test` is CPU/memory intensive and writes shared build artifacts under `contracts/build/`
-- Run serially to avoid cache contention and flaky output interleaving
-- **Max concurrent: 1**
+1. Start frontend: `cd /Users/maxmohammadi/cash-orderbook/web && PORT=3102 npx next dev --turbopack`
+2. (Optional) Start API: `cd /Users/maxmohammadi/cash-orderbook && node api/dist/index.js` on port 3100
+3. (Optional) Start WS: WebSocket server on port 3101
 
 ## Testing Notes
 
-- Frontend tests require all 3 services running (API, WS, Web)
-- Contract tests are self-contained (no services needed)
-- Backend tests need API service running but not frontend
-- WebSocket tests may need timing tolerance (100ms for event propagation)
-- Testnet deploy validation requires a local Aptos profile in repo workspace (`.aptos/config.yaml`) or deployment assertions will be blocked at profile resolution.
-
-## Flow Validator Guidance: aptos-cli
-
-- Isolation boundary: use only this repo at `/Users/maxmohammadi/cash-orderbook`, no extra workspaces.
-- Do not start API/WS/Web services for contracts milestone validation.
-- Run contract assertions via:
-  - `cd contracts && aptos move test --named-addresses cash_orderbook=0xCAFE --coverage`
-- For `VAL-CONTRACT-001`, attempt testnet deployment evidence via:
-  - `bash scripts/deploy-testnet.sh --profile default`
-  - If Aptos profile/funds are missing, mark assertion `blocked` with the exact CLI error.
-- Save command transcripts/screenshots as evidence and report assertion-by-assertion outcomes.
-
-## Flow Validator Guidance: vitest
-
-- Isolation boundary: run tests from this repo only (`/Users/maxmohammadi/cash-orderbook`).
-- Run SDK/backend tests directly from package directories; do not modify source code while validating.
-- Prefer targeted test commands and include raw assertion-specific output in the flow report evidence list.
-- Do not rely on network flakiness for pass/fail; if an assertion requires live chain confirmation and fixtures are unavailable, mark it blocked with exact error/output.
-
-## Flow Validator Guidance: curl-ws
-
-- Isolation boundary: use only local services on ports `3100` (REST) and `3101` (WS).
-- Do not start additional app instances on other ports; mission port boundary is 3100-3102 only.
-- Keep state-mutating checks (rate-limit bursts, synthetic event triggers) serialized within this flow to avoid cross-flow interference.
-- Capture exact request/response payloads and status codes for each assertion.
-- If required trade/depth data cannot be produced from available local surfaces, mark affected assertions blocked and include precise prerequisite gap.
-
-## Flow Validator Guidance: agent-browser
-
-- Isolation boundary: use only `http://localhost:3102` (frontend), with backend dependencies at `http://localhost:3100` and `ws://localhost:3101`.
-- Do not start/stop services from subagents; shared services are controlled by the parent validator.
-- Use a dedicated browser session per flow group; do not reuse sessions across groups.
-- For wallet-dependent assertions, attempt real UI flow only. If no automatable wallet is available in the browser environment, mark assertions as `blocked` with exact UI/console evidence.
-- Save screenshots and console/network evidence for every assertion outcome, including blocked outcomes.
-
-## Flow Validator Guidance: agent-browser+curl
-
-- Use `agent-browser` for frontend interactions and `curl` only for corroborating backend state linked to that exact interaction.
-- Keep assertions in this surface serialized within the same flow when they mutate shared orderbook state.
-- If on-chain transaction prerequisites (funded wallet, executable signer flow) are unavailable, mark affected cross assertions `blocked` and reference both frontend evidence and API evidence.
-
-## Backend Validation Findings (2026-03-31)
-
-- REST/WS surface currently exposes read endpoints only; POST attempts to create orders/trades/deposits returned `404`, so dynamic data assertions require an external state-driving mechanism (SDK/contract integration harness) to be testable.
-- For ad-hoc WS scripts in repo root, import `ws` from `api/node_modules/ws` if root resolution fails.
-- With default runtime settings (`CONTRACT_ADDRESS=0xCAFE`), indexer polling can remain at `lastIndexedVersion=0`; validate event-driven assertions only after wiring a contract address/network that emits events through the supported indexer path.
-
-## Frontend Validation Findings (2026-03-31)
-
-- Core UI assertions for landing, wallet modal visibility/options, swap layout, and view navigation are testable and passed via `agent-browser`.
-- Wallet-dependent assertions are blocked in this environment when no automatable connected signer is available (social auth requires credentials and extension wallets are install paths only).
-- Data-driven orderbook/chart/ticker assertions are blocked when `GET /depth` and `GET /trades` stay empty; the UI remains in empty-state (`No orders yet`, `No depth data`, `No trades yet`).
-- Cross-surface E2E assertions requiring state mutation were blocked because there is no local REST mutation route (`POST /orders` returns `404`) and no connected wallet flow to create on-chain events from the browser surface.
+- **No wallet private keys needed** for most visual validations
+- Wallet connect/disconnect tests use the wallet selector modal (no real signing needed for visual checks)
+- For swap execution tests (VAL-SWAP-008), a funded wallet on Aptos testnet/mainnet would be needed — mark as blocked if not available
+- Mobile responsive tests: set viewport to 375x812 (iPhone SE) and 768x1024 (iPad)
+- Chart tests may show empty state if API is not running — VAL-ERROR-001 validates this is handled

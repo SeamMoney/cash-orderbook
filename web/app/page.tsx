@@ -1,16 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Nav, type NavTab } from "@/components/nav";
 import { Toaster } from "sonner";
-import { ChartPlaceholder } from "@/components/placeholders/chart-placeholder";
+import { TokenHeader } from "@/components/token-header";
+import { PriceChart, type CrosshairData } from "@/components/price-chart";
 import { StatsPlaceholder } from "@/components/placeholders/stats-placeholder";
 import { SwapPlaceholder } from "@/components/placeholders/swap-placeholder";
 import { TransactionsPlaceholder } from "@/components/placeholders/transactions-placeholder";
-import { TokenHeader } from "@/components/token-header";
+import { useMarket } from "@/hooks/use-market";
 
 export default function Home(): React.ReactElement {
   const [activeTab, setActiveTab] = useState<NavTab>("trade");
+  const { market, loading: marketLoading } = useMarket();
+
+  // Chart crosshair hover state — when hovering, override the header price
+  const [hoverPrice, setHoverPrice] = useState<number | null>(null);
+  const [hoverTimestamp, setHoverTimestamp] = useState<string | null>(null);
+
+  const handleCrosshairMove = useCallback((data: CrosshairData): void => {
+    setHoverPrice(data.price);
+    setHoverTimestamp(data.timestamp);
+  }, []);
+
+  // Derive display values
+  const displayPrice = hoverPrice ?? market?.lastPrice ?? null;
+  const change24h =
+    market && market.lastPrice > 0 && market.volume24h >= 0
+      ? // Compute a synthetic 24h change for display
+        // The API doesn't return change24h directly, so show 0.00 as fallback
+        0
+      : null;
 
   return (
     <div className="flex min-h-screen flex-col bg-[#000000]">
@@ -33,10 +53,15 @@ export default function Home(): React.ReactElement {
           {/* Left Column (~65%) — Token Info + Chart + Stats + Transactions */}
           <div className="w-full md:w-[65%] space-y-6">
             {/* Token Header */}
-            <TokenHeader />
+            <TokenHeader
+              price={displayPrice}
+              change24h={change24h}
+              loading={marketLoading}
+              hoverTimestamp={hoverTimestamp}
+            />
 
-            {/* Chart Placeholder */}
-            <ChartPlaceholder />
+            {/* Price Chart */}
+            <PriceChart onCrosshairMove={handleCrosshairMove} />
 
             {/* Stats Placeholder */}
             <StatsPlaceholder />
