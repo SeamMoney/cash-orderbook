@@ -153,6 +153,26 @@ module cash_orderbook::fees {
         (((quote_amount as u128) * (config.taker_fee_bps as u128) / (BPS_DENOMINATOR as u128)) as u64)
     }
 
+    /// Calculate the maximum possible fee for a given quote amount.
+    /// Returns max(taker_fee, maker_fee) so callers can lock sufficient funds
+    /// regardless of whether the order ends up as taker or maker.
+    public fun calculate_max_fee(quote_amount: u64): u64 acquires FeeConfig {
+        let resource_addr = types::get_resource_account_address();
+        if (!exists<FeeConfig>(resource_addr)) {
+            return 0
+        };
+        let config = borrow_global<FeeConfig>(resource_addr);
+        let max_bps = if (config.taker_fee_bps > config.maker_fee_bps) {
+            config.taker_fee_bps
+        } else {
+            config.maker_fee_bps
+        };
+        if (max_bps == 0) {
+            return 0
+        };
+        (((quote_amount as u128) * (max_bps as u128) / (BPS_DENOMINATOR as u128)) as u64)
+    }
+
     /// Collect a fee into the vault. Called by settlement.
     /// Deducts fee from trader's available balance and credits fee vault.
     public(friend) fun collect_fee(

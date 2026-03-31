@@ -25,6 +25,7 @@ module cash_orderbook::order_placement {
     use cash_orderbook::matching;
     use cash_orderbook::settlement;
     use cash_orderbook::subaccounts;
+    use cash_orderbook::fees;
 
     // ========== Error Codes ==========
     const E_INSUFFICIENT_BALANCE: u64 = 2;
@@ -136,13 +137,16 @@ module cash_orderbook::order_placement {
         let now = timestamp::now_microseconds();
 
         // 4. Calculate required funds and lock them
-        //    Buy order: lock quote asset (USDC) = price * quantity / PRICE_SCALE
+        //    Buy order: lock quote asset (USDC) = price * quantity / PRICE_SCALE + max_fee
+        //      Extra fee is locked to cover taker or maker fee during settlement
+        //      (settlement debits fees from locked, not available balances)
         //    Sell order: lock base asset (CASH) = quantity
         let quote_lock_amount = calculate_quote_amount(price, quantity);
+        let fee_lock_amount = fees::calculate_max_fee(quote_lock_amount);
 
         if (is_bid) {
             assert!(quote_lock_amount > 0, E_INVALID_AMOUNT);
-            accounts::lock_balance(user_addr, quote_asset, quote_lock_amount);
+            accounts::lock_balance(user_addr, quote_asset, quote_lock_amount + fee_lock_amount);
         } else {
             accounts::lock_balance(user_addr, base_asset, quantity);
         };
@@ -159,9 +163,9 @@ module cash_orderbook::order_placement {
                 best_bid > 0 && best_bid >= price
             };
             if (would_cross) {
-                // Unlock funds before aborting
+                // Unlock funds before aborting (including fee reserve)
                 if (is_bid) {
-                    accounts::unlock_balance(user_addr, quote_asset, quote_lock_amount);
+                    accounts::unlock_balance(user_addr, quote_asset, quote_lock_amount + fee_lock_amount);
                 } else {
                     accounts::unlock_balance(user_addr, base_asset, quantity);
                 };
@@ -177,9 +181,9 @@ module cash_orderbook::order_placement {
                 market::get_fillable_bid_quantity(price)
             };
             if (fillable < quantity) {
-                // Can't fully fill — unlock funds and abort
+                // Can't fully fill — unlock funds and abort (including fee reserve)
                 if (is_bid) {
-                    accounts::unlock_balance(user_addr, quote_asset, quote_lock_amount);
+                    accounts::unlock_balance(user_addr, quote_asset, quote_lock_amount + fee_lock_amount);
                 } else {
                     accounts::unlock_balance(user_addr, base_asset, quantity);
                 };
@@ -216,16 +220,21 @@ module cash_orderbook::order_placement {
             settlement::settle_trades(&trades, pair_id);
 
             // For buy orders: unlock excess locked quote that wasn't used in fills.
-            // Taker locked at their limit price, but fills may occur at lower maker prices.
-            // We need to unlock the difference.
+            // Total locked = quote_lock_amount + fee_lock_amount.
+            // Settlement debited (quote_amount_i + fee_i) from locked for each fill.
+            // We need to unlock the difference minus what's still needed for resting orders.
             if (is_bid) {
                 let total_quote_used = calculate_total_quote_used(&trades);
-                if (total_quote_used < quote_lock_amount) {
+                let total_fees_used = calculate_total_fees_used(&trades);
+                let total_used = total_quote_used + total_fees_used;
+                let total_locked = quote_lock_amount + fee_lock_amount;
+                if (total_used < total_locked) {
                     let remaining_qty = types::order_remaining_quantity(&order);
-                    let still_needed = calculate_quote_amount(price, remaining_qty);
-                    let total_accounted = total_quote_used + still_needed;
-                    if (total_accounted < quote_lock_amount) {
-                        accounts::unlock_balance(user_addr, quote_asset, quote_lock_amount - total_accounted);
+                    let still_needed_quote = calculate_quote_amount(price, remaining_qty);
+                    let still_needed_fee = fees::calculate_max_fee(still_needed_quote);
+                    let total_accounted = total_used + still_needed_quote + still_needed_fee;
+                    if (total_accounted < total_locked) {
+                        accounts::unlock_balance(user_addr, quote_asset, total_locked - total_accounted);
                     };
                 };
             };
@@ -239,10 +248,11 @@ module cash_orderbook::order_placement {
             // For buy orders, if there's any remaining lock, unlock it
             // (shouldn't happen since we accounted above, but safety check)
         } else if (order_type == types::order_type_ioc()) {
-            // IOC: cancel any unfilled remainder — unlock remaining locked funds
+            // IOC: cancel any unfilled remainder — unlock remaining locked funds + fee reserve
             if (is_bid) {
                 let remaining_lock = calculate_quote_amount(price, remaining);
-                accounts::unlock_balance(user_addr, quote_asset, remaining_lock);
+                let remaining_fee = fees::calculate_max_fee(remaining_lock);
+                accounts::unlock_balance(user_addr, quote_asset, remaining_lock + remaining_fee);
             } else {
                 accounts::unlock_balance(user_addr, base_asset, remaining);
             };
@@ -366,10 +376,13 @@ module cash_orderbook::order_placement {
         // 9. Unlock any remaining locked funds (market orders don't rest)
         let remaining = types::order_remaining_quantity(&order);
         if (is_bid) {
-            // Unlock quote that wasn't used
+            // Unlock quote that wasn't used. Settlement debited (quote + taker_fee) per fill
+            // from locked. Unlock everything that remains.
             let total_quote_used = calculate_total_quote_used(&trades);
-            if (quote_lock_amount > total_quote_used) {
-                accounts::unlock_balance(user_addr, quote_asset, quote_lock_amount - total_quote_used);
+            let total_fees_used = calculate_total_fees_used(&trades);
+            let total_used = total_quote_used + total_fees_used;
+            if (quote_lock_amount > total_used) {
+                accounts::unlock_balance(user_addr, quote_asset, quote_lock_amount - total_used);
             };
         } else {
             if (remaining > 0) {
@@ -419,6 +432,28 @@ module cash_orderbook::order_placement {
             let trade = vector::borrow(trades, i);
             let trade_quote = (((matching::trade_price(trade) as u128) * (matching::trade_quantity(trade) as u128)) / (price_scale as u128) as u64);
             total = total + trade_quote;
+            i = i + 1;
+        };
+        total
+    }
+
+    /// Calculate the total fees debited from the buyer's locked balance across all trades.
+    /// For buy taker: settlement debits taker_fee from buyer's locked per fill.
+    /// For sell taker: settlement debits maker_fee from buyer's locked per fill.
+    /// This function returns the taker_fee for each trade (since it's called from buy order context,
+    /// where the buyer is always the taker).
+    fun calculate_total_fees_used(trades: &vector<matching::Trade>): u64 {
+        let total: u64 = 0;
+        let price_scale = types::price_scale();
+        let i = 0;
+        let len = vector::length(trades);
+        while (i < len) {
+            let trade = vector::borrow(trades, i);
+            let trade_quote = (((matching::trade_price(trade) as u128) * (matching::trade_quantity(trade) as u128)) / (price_scale as u128) as u64);
+            // In the buy order context, the buyer is always the taker,
+            // so settlement debits taker_fee from buyer's locked
+            let trade_fee = fees::calculate_taker_fee(trade_quote);
+            total = total + trade_fee;
             i = i + 1;
         };
         total
@@ -1569,9 +1604,6 @@ module cash_orderbook::order_placement {
 
     // ========== FEE INTEGRATION TESTS ==========
 
-    #[test_only]
-    use cash_orderbook::fees;
-
     #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
     /// Trade with zero fees (default) — no deduction occurs, balances same as before.
     fun test_trade_with_zero_fees_no_deduction(deployer: &signer, maker: &signer, taker: &signer) {
@@ -1884,5 +1916,392 @@ module cash_orderbook::order_placement {
 
         // Order is on the asks side
         assert!(!market::asks_is_empty(), 6501);
+    }
+
+    // ========== FEE LOCK ACCOUNTING REGRESSION TESTS ==========
+    // These tests verify that non-zero fee trades work correctly with the
+    // lock/unlock accounting model. Previously, settlement debited fees from
+    // AVAILABLE balances, but during a buy-side trade the buyer's quote is
+    // LOCKED (not available), causing E_INSUFFICIENT_BALANCE aborts.
+
+    #[test_only]
+    /// Setup for fee regression tests: two users with EXACT balances needed for the trade.
+    /// The buyer deposits ONLY enough to cover the trade + fees, so there's zero excess
+    /// available quote after locking. This catches the original bug where fees were
+    /// debited from available (which was 0).
+    fun setup_fee_regression_env(
+        deployer: &signer,
+        maker: &signer,
+        taker: &signer,
+        maker_cash: u64,
+        maker_usdc: u64,
+        taker_cash: u64,
+        taker_usdc: u64,
+    ): (Object<Metadata>, Object<Metadata>, u64) {
+        let deployer_addr = signer::address_of(deployer);
+        let maker_addr = signer::address_of(maker);
+        let taker_addr = signer::address_of(taker);
+        test_account::create_account_for_test(deployer_addr);
+        test_account::create_account_for_test(maker_addr);
+        test_account::create_account_for_test(taker_addr);
+
+        types::init_module_for_test(deployer);
+        let resource_signer = types::get_resource_signer();
+        let resource_addr = signer::address_of(&resource_signer);
+        test_account::create_account_for_test(resource_addr);
+
+        let aptos_framework = test_account::create_signer_for_test(@0x1);
+        timestamp::set_time_has_started_for_testing(&aptos_framework);
+
+        // Create base asset (CASH)
+        let base_constructor_ref = object::create_named_object(deployer, b"TEST_CASH");
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            &base_constructor_ref,
+            std::option::none(),
+            string::utf8(b"Test CASH"),
+            string::utf8(b"CASH"),
+            6,
+            string::utf8(b""),
+            string::utf8(b""),
+        );
+        let base_metadata = object::object_from_constructor_ref<Metadata>(&base_constructor_ref);
+        let base_mint_ref = fungible_asset::generate_mint_ref(&base_constructor_ref);
+
+        // Create quote asset (USDC)
+        let quote_constructor_ref = object::create_named_object(deployer, b"TEST_USDC");
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            &quote_constructor_ref,
+            std::option::none(),
+            string::utf8(b"Test USDC"),
+            string::utf8(b"USDC"),
+            6,
+            string::utf8(b""),
+            string::utf8(b""),
+        );
+        let quote_metadata = object::object_from_constructor_ref<Metadata>(&quote_constructor_ref);
+        let quote_mint_ref = fungible_asset::generate_mint_ref(&quote_constructor_ref);
+
+        // Mint and deposit for maker
+        if (maker_cash > 0) {
+            let fa = fungible_asset::mint(&base_mint_ref, maker_cash);
+            primary_fungible_store::deposit(maker_addr, fa);
+            accounts::deposit(maker, base_metadata, maker_cash);
+        };
+        if (maker_usdc > 0) {
+            let fa = fungible_asset::mint(&quote_mint_ref, maker_usdc);
+            primary_fungible_store::deposit(maker_addr, fa);
+            accounts::deposit(maker, quote_metadata, maker_usdc);
+        };
+
+        // Mint and deposit for taker
+        if (taker_cash > 0) {
+            let fa = fungible_asset::mint(&base_mint_ref, taker_cash);
+            primary_fungible_store::deposit(taker_addr, fa);
+            accounts::deposit(taker, base_metadata, taker_cash);
+        };
+        if (taker_usdc > 0) {
+            let fa = fungible_asset::mint(&quote_mint_ref, taker_usdc);
+            primary_fungible_store::deposit(taker_addr, fa);
+            accounts::deposit(taker, quote_metadata, taker_usdc);
+        };
+
+        // Register market
+        market::register_market(
+            deployer,
+            base_metadata,
+            quote_metadata,
+            1_000,
+            1_000,
+            10_000,
+        );
+
+        (base_metadata, quote_metadata, 0)
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// REGRESSION: Non-zero fee limit buy where buyer deposits EXACT quote needed.
+    /// Previously failed with E_INSUFFICIENT_BALANCE because fees were debited from
+    /// available balance (which was 0 after locking all quote for the buy order).
+    ///
+    /// Setup: 30 bps taker, 10 bps maker. Trade: 100 CASH at 2.0 USDC = 200 USDC.
+    /// Taker fee = 200 * 30/10000 = 0.6 USDC = 600_000
+    /// Maker fee = 200 * 10/10000 = 0.2 USDC = 200_000
+    /// Max fee = 0.6 USDC = 600_000
+    /// Buyer (taker) deposits ONLY 200.6 USDC (quote + max_fee).
+    fun test_fee_regression_limit_buy_exact_balance(deployer: &signer, maker: &signer, taker: &signer) {
+        // Buyer deposits exactly 200_600_000 USDC (200 + 0.6 max_fee)
+        // Seller deposits 100 CASH
+        let (base_metadata, quote_metadata, pair_id) = setup_fee_regression_env(
+            deployer, maker, taker,
+            100_000_000, // maker CASH
+            0,           // maker USDC (doesn't need any)
+            0,           // taker CASH (doesn't need any)
+            200_600_000, // taker USDC: exactly enough for quote + max_fee
+        );
+        let taker_addr = signer::address_of(taker);
+        let maker_addr = signer::address_of(maker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Set fees: 10 bps maker, 30 bps taker
+        fees::update_fee_config(deployer, 10, 30);
+
+        // Maker: sell 100 CASH at 2.0 USDC
+        place_limit_order(maker, pair_id, 2_000_000, 100_000_000, false, types::order_type_gtc());
+
+        // Taker: buy 100 CASH at 2.0 — this locks ALL 200_600_000 (200 + 0.6 fee)
+        // After lock, taker available quote = 0. Old code would fail here during fee deduction.
+        place_limit_order(taker, pair_id, 2_000_000, 100_000_000, true, types::order_type_gtc());
+
+        // Verify: trade executed without E_INSUFFICIENT_BALANCE!
+        assert!(market::bids_is_empty(), 7000);
+        assert!(market::asks_is_empty(), 7001);
+
+        // Taker (buyer): gets 100 CASH, pays 200 USDC + 0.6 taker_fee
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 100_000_000, 7002);
+        // Taker USDC: deposited 200.6, paid 200 + 0.6 = 200.6, remainder = 0
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 0, 7003);
+        assert!(accounts::get_locked_balance(taker_addr, quote_addr) == 0, 7004);
+
+        // Maker (seller): gets 200 USDC - 0.2 maker_fee = 199.8
+        assert!(accounts::get_available_balance(maker_addr, base_addr) == 0, 7005);
+        assert!(accounts::get_available_balance(maker_addr, quote_addr) == 199_800_000, 7006);
+
+        // Fee vault: 600_000 + 200_000 = 800_000
+        assert!(fees::get_collected_fees(quote_addr) == 800_000, 7007);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// REGRESSION: Non-zero fee market buy where ALL available quote is locked.
+    /// Market buy locks the user's entire available quote balance.
+    /// Previously failed because debit_available(taker, quote, taker_fee) found 0 available.
+    ///
+    /// Setup: 50 bps taker, 0 bps maker. Maker sell 50 CASH at 1.0 USDC.
+    /// Taker market buys 50 CASH. quote_amount = 50 USDC. Taker fee = 50 * 50/10000 = 0.25.
+    /// Taker deposits exactly 50.25 USDC.
+    fun test_fee_regression_market_buy_exact_balance(deployer: &signer, maker: &signer, taker: &signer) {
+        // Taker deposits exactly 50_250_000 USDC (50 + 0.25 taker_fee)
+        let (base_metadata, quote_metadata, pair_id) = setup_fee_regression_env(
+            deployer, maker, taker,
+            50_000_000,  // maker CASH
+            0,           // maker USDC
+            0,           // taker CASH
+            50_250_000,  // taker USDC: exact amount for trade + taker_fee
+        );
+        let taker_addr = signer::address_of(taker);
+        let maker_addr = signer::address_of(maker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Set fees: 0 bps maker, 50 bps taker
+        fees::update_fee_config(deployer, 0, 50);
+
+        // Maker: sell 50 CASH at 1.0 USDC
+        place_limit_order(maker, pair_id, 1_000_000, 50_000_000, false, types::order_type_gtc());
+
+        // Taker: market buy 50 CASH — locks ALL 50_250_000 USDC.
+        // Old code: after settlement, debit_available(taker, 250_000) fails (0 available).
+        place_market_order(taker, pair_id, 50_000_000, true);
+
+        // Verify: trade executed without abort
+        assert!(market::asks_is_empty(), 7100);
+
+        // Taker: got 50 CASH, paid 50 USDC + 0.25 taker_fee
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 50_000_000, 7101);
+        // Taker USDC: deposited 50.25, used 50.25, remainder = 0
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 0, 7102);
+        assert!(accounts::get_locked_balance(taker_addr, quote_addr) == 0, 7103);
+
+        // Maker: 50 USDC received (no maker fee)
+        assert!(accounts::get_available_balance(maker_addr, quote_addr) == 50_000_000, 7104);
+
+        // Fee vault: only taker fee = 250_000
+        assert!(fees::get_collected_fees(quote_addr) == 250_000, 7105);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// REGRESSION: Non-zero fee limit sell where maker (buyer) has exact balance.
+    /// The maker (buyer) has a resting bid. When the taker sells into it,
+    /// settlement must debit maker_fee from the buyer's LOCKED balance.
+    /// Previously would fail if maker had no available quote for debit_available.
+    ///
+    /// Setup: 20 bps maker, 50 bps taker. Trade: 100 CASH at 1.5 USDC = 150 USDC.
+    /// Maker fee = 150 * 20/10000 = 0.3 USDC = 300_000
+    /// Taker fee = 150 * 50/10000 = 0.75 USDC = 750_000
+    /// Max fee = 0.75 USDC = 750_000
+    /// Maker deposits exactly 150.75 USDC (quote + max_fee for their resting bid).
+    fun test_fee_regression_limit_sell_maker_exact_balance(deployer: &signer, maker: &signer, taker: &signer) {
+        // Maker deposits exactly 150_750_000 USDC (quote + max_fee)
+        // Taker deposits 100 CASH
+        let (base_metadata, quote_metadata, pair_id) = setup_fee_regression_env(
+            deployer, maker, taker,
+            0,           // maker CASH (doesn't need any)
+            150_750_000, // maker USDC: exactly enough for quote + max_fee
+            100_000_000, // taker CASH
+            0,           // taker USDC (doesn't need any)
+        );
+        let taker_addr = signer::address_of(taker);
+        let maker_addr = signer::address_of(maker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Set fees: 20 bps maker, 50 bps taker
+        fees::update_fee_config(deployer, 20, 50);
+
+        // Maker: buy 100 CASH at 1.5 USDC — locks 150_750_000 (150 + 0.75 max_fee)
+        // After lock, maker available quote = 0.
+        place_limit_order(maker, pair_id, 1_500_000, 100_000_000, true, types::order_type_gtc());
+        assert!(accounts::get_available_balance(maker_addr, quote_addr) == 0, 7200);
+
+        // Taker: sell 100 CASH at 1.5 — matches maker's bid.
+        // Old code: debit_available(maker, 300_000) fails (maker has 0 available quote).
+        place_limit_order(taker, pair_id, 1_500_000, 100_000_000, false, types::order_type_gtc());
+
+        // Verify: trade executed without abort
+        assert!(market::bids_is_empty(), 7201);
+        assert!(market::asks_is_empty(), 7202);
+
+        // Maker (buyer): gets 100 CASH, pays 150 USDC + 0.3 maker_fee from locked.
+        // Excess fee reserve (0.75 - 0.3 = 0.45) unlocked back to available.
+        assert!(accounts::get_available_balance(maker_addr, base_addr) == 100_000_000, 7203);
+        // Maker USDC: deposited 150.75, locked all, settlement debits 150.3 from locked,
+        // unlocks 0.45 excess fee. Available = 0.45 = 450_000
+        assert!(accounts::get_available_balance(maker_addr, quote_addr) == 450_000, 7204);
+        assert!(accounts::get_locked_balance(maker_addr, quote_addr) == 0, 7205);
+
+        // Taker (seller): sells 100 CASH, gets 150 USDC - 0.75 taker_fee = 149.25
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 0, 7206);
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 149_250_000, 7207);
+
+        // Fee vault: 750_000 + 300_000 = 1_050_000
+        assert!(fees::get_collected_fees(quote_addr) == 1_050_000, 7208);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// REGRESSION: Non-zero fee market buy across multiple price levels.
+    /// Verifies fees are correctly calculated per-fill and excess is properly unlocked.
+    ///
+    /// Setup: 30 bps taker, 10 bps maker.
+    /// Maker: sell 20 CASH @1.0, sell 20 CASH @2.0
+    /// Taker: market buy 40 CASH
+    /// Fill 1: 20@1.0 = 20 USDC, taker_fee = 20M * 30/10000 = 60_000, maker_fee = 20_000
+    /// Fill 2: 20@2.0 = 40 USDC, taker_fee = 40M * 30/10000 = 120_000, maker_fee = 40_000
+    /// Total quote = 60 USDC, total taker_fee = 180_000, total maker_fee = 60_000
+    fun test_fee_regression_market_buy_multiple_levels(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_fee_regression_env(
+            deployer, maker, taker,
+            40_000_000,  // maker CASH: 40 CASH to sell
+            0,           // maker USDC
+            0,           // taker CASH
+            100_000_000, // taker USDC: more than enough
+        );
+        let taker_addr = signer::address_of(taker);
+        let maker_addr = signer::address_of(maker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Set fees: 10 bps maker, 30 bps taker
+        fees::update_fee_config(deployer, 10, 30);
+
+        // Maker: sell 20 CASH at 1.0, sell 20 CASH at 2.0
+        place_limit_order(maker, pair_id, 1_000_000, 20_000_000, false, types::order_type_gtc());
+        place_limit_order(maker, pair_id, 2_000_000, 20_000_000, false, types::order_type_gtc());
+
+        // Taker: market buy 40 CASH — fills 20@1.0 + 20@2.0
+        place_market_order(taker, pair_id, 40_000_000, true);
+
+        // Total quote = 20 + 40 = 60 USDC = 60_000_000
+        // Total taker fee = 60_000 + 120_000 = 180_000
+        // Total maker fee = 20_000 + 40_000 = 60_000
+        // Total fees = 240_000
+
+        // Taker: 40 CASH received
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 40_000_000, 7300);
+        // Taker USDC: 100M - 60M (quote) - 180K (taker_fee) = 39_820_000
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 39_820_000, 7301);
+        assert!(accounts::get_locked_balance(taker_addr, quote_addr) == 0, 7302);
+
+        // Maker: receives (20M - 20K) + (40M - 40K) = 19_980_000 + 39_960_000 = 59_940_000
+        assert!(accounts::get_available_balance(maker_addr, quote_addr) == 59_940_000, 7303);
+
+        // Fee vault: 180_000 + 60_000 = 240_000
+        assert!(fees::get_collected_fees(quote_addr) == 240_000, 7304);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// REGRESSION: Non-zero fee limit buy with price improvement.
+    /// Taker buys at limit 3.0 but fills at 1.0 (maker's price).
+    /// Verifies excess from price improvement + fee accounting all works correctly.
+    ///
+    /// Setup: 30 bps taker, 10 bps maker.
+    /// Trade: 50 CASH at 1.0 (maker price). quote_amount = 50 USDC.
+    /// Taker_fee = 50 * 30/10000 = 15000 (0.015 USDC)
+    /// Maker_fee = 50 * 10/10000 = 5000 (0.005 USDC)
+    fun test_fee_regression_limit_buy_price_improvement(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_fee_regression_env(
+            deployer, maker, taker,
+            50_000_000,  // maker CASH
+            0,           // maker USDC
+            0,           // taker CASH
+            200_000_000, // taker USDC (enough for 3.0 * 50 + fees)
+        );
+        let taker_addr = signer::address_of(taker);
+        let maker_addr = signer::address_of(maker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        fees::update_fee_config(deployer, 10, 30);
+
+        // Maker: sell 50 CASH at 1.0
+        place_limit_order(maker, pair_id, 1_000_000, 50_000_000, false, types::order_type_gtc());
+
+        // Taker: buy 50 CASH at 3.0 (fills at 1.0 due to price improvement)
+        place_limit_order(taker, pair_id, 3_000_000, 50_000_000, true, types::order_type_gtc());
+
+        // quote_amount = 50 * 1.0 = 50 USDC = 50_000_000
+        // taker_fee = 50_000_000 * 30 / 10000 = 150_000 (0.015 * 10 = 0.15 USDC — wait, let me recalc)
+        // Actually: 50_000_000 * 30 / 10_000 = 150_000
+        // maker_fee = 50_000_000 * 10 / 10_000 = 50_000
+
+        assert!(market::bids_is_empty(), 7400);
+        assert!(market::asks_is_empty(), 7401);
+
+        // Taker: 50 CASH received
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 50_000_000, 7402);
+        // Taker USDC: 200M - 50M (quote at fill price) - 150K (taker_fee) = 149_850_000
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 149_850_000, 7403);
+        assert!(accounts::get_locked_balance(taker_addr, quote_addr) == 0, 7404);
+
+        // Maker: 50M - 50K (maker_fee) = 49_950_000
+        assert!(accounts::get_available_balance(maker_addr, quote_addr) == 49_950_000, 7405);
+
+        // Fee vault: 150K + 50K = 200K
+        assert!(fees::get_collected_fees(quote_addr) == 200_000, 7406);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// Verify that when fees are zero, the lock amount is exactly the quote amount
+    /// (no extra fee reserve). This ensures backward compatibility.
+    fun test_fee_zero_lock_amount_unchanged(deployer: &signer, maker: &signer, taker: &signer) {
+        let (_base_metadata, quote_metadata, pair_id) = setup_fee_regression_env(
+            deployer, maker, taker,
+            0, 0,
+            0, 200_000_000, // taker USDC
+        );
+        let taker_addr = signer::address_of(taker);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Fees are 0 (default)
+        let (maker_bps, taker_bps) = fees::get_fee_config();
+        assert!(maker_bps == 0 && taker_bps == 0, 7500);
+
+        // Place buy: 100 CASH at 1.5 = lock 150 USDC (no fee reserve since fees=0)
+        place_limit_order(taker, pair_id, 1_500_000, 100_000_000, true, types::order_type_gtc());
+
+        let locked = accounts::get_locked_balance(taker_addr, quote_addr);
+        assert!(locked == 150_000_000, 7501); // Exactly quote_amount, no extra
+
+        let available = accounts::get_available_balance(taker_addr, quote_addr);
+        assert!(available == 50_000_000, 7502); // 200 - 150 = 50
     }
 }

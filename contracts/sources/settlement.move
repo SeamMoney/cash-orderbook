@@ -104,32 +104,62 @@ module cash_orderbook::settlement {
         // Calculate fees
         let taker_fee = fees::calculate_taker_fee(quote_amount);
         let maker_fee = fees::calculate_maker_fee(quote_amount);
-
-        // Determine taker and maker addresses
-        let taker_addr = if (taker_is_bid) { buyer } else { seller };
-        let maker_addr = if (taker_is_bid) { seller } else { buyer };
+        let total_fee = taker_fee + maker_fee;
 
         // Transfer base asset (CASH): seller's locked -> buyer's available
         // The seller had locked their CASH when placing a sell order
         accounts::debit_locked(seller, base_asset, fill_quantity);
         accounts::credit_available(buyer, base_asset, fill_quantity);
 
-        // Transfer quote asset (USDC): buyer's locked -> seller's available
-        // The buyer had locked their USDC when placing a buy order
-        accounts::debit_locked(buyer, quote_asset, quote_amount);
-        accounts::credit_available(seller, quote_asset, quote_amount);
+        // Transfer quote asset (USDC) with fees deducted from LOCKED balances.
+        //
+        // The buyer's quote is LOCKED (not available), so fees must be deducted
+        // from locked balances during settlement. Extra quote was locked at order
+        // placement time to cover fees.
+        //
+        // For buy taker (taker_is_bid = true):
+        //   Buyer (taker) pays: quote_amount + taker_fee (from locked)
+        //   Seller (maker) gets: quote_amount - maker_fee (credited to available)
+        //   Vault gets: taker_fee + maker_fee
+        //
+        // For sell taker (taker_is_bid = false):
+        //   Buyer (maker) pays: quote_amount + maker_fee (from locked)
+        //   Seller (taker) gets: quote_amount - taker_fee (credited to available)
+        //   Vault gets: taker_fee + maker_fee
+        // Calculate the max fee that was locked at order placement time
+        let max_fee = fees::calculate_max_fee(quote_amount);
 
-        // Collect taker fee: deduct from taker's available balance in quote asset
-        // (taker just received credit or had quote deducted — fee comes from their available)
-        if (taker_fee > 0) {
-            accounts::debit_available(taker_addr, quote_asset, taker_fee);
-            fees::collect_fee(quote_asset, taker_fee, false, taker_addr);
+        if (taker_is_bid) {
+            // Buyer is taker: debit quote_amount + taker_fee from buyer's locked.
+            // The excess fee reserve (max_fee - taker_fee) is handled by
+            // order_placement's excess unlock calculation.
+            accounts::debit_locked(buyer, quote_asset, quote_amount + taker_fee);
+            // Seller (maker) receives quote_amount minus their maker fee
+            accounts::credit_available(seller, quote_asset, quote_amount - maker_fee);
+        } else {
+            // Buyer is maker (resting bid): debit quote_amount + maker_fee from locked.
+            accounts::debit_locked(buyer, quote_asset, quote_amount + maker_fee);
+            // Unlock the excess fee reserve for the maker (no order_placement running
+            // for the maker, so we must unlock here).
+            // Maker locked max_fee per unit at placement; only maker_fee was consumed.
+            let excess_fee = max_fee - maker_fee;
+            if (excess_fee > 0) {
+                accounts::unlock_balance(buyer, quote_asset, excess_fee);
+            };
+            // Seller (taker) receives quote_amount minus their taker fee
+            accounts::credit_available(seller, quote_asset, quote_amount - taker_fee);
         };
 
-        // Collect maker fee: deduct from maker's available balance in quote asset
-        if (maker_fee > 0) {
-            accounts::debit_available(maker_addr, quote_asset, maker_fee);
-            fees::collect_fee(quote_asset, maker_fee, true, maker_addr);
+        // Collect total fees to the fee vault
+        if (total_fee > 0) {
+            let taker_addr = if (taker_is_bid) { buyer } else { seller };
+            let maker_addr = if (taker_is_bid) { seller } else { buyer };
+            if (taker_fee > 0) {
+                fees::collect_fee(quote_asset, taker_fee, false, taker_addr);
+            };
+            if (maker_fee > 0) {
+                fees::collect_fee(quote_asset, maker_fee, true, maker_addr);
+            };
         };
 
         // Emit TradeEvent
