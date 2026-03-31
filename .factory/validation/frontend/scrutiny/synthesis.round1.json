@@ -1,0 +1,118 @@
+{
+  "milestone": "frontend",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "cd /Users/maxmohammadi/cash-orderbook && pnpm -r test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "cd /Users/maxmohammadi/cash-orderbook && pnpm -r typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "cd /Users/maxmohammadi/cash-orderbook && pnpm -r lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 5,
+    "passed": 0,
+    "failed": 5,
+    "failedFeatures": [
+      "frontend-scaffold-wallet",
+      "frontend-swap-interface",
+      "frontend-orderbook-view",
+      "frontend-realtime-polish",
+      "deployment-integration"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "frontend-scaffold-wallet",
+      "severity": "blocking",
+      "description": "Connected wallet button state renders only truncated address and omits required CASH/USDC balances (VAL-FRONTEND-004)."
+    },
+    {
+      "featureId": "frontend-swap-interface",
+      "severity": "blocking",
+      "description": "Swap submission path bypasses @cash/orderbook-sdk and directly submits raw wallet transactions."
+    },
+    {
+      "featureId": "frontend-swap-interface",
+      "severity": "blocking",
+      "description": "Swap action is not disabled on insufficient user balance; gating is based on quote liquidity placeholder logic."
+    },
+    {
+      "featureId": "frontend-orderbook-view",
+      "severity": "blocking",
+      "description": "Order form submit path uses raw wallet transaction calls instead of required SDK integration."
+    },
+    {
+      "featureId": "frontend-realtime-polish",
+      "severity": "blocking",
+      "description": "Realtime hook set does not subscribe/handle account:{address}, so account balance updates are missing."
+    },
+    {
+      "featureId": "frontend-realtime-polish",
+      "severity": "blocking",
+      "description": "Network error retry UX required by feature spec is not exposed in orderbook/realtime view."
+    },
+    {
+      "featureId": "deployment-integration",
+      "severity": "blocking",
+      "description": "Integration test flow does not execute required on-chain deposit/place/match/withdraw operations."
+    },
+    {
+      "featureId": "deployment-integration",
+      "severity": "blocking",
+      "description": "Integration workflow does not verify frontend UI state reflects seeded depth/trades."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "library",
+      "description": "Added .factory/library/aptos-events-v1-deprecation.md to capture v1 events endpoint deprecation context and migration direction.",
+      "sourceFeature": "deployment-integration"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": ".factory/skills/frontend-worker/SKILL.md",
+      "suggestion": "Make SDK usage explicit and mandatory for order/swap/cancel transaction submission in frontend features unless a feature explicitly waives it; also add a required verification check for connected-state CASH/USDC balance rendering.",
+      "evidence": "frontend-swap-interface and frontend-orderbook-view both used direct wallet transaction payloads; frontend-scaffold-wallet missed connected balances while still reporting wallet flow complete.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add a frontend convention that trading transactions should go through shared SDK abstractions (SDK-first) to keep wallet payload construction centralized and consistent.",
+      "evidence": "Architecture references frontend→SDK→RPC flow, but milestone frontend implementations diverged and repeated direct payload construction.",
+      "isSystemic": true
+    },
+    {
+      "target": ".factory/skills/backend-worker/SKILL.md",
+      "suggestion": "Clarify that deployment/ops scripts may follow script-first implementation with focused utility tests plus service-level verification when strict test-first flow is impractical.",
+      "evidence": "deployment-integration transcript and skill feedback show repeated tension between strict tests-first guidance and operational script work.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "frontend-worker skill inconsistency around SDK vs direct wallet submission",
+      "reason": "duplicate (covered in suggestedGuidanceUpdates as a single consolidated SDK-first recommendation)"
+    },
+    {
+      "observation": "WebSocket service healthcheck uses placeholder fallback command",
+      "reason": "requires overwriting existing service definition; not applied in this scrutiny round under additive-only update constraints"
+    },
+    {
+      "observation": "Document pre-commit scanner behavior for base64-like literals",
+      "reason": "ambiguous and environment-dependent without a reproducible repository-level rule"
+    }
+  ],
+  "previousRound": null
+}

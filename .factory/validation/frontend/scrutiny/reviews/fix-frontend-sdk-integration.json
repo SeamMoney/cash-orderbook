@@ -1,0 +1,50 @@
+{
+  "featureId": "fix-frontend-sdk-integration",
+  "reviewedAt": "2026-03-31T04:21:53Z",
+  "commitId": "252858b8ba8c70d03452c8ab3c63cef2b4d87570",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The fix correctly adds connected-wallet balance display, insufficient-balance disable state, account-channel subscription, retry toast action, and the funded-account note in integration-test comments. However, the two core SDK-integration blockers remain unresolved: swap and order-form submissions still use wallet `signAndSubmitTransaction` with manually built payloads instead of `@cash/orderbook-sdk` `placeOrder()`.",
+    "issues": [
+      {
+        "file": "web/components/swap/swap-widget.tsx",
+        "line": 156,
+        "severity": "blocking",
+        "description": "Swap execution still submits via wallet `signAndSubmitTransaction` rather than calling SDK `CashOrderbook.placeOrder()`. The payload is produced by a custom helper, so this does not satisfy the prior blocking requirement to route swap submission through SDK order placement."
+      },
+      {
+        "file": "web/components/orderbook/order-form.tsx",
+        "line": 106,
+        "severity": "blocking",
+        "description": "Order-form submit path still calls wallet `signAndSubmitTransaction` with a helper-built payload instead of SDK `CashOrderbook.placeOrder()` for limit/market orders, leaving the original SDK-integration blocker unresolved."
+      },
+      {
+        "file": "web/lib/sdk.ts",
+        "line": 35,
+        "severity": "blocking",
+        "description": "The new frontend SDK file implements a custom `buildPlaceOrderPayload()` that re-implements SDK transaction construction logic, but it does not instantiate/use `CashOrderbook` or call `placeOrder()`. This preserves a parallel raw-payload path rather than resolving the required SDK submission path."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "frontend-worker skill procedure still tells workers to use wallet `signAndSubmitTransaction` directly and does not provide a concrete SDK-first wallet-adapter pattern, which continues to produce non-compliant transaction submission implementations.",
+      "evidence": ".factory/skills/frontend-worker/SKILL.md:41 instructs direct signAndSubmitTransaction usage; this fix uses signAndSubmitTransaction in web/components/swap/swap-widget.tsx:156 and web/components/orderbook/order-form.tsx:106 instead of SDK placeOrder."
+    },
+    {
+      "area": "conventions",
+      "observation": "Mission AGENTS frontend conventions still lack an explicit SDK-first rule even though architecture defines frontend->SDK->RPC flow; this guidance gap remains a recurring source of implementation drift.",
+      "evidence": "Mission AGENTS frontend section (/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/AGENTS.md:62-69) has no SDK submission rule, while .factory/library/architecture.md:69 defines `User → Frontend → SDK → Aptos RPC`."
+    },
+    {
+      "area": "knowledge",
+      "observation": "The codebase lacks shared guidance for wallet-adapter + SDK integration when SDK write methods require Account signers; workers are currently re-implementing payload builders ad hoc.",
+      "evidence": "web/lib/sdk.ts:29-35 documents that SDK placeOrder expects Account and introduces custom payload building instead. This pattern is not captured in .factory/library/ and is likely to recur."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/frontend/scrutiny/synthesis.json",
+  "summary": "Fix review failed: most UI/WS balance and retry updates landed, but the two primary scrutiny blockers for SDK transaction submission remain unresolved because swap and order form still submit via wallet raw transaction calls rather than SDK `placeOrder()`."
+}
