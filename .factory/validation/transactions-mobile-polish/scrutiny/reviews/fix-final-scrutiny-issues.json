@@ -1,0 +1,30 @@
+{
+  "featureId": "fix-final-scrutiny-issues",
+  "reviewedAt": "2026-03-31T13:31:39Z",
+  "commitId": "6a353aa",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Reviewed prior failed features (transactions-table @ e099bd3, mobile-responsive @ e798bba, animations-realtime-polish @ aa42b5d), their prior scrutiny reports, and the fix commit 6a353aa. The fix resolves all three blocking findings: Address column no longer uses trade IDs and now reads participant-address fields with a '—' fallback when absent; mobile hamburger-menu Connect Wallet control enforces a 44px minimum button height; and the chart now subscribes to realtime trades and appends WS trade prices to the series while retaining REST candle polling fallback when WS is unavailable.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Feature metadata still uses `frontend-ui-worker`, but workers continue deviating to `frontend-worker` at runtime.",
+      "evidence": "Mission features.json uses `skillName: frontend-ui-worker` for this milestone (e.g., lines 516, 555, 590, 639), while fix handoff `.../handoffs/2026-03-31T13-27-23-592Z__fix-final-scrutiny-issues__fa867cf3-6efc-4101-a4c4-cd892abdff95.json` records a deviation to `frontend-worker`."
+    },
+    {
+      "area": "knowledge",
+      "observation": "Trade contracts/API still do not expose participant wallet addresses, so Address can only render '—' unless upstream schemas are extended.",
+      "evidence": "shared/src/index.ts `Trade` includes maker/taker order IDs but no wallet address fields (lines 48-55); api/src/routes/trades.ts maps response to `{ id, price, quantity, side, timestamp }` only."
+    }
+  ],
+  "addressesFailureFrom": [
+    ".factory/validation/transactions-mobile-polish/scrutiny/reviews/transactions-table.json",
+    ".factory/validation/transactions-mobile-polish/scrutiny/reviews/mobile-responsive.json",
+    ".factory/validation/transactions-mobile-polish/scrutiny/reviews/animations-realtime-polish.json"
+  ],
+  "summary": "Pass. The rerun fix feature adequately addresses each of the three original blocking scrutiny failures across table address sourcing, mobile wallet-button touch target sizing, and WebSocket-driven chart updates with REST fallback preserved."
+}
