@@ -1,0 +1,88 @@
+{
+  "groupId": "rerun-chart-data",
+  "testedAt": "2026-03-31T10:59:29Z",
+  "isolation": {
+    "milestone": "layout-chart",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "appUrl": "http://localhost:3102",
+    "apiUrl": "http://localhost:3100",
+    "webSocketUrl": "ws://localhost:3101",
+    "assignedAssertions": [
+      "VAL-CHART-001",
+      "VAL-CHART-003"
+    ],
+    "agentBrowserSession": "rerun-chart-data"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-CHART-001",
+      "title": "Price chart renders",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Open http://localhost:3102 and inspect chart panel",
+          "expected": "Line chart with colored trend line and gradient fill is visible",
+          "observed": "Chart panel shows 'No chart data available' placeholder instead of a rendered line chart"
+        },
+        {
+          "action": "Switch chart range tabs (1H and 1D)",
+          "expected": "Chart re-renders with data for selected range",
+          "observed": "Range state toggles, but chart remains in no-data placeholder state"
+        },
+        {
+          "action": "Verify candle data availability via in-browser API fetch checks",
+          "expected": "At least one interval returns non-empty candle array",
+          "observed": "GET /candles returned HTTP 200 with empty arrays for 1m/5m/15m/1h/1d; 4h returned HTTP 400"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-chart/rerun-chart-data/VAL-CHART-001-chart-visible.png"
+        ],
+        "consoleErrors": "none (agent-browser errors returned no JavaScript runtime errors)",
+        "network": "Observed GET /candles?interval=1h and GET /candles?interval=5m from UI; explicit browser fetch checks: 1m=200 len0, 5m=200 len0, 15m=200 len0, 1h=200 len0, 1d=200 len0, 4h=400"
+      },
+      "issues": "Blocked by absence of candle data in API responses; assertion requires rendered line chart dependent on candle dataset."
+    },
+    {
+      "id": "VAL-CHART-003",
+      "title": "Chart hover interaction",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Move mouse across chart area to trigger hover/crosshair",
+          "expected": "Crosshair/tooltip appears with exact price + timestamp, and header price follows hover point",
+          "observed": "No crosshair or tooltip appears; chart area remains in no-data placeholder state"
+        },
+        {
+          "action": "Retry hover after changing chart range",
+          "expected": "Hover interaction activates on plotted data",
+          "observed": "No plotted data appears after range changes, so hover interaction cannot be exercised"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-chart/rerun-chart-data/VAL-CHART-003-hover-attempt.png"
+        ],
+        "consoleErrors": "none (agent-browser errors returned no JavaScript runtime errors)",
+        "network": "UI requested /candles endpoints but returned no usable candle data for rendering, preventing hover target generation"
+      },
+      "issues": "Blocked because chart data is empty; hover/crosshair contract cannot be validated without rendered candle/line points."
+    }
+  ],
+  "frictions": [],
+  "blockers": [
+    {
+      "description": "Candle dataset unavailable for tested intervals during validation run",
+      "affectedAssertions": [
+        "VAL-CHART-001",
+        "VAL-CHART-003"
+      ],
+      "quickFixAttempted": "Reloaded app, switched time ranges, and ran direct in-browser fetch checks against /candles intervals (1m, 5m, 15m, 1h, 1d). All successful responses returned empty arrays."
+    }
+  ],
+  "summary": "Tested 2 assertions: 0 passed, 0 failed, 2 blocked due to missing candle data required for chart rendering and hover validation."
+}

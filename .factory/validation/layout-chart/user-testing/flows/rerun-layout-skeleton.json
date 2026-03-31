@@ -1,0 +1,120 @@
+{
+  "groupId": "rerun-layout-skeleton",
+  "testedAt": "2026-03-31T11:01:46Z",
+  "isolation": {
+    "milestone": "layout-chart",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "appUrl": "http://localhost:3102",
+    "apiUrl": "http://localhost:3100",
+    "websocketUrl": "ws://localhost:3101",
+    "browserSession": "layout-skel-79476079"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-LAYOUT-004",
+      "title": "Token header with price and change",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Reload the page and wait for steady state",
+          "expected": "Header shows CASH icon/name/ticker, current price, and 24h change percentage colored green/red",
+          "observed": "Header shows CASH icon/name/ticker and price ($0.000000), but no 24h change percentage is visible"
+        },
+        {
+          "action": "Check computed style of the rendered price",
+          "expected": "Price uses monospace font",
+          "observed": "Price uses GeistSans (non-monospace)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-chart/rerun-layout-skeleton/VAL-LAYOUT-004-token-header.png"
+        ],
+        "consoleErrors": "none (only info/log messages: React DevTools suggestion and HMR connected)",
+        "network": "GET /market observed in browser request log during load"
+      },
+      "issues": "Required 24h change percentage is missing; price typography does not match monospace requirement."
+    },
+    {
+      "id": "VAL-LAYOUT-005",
+      "title": "Token stats grid",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect stats row below chart",
+          "expected": "Shows Market Cap (--), 24h Volume (from /market), FDV (--), Total Supply (--)",
+          "observed": "Grid shows Market cap --, 24H volume $0.00, FDV --, Total supply --"
+        },
+        {
+          "action": "Check label/value typography and colors",
+          "expected": "Labels muted; values white, bold, monospace",
+          "observed": "Labels are muted gray; values are white and bold monospace"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-chart/rerun-layout-skeleton/VAL-LAYOUT-005-token-stats-grid.png"
+        ],
+        "consoleErrors": "none (only info/log messages: React DevTools suggestion and HMR connected)",
+        "network": "GET /market observed in browser request log"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CHART-004",
+      "title": "Chart loading state",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Capture screenshot immediately after reload",
+          "expected": "Chart area shows loading skeleton/shimmer placeholder (not blank)",
+          "observed": "Chart card shows loading placeholder with \"Loading chart...\" before final chart empty-state appears"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-chart/rerun-layout-skeleton/VAL-CHART-004-chart-loading-state.png"
+        ],
+        "consoleErrors": "none (only info/log messages: React DevTools suggestion and HMR connected)",
+        "network": "GET /candles?interval=5m and GET /candles?interval=1h observed during load"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-POLISH-005",
+      "title": "Skeleton loading states",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Capture page at initial reload frame",
+          "expected": "Skeleton placeholders visible for chart, token stats, swap quote, and transactions; no blank regions",
+          "observed": "Initial frame shows chart loading placeholder, stats skeleton values, swap quote skeleton bars, and transactions table skeleton rows"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-chart/rerun-layout-skeleton/VAL-POLISH-005-skeleton-loading-state.png"
+        ],
+        "consoleErrors": "none (only info/log messages: React DevTools suggestion and HMR connected)",
+        "network": "Initial load triggers market/candles requests while skeleton placeholders are rendered"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Loading skeleton phase is brief and required immediate post-reload capture to preserve evidence.",
+      "resolved": true,
+      "resolution": "Captured time-sliced screenshots at reload t=0ms, t=500ms, and t=1700ms; used t=0ms for loading-state assertions.",
+      "affectedAssertions": [
+        "VAL-CHART-004",
+        "VAL-POLISH-005"
+      ]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 4 assertions: 3 passed (VAL-LAYOUT-005, VAL-CHART-004, VAL-POLISH-005) and 1 failed (VAL-LAYOUT-004: missing 24h change percentage and non-monospace price)."
+}

@@ -1,0 +1,67 @@
+{
+  "milestone": "layout-chart",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 14,
+    "passed": 8,
+    "failed": 4,
+    "blocked": 2
+  },
+  "passedAssertions": [
+    "VAL-CHART-002",
+    "VAL-ERROR-001",
+    "VAL-ERROR-003",
+    "VAL-LAYOUT-001",
+    "VAL-LAYOUT-002",
+    "VAL-LAYOUT-003",
+    "VAL-LAYOUT-006",
+    "VAL-POLISH-009"
+  ],
+  "failedAssertions": [
+    {
+      "id": "VAL-LAYOUT-004",
+      "reason": "Token header shows icon/name/ticker and monospace price, but no 24h percentage change is rendered."
+    },
+    {
+      "id": "VAL-LAYOUT-005",
+      "reason": "Stats grid is present, but Market cap and Total supply remain '--' instead of populated values."
+    },
+    {
+      "id": "VAL-CHART-004",
+      "reason": "On reload, chart area did not show a visible chart skeleton/shimmer loading state before empty-state rendering."
+    },
+    {
+      "id": "VAL-POLISH-005",
+      "reason": "Transactions and swap quote placeholders render, but chart and stats area showed empty/fallback content instead of skeleton shimmer placeholders during capture."
+    }
+  ],
+  "blockedAssertions": [
+    {
+      "id": "VAL-CHART-001",
+      "blockedBy": "No candle data returned, so line/gradient positivity rendering cannot be validated."
+    },
+    {
+      "id": "VAL-CHART-003",
+      "blockedBy": "Hover tooltip/crosshair and header hover-price update cannot be validated without candle points."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added Validation Concurrency section with max concurrent agent-browser validators set to 3.",
+      "source": "setup"
+    },
+    {
+      "target": "user-testing.md",
+      "description": "Added Flow Validator Guidance: agent-browser section for isolation rules and evidence expectations.",
+      "source": "setup"
+    },
+    {
+      "target": "user-testing.md",
+      "description": "Documented local empty-candles behavior and recommended browser-level API blocking for isolation-safe API-unavailable tests.",
+      "source": "flow-report"
+    }
+  ],
+  "previousRound": null
+}

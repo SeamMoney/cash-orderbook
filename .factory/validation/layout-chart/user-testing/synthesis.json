@@ -1,67 +1,45 @@
 {
   "milestone": "layout-chart",
-  "round": 1,
+  "round": 2,
   "status": "fail",
   "assertionsSummary": {
-    "total": 14,
-    "passed": 8,
-    "failed": 4,
+    "total": 6,
+    "passed": 3,
+    "failed": 1,
     "blocked": 2
   },
   "passedAssertions": [
-    "VAL-CHART-002",
-    "VAL-ERROR-001",
-    "VAL-ERROR-003",
-    "VAL-LAYOUT-001",
-    "VAL-LAYOUT-002",
-    "VAL-LAYOUT-003",
-    "VAL-LAYOUT-006",
-    "VAL-POLISH-009"
+    "VAL-LAYOUT-005",
+    "VAL-CHART-004",
+    "VAL-POLISH-005"
   ],
   "failedAssertions": [
     {
       "id": "VAL-LAYOUT-004",
-      "reason": "Token header shows icon/name/ticker and monospace price, but no 24h percentage change is rendered."
-    },
-    {
-      "id": "VAL-LAYOUT-005",
-      "reason": "Stats grid is present, but Market cap and Total supply remain '--' instead of populated values."
-    },
-    {
-      "id": "VAL-CHART-004",
-      "reason": "On reload, chart area did not show a visible chart skeleton/shimmer loading state before empty-state rendering."
-    },
-    {
-      "id": "VAL-POLISH-005",
-      "reason": "Transactions and swap quote placeholders render, but chart and stats area showed empty/fallback content instead of skeleton shimmer placeholders during capture."
+      "reason": "Token header still does not render 24h percentage change; rendered price style also resolved to GeistSans instead of monospace."
     }
   ],
   "blockedAssertions": [
     {
       "id": "VAL-CHART-001",
-      "blockedBy": "No candle data returned, so line/gradient positivity rendering cannot be validated."
+      "blockedBy": "No candle data returned from /candles for tested intervals, so line/gradient chart rendering cannot be validated."
     },
     {
       "id": "VAL-CHART-003",
-      "blockedBy": "Hover tooltip/crosshair and header hover-price update cannot be validated without candle points."
+      "blockedBy": "Hover tooltip/crosshair cannot be validated without rendered chart points because /candles responses were empty."
     }
   ],
   "appliedUpdates": [
     {
       "target": "user-testing.md",
-      "description": "Added Validation Concurrency section with max concurrent agent-browser validators set to 3.",
+      "description": "Documented that seed-orderbook requires APTOS_PRIVATE_KEY and that missing key blocks local candle/trade seeding for chart-data assertions.",
       "source": "setup"
     },
     {
       "target": "user-testing.md",
-      "description": "Added Flow Validator Guidance: agent-browser section for isolation rules and evidence expectations.",
-      "source": "setup"
-    },
-    {
-      "target": "user-testing.md",
-      "description": "Documented local empty-candles behavior and recommended browser-level API blocking for isolation-safe API-unavailable tests.",
+      "description": "Recorded observed candle interval behavior: 1m/5m/15m/1h/1d returned 200 with empty arrays while 4h returned 400 in this environment.",
       "source": "flow-report"
     }
   ],
-  "previousRound": null
+  "previousRound": ".factory/validation/layout-chart/user-testing/synthesis.round1.json"
 }
