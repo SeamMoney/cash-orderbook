@@ -1,0 +1,253 @@
+{
+  "surface": "aptos-cli",
+  "testedAt": "2026-03-31T01:49:57Z",
+  "assertions": [
+    {
+      "id": "VAL-CONTRACT-001",
+      "status": "blocked",
+      "reason": "`bash scripts/deploy-testnet.sh --profile default` exited with code 1 while extracting deployer address; local Aptos profile config is missing (`Unable to find config .../.aptos/config.yaml, have you run aptos init?`).",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-001-deploy-testnet.txt",
+        "contracts/core-cli/VAL-CONTRACT-001-profile-error.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-002",
+      "status": "pass",
+      "reason": "Market registration and unauthorized rejection covered by passing tests `market::test_register_market_success` and `market::test_register_market_unauthorized`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-003",
+      "status": "pass",
+      "reason": "Deposit flow covered by passing tests `accounts::test_deposit_success` and `accounts::test_deposit_and_withdraw_preserves_fa_balance`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-004",
+      "status": "pass",
+      "reason": "Asset deposit correctness (including FA balance preservation behavior) covered by passing tests `accounts::test_deposit_success` and `accounts::test_deposit_and_withdraw_preserves_fa_balance`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-005",
+      "status": "pass",
+      "reason": "Withdraw success and insufficient-balance abort covered by passing tests `accounts::test_withdraw_success` and `accounts::test_withdraw_insufficient_balance`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-006",
+      "status": "pass",
+      "reason": "GTC limit buy placement covered by passing test `order_placement::test_place_gtc_limit_buy`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-007",
+      "status": "pass",
+      "reason": "GTC limit sell placement covered by passing test `order_placement::test_place_gtc_limit_sell`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-008",
+      "status": "pass",
+      "reason": "IOC matching/cancel behavior covered by passing tests `order_placement::test_ioc_partial_fill_cancels_remainder`, `order_placement::test_place_ioc_buy_no_match_cancels`, and `order_placement::test_place_ioc_sell_no_match_cancels`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-009",
+      "status": "pass",
+      "reason": "FOK full-fill and abort paths covered by passing tests `order_placement::test_fok_full_fill`, `order_placement::test_place_fok_buy_aborts_insufficient_liquidity`, and `order_placement::test_place_fok_sell_aborts_insufficient_liquidity`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-010",
+      "status": "pass",
+      "reason": "PostOnly cross rejection and passive rest behavior covered by passing tests `order_placement::test_place_post_only_buy_aborts_on_cross`, `order_placement::test_place_post_only_sell_aborts_on_cross`, `order_placement::test_place_post_only_buy_rests`, and `order_placement::test_place_post_only_sell_rests`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-011",
+      "status": "pass",
+      "reason": "Market buy matching behavior covered by passing tests `order_placement::test_place_market_buy`, `order_placement::test_market_buy_fills`, and `order_placement::test_market_buy_multiple_levels`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-012",
+      "status": "pass",
+      "reason": "Market sell matching behavior covered by passing tests `order_placement::test_place_market_sell` and `order_placement::test_market_sell_fills`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-013",
+      "status": "pass",
+      "reason": "Cancel own order, locked-fund release behavior, and unauthorized cancel rejection covered by passing tests `cancel::test_cancel_buy_order`, `cancel::test_cancel_sell_order`, `cancel::test_cancel_after_partial_fill_then_fee_change`, and `cancel::test_cancel_other_users_order`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-014",
+      "status": "pass",
+      "reason": "Price-time priority covered by passing tests `order_placement::test_multiple_fills_price_priority` and `order_placement::test_time_priority_same_price`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-015",
+      "status": "pass",
+      "reason": "Full-fill matching covered by passing tests `order_placement::test_full_fill_buy_taker` and `order_placement::test_full_fill_sell_taker`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-016",
+      "status": "pass",
+      "reason": "Partial-fill paths covered by passing tests `order_placement::test_partial_fill_maker_remains`, `order_placement::test_partial_fill_taker_rests`, and `order_placement::test_ioc_partial_fill_cancels_remainder`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-017",
+      "status": "pass",
+      "reason": "Settlement amount correctness and balance integrity covered by passing tests `order_placement::test_settlement_quote_amount_calculation` and `edge_case_tests::test_balance_consistency`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-018",
+      "status": "pass",
+      "reason": "Self-trade prevention covered by passing tests `order_placement::test_self_trade_prevention_buy`, `order_placement::test_self_trade_prevention_sell`, and `order_placement::test_self_trade_skips_own_fills_others`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-019",
+      "status": "pass",
+      "reason": "Sorted orderbook view behavior covered by passing test `views::test_get_orderbook_sorted`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-020",
+      "status": "pass",
+      "reason": "User balance view behavior covered by passing test `views::test_get_user_balances`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-021",
+      "status": "pass",
+      "reason": "User open orders view behavior covered by passing tests `views::test_get_user_orders`, `views::test_get_user_orders_empty`, and `views::test_get_user_orders_filters_by_user`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-022",
+      "status": "pass",
+      "reason": "Pause controls covered by passing tests `admin::test_pause_market_status`, `admin::test_order_placement_on_paused_market_aborts`, `admin::test_cancellation_on_paused_market_works`, and `admin::test_pause_market_unauthorized`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-023",
+      "status": "pass",
+      "reason": "Unpause behavior and authorization covered by passing tests `admin::test_unpause_market_status`, `admin::test_pause_unpause_cycle`, and `admin::test_unpause_market_unauthorized`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-024",
+      "status": "pass",
+      "reason": "Zero-fee defaults, fee config updates, and nonzero fee deduction covered by passing tests `fees::test_fee_config_starts_at_zero`, `fees::test_update_fee_config`, `order_placement::test_trade_with_zero_fees_no_deduction`, and `order_placement::test_trade_with_nonzero_fees_correct_deduction`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-025",
+      "status": "pass",
+      "reason": "Invalid-input aborts covered by passing tests `order_placement::test_zero_price_aborts`, `order_placement::test_zero_quantity_aborts`, `order_placement::test_nonexistent_market_aborts`, and `accounts::test_deposit_zero_amount`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-026",
+      "status": "pass",
+      "reason": "Insufficient-balance rejection and state integrity covered by passing tests `order_placement::test_insufficient_balance_buy`, `order_placement::test_insufficient_balance_sell`, and `edge_case_tests::test_balance_consistency`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-027",
+      "status": "pass",
+      "reason": "Deep book depth and middle-order cancellation behavior covered by passing tests `edge_case_tests::test_deep_book_12_bid_levels`, `edge_case_tests::test_deep_book_12_ask_levels`, `edge_case_tests::test_cancel_middle_ask_orders_preserves_sort`, and `edge_case_tests::test_cancel_multiple_middle_orders_preserves_sort`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    },
+    {
+      "id": "VAL-CONTRACT-028",
+      "status": "pass",
+      "reason": "Subaccount creation/delegation/revocation and delegated trading authorization covered by passing tests `subaccounts::test_create_subaccount`, `subaccounts::test_delegate_trading`, `subaccounts::test_revoke_delegation`, and `order_placement::test_delegated_limit_order_authorized`.",
+      "evidence": [
+        "contracts/core-cli/VAL-CONTRACT-002-028-move-test-coverage.txt"
+      ]
+    }
+  ],
+  "toolsUsed": [
+    "aptos"
+  ],
+  "frictions": [
+    {
+      "description": "`scripts/deploy-testnet.sh` exits immediately at profile extraction when no local Aptos config exists, so the script does not print its own friendly error block.",
+      "resolved": true,
+      "resolution": "Captured the direct Aptos CLI profile error via `aptos config show-profiles --profile default` and used that as blocker evidence for VAL-CONTRACT-001.",
+      "affectedAssertions": [
+        "VAL-CONTRACT-001"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Missing Aptos profile config in repo workspace prevented testnet deploy evidence collection.",
+      "affectedAssertions": [
+        "VAL-CONTRACT-001"
+      ],
+      "quickFixAttempted": "Retried deployment command and ran `aptos config show-profiles --profile default`; CLI returned `Unable to find config /Users/maxmohammadi/cash-orderbook/.aptos/config.yaml, have you run aptos init?`."
+    }
+  ]
+}

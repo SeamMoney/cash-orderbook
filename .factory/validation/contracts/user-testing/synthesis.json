@@ -1,0 +1,80 @@
+{
+  "milestone": "contracts",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 28,
+    "passed": 27,
+    "failed": 0,
+    "blocked": 1
+  },
+  "passedAssertions": [
+    "VAL-CONTRACT-002",
+    "VAL-CONTRACT-003",
+    "VAL-CONTRACT-004",
+    "VAL-CONTRACT-005",
+    "VAL-CONTRACT-006",
+    "VAL-CONTRACT-007",
+    "VAL-CONTRACT-008",
+    "VAL-CONTRACT-009",
+    "VAL-CONTRACT-010",
+    "VAL-CONTRACT-011",
+    "VAL-CONTRACT-012",
+    "VAL-CONTRACT-013",
+    "VAL-CONTRACT-014",
+    "VAL-CONTRACT-015",
+    "VAL-CONTRACT-016",
+    "VAL-CONTRACT-017",
+    "VAL-CONTRACT-018",
+    "VAL-CONTRACT-019",
+    "VAL-CONTRACT-020",
+    "VAL-CONTRACT-021",
+    "VAL-CONTRACT-022",
+    "VAL-CONTRACT-023",
+    "VAL-CONTRACT-024",
+    "VAL-CONTRACT-025",
+    "VAL-CONTRACT-026",
+    "VAL-CONTRACT-027",
+    "VAL-CONTRACT-028"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [
+    {
+      "id": "VAL-CONTRACT-001",
+      "blockedBy": "`bash scripts/deploy-testnet.sh --profile default` exited with code 1 while extracting deployer address; local Aptos profile config is missing (`Unable to find config .../.aptos/config.yaml, have you run aptos init?`)."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added aptos-cli concurrency cap, flow validator isolation guidance, and testnet profile prerequisite note for deployment validation.",
+      "source": "setup"
+    }
+  ],
+  "previousRound": null,
+  "flowReports": [
+    ".factory/validation/contracts/user-testing/flows/core-cli.json"
+  ],
+  "toolsUsed": [
+    "aptos"
+  ],
+  "frictions": [
+    {
+      "description": "`scripts/deploy-testnet.sh` exits immediately at profile extraction when no local Aptos config exists, so the script does not print its own friendly error block.",
+      "resolved": true,
+      "resolution": "Captured the direct Aptos CLI profile error via `aptos config show-profiles --profile default` and used that as blocker evidence for VAL-CONTRACT-001.",
+      "affectedAssertions": [
+        "VAL-CONTRACT-001"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Missing Aptos profile config in repo workspace prevented testnet deploy evidence collection.",
+      "affectedAssertions": [
+        "VAL-CONTRACT-001"
+      ],
+      "quickFixAttempted": "Retried deployment command and ran `aptos config show-profiles --profile default`; CLI returned `Unable to find config /Users/maxmohammadi/cash-orderbook/.aptos/config.yaml, have you run aptos init?`."
+    }
+  ]
+}
