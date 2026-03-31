@@ -1,0 +1,62 @@
+{
+  "milestone": "contracts",
+  "round": 2,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "cd /Users/maxmohammadi/cash-orderbook && pnpm -r test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "cd /Users/maxmohammadi/cash-orderbook && pnpm -r typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "cd /Users/maxmohammadi/cash-orderbook && pnpm -r lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 2,
+    "passed": 1,
+    "failed": 1,
+    "failedFeatures": [
+      "fix-contract-fees-delegation"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "fix-contract-fees-delegation",
+      "severity": "blocking",
+      "description": "Settlement debits taker/maker fees from available quote balances after trade transfer bookkeeping, which can abort buy-side settlements where quote is locked rather than available."
+    },
+    {
+      "featureId": "fix-contract-fees-delegation",
+      "severity": "blocking",
+      "description": "Market buy flow locks all available quote before matching and unlocks without fee-aware accounting, creating a deterministic non-zero-fee failure path when fees are debited from available balances."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": ".factory/skills/move-worker/SKILL.md",
+      "suggestion": "Add an explicit lock-vs-available balance verification checkpoint for fee settlement paths (especially market-buy lock-all flows) so fee debits are validated against the same balance bucket used during order locking and settlement.",
+      "evidence": "fix-contract-fees-delegation review found settlement fee debits from available balances (contracts/sources/settlement.move:125,131) combined with market-buy quote lock-all behavior (contracts/sources/order_placement.move:324-333) causing blocking non-zero-fee execution failures.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "tests-first procedure drift noted in fix-contract-order-semantics",
+      "reason": "duplicate of prior-round systemic recommendation already captured in synthesis.round1"
+    },
+    {
+      "observation": "mission-level balance view requirement wording ambiguity",
+      "reason": "ambiguous scope for this round and already partially clarified in mission AGENTS; no safe additive shared-state change to apply directly"
+    }
+  ],
+  "previousRound": ".factory/validation/contracts/scrutiny/synthesis.round1.json"
+}

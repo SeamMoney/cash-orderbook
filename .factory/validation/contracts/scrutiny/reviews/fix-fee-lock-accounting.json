@@ -1,0 +1,33 @@
+{
+  "featureId": "fix-fee-lock-accounting",
+  "reviewedAt": "2026-03-31T01:08:53Z",
+  "commitId": "82c1aa059a156887156d8aecbb75158036b37a6e",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The fix correctly addresses the original failure mode by moving fee debits to locked quote and updating buy-order/market-buy unlock accounting. However, it introduces an unresolved lock/unlock regression: bid cancellations still unlock only quote principal and do not unlock the fee reserve that is now locked at bid placement.",
+    "issues": [
+      {
+        "file": "contracts/sources/cancel.move",
+        "line": 122,
+        "severity": "blocking",
+        "description": "Buy-order cancellation unlocks only `quote_unlock = price * remaining / PRICE_SCALE` and does not release the fee reserve now locked for bids. Since `place_limit_order_internal` locks `quote + max_fee` for bids, canceling an unfilled/partially-filled bid with non-zero fees leaves fee funds stranded in locked balance."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "There is no explicit mission/library convention requiring lock-accounting changes to update all corresponding unlock paths (order placement, settlement, and cancel).",
+      "evidence": "Bid locking was updated to include fee reserve (`contracts/sources/order_placement.move:149`), but bid cancel unlock logic remained principal-only (`contracts/sources/cancel.move:122`)."
+    },
+    {
+      "area": "skills",
+      "observation": "The move-worker procedure lacks an explicit step to trace every `lock_balance` path to a matching unlock/debit path across modules, which likely contributed to missing the cancel-path regression.",
+      "evidence": ".factory/skills/move-worker/SKILL.md work procedure is generic; this fix changed only settlement/order_placement/fees and added fee regression tests, but no cancel-path update/test despite changed bid lock semantics."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/contracts/scrutiny/reviews/fix-contract-fees-delegation.json",
+  "summary": "I reviewed the fix feature transcript skeleton, handoff, and both diffs (original failed feature commit 1e034fb and fix commit 82c1aa0). The original fee-from-available failure is addressed in settlement and market-buy unlock flows, but the fix is not complete for lock/unlock accounting: bid cancel still fails to release fee reserve, leaving locked funds under non-zero fees. Therefore the fix review fails."
+}
