@@ -55,6 +55,12 @@ module cash_orderbook::types {
         timestamp: u64,
         /// Market pair ID
         pair_id: u64,
+        /// Total locked quote amount at placement time (principal + fee_reserve).
+        /// For sell orders this is 0 (they lock base, not quote).
+        /// For buy orders this is the exact amount locked from the user's balance.
+        /// Used by cancel to deterministically return the correct amount regardless
+        /// of fee config changes between placement and cancellation.
+        locked_quote: u64,
     }
 
     /// Composite key for ordering in BigOrderedMap.
@@ -188,6 +194,7 @@ module cash_orderbook::types {
         order_type: u8,
         timestamp: u64,
         pair_id: u64,
+        locked_quote: u64,
     ): Order {
         Order {
             order_id,
@@ -199,6 +206,7 @@ module cash_orderbook::types {
             order_type,
             timestamp,
             pair_id,
+            locked_quote,
         }
     }
 
@@ -238,10 +246,16 @@ module cash_orderbook::types {
     public fun order_type(order: &Order): u8 { order.order_type }
     public fun order_timestamp(order: &Order): u64 { order.timestamp }
     public fun order_pair_id(order: &Order): u64 { order.pair_id }
+    public fun order_locked_quote(order: &Order): u64 { order.locked_quote }
 
     /// Set remaining quantity (friend access for matching engine)
     public(friend) fun set_remaining_quantity(order: &mut Order, qty: u64) {
         order.remaining_quantity = qty;
+    }
+
+    /// Set locked_quote amount (friend access for settlement on partial fills)
+    public(friend) fun set_locked_quote(order: &mut Order, amount: u64) {
+        order.locked_quote = amount;
     }
 
     // ========== OrderKey Accessors ==========
@@ -341,6 +355,7 @@ module cash_orderbook::types {
             ORDER_TYPE_GTC, // order_type
             1000000,     // timestamp
             0,           // pair_id
+            150_000_000, // locked_quote (1.5 * 100 = 150 USDC)
         );
 
         assert!(order_id(&order) == 42, 200);
@@ -352,6 +367,7 @@ module cash_orderbook::types {
         assert!(order_type(&order) == ORDER_TYPE_GTC, 206);
         assert!(order_timestamp(&order) == 1000000, 207);
         assert!(order_pair_id(&order) == 0, 208);
+        assert!(order_locked_quote(&order) == 150_000_000, 209);
     }
 
     #[test]

@@ -12,7 +12,6 @@ module cash_orderbook::cancel {
     use cash_orderbook::accounts;
     use cash_orderbook::market;
     use cash_orderbook::subaccounts;
-    use cash_orderbook::fees;
 
     // ========== Error Codes ==========
     const E_UNAUTHORIZED: u64 = 1;
@@ -116,13 +115,11 @@ module cash_orderbook::cancel {
                 let key = types::new_order_key(inverted_price, timestamp, order_id);
                 market::remove_bid(key);
 
-                // Unlock quote funds: principal + fee reserve
-                // At placement, bid orders lock: quote_principal + max_fee_reserve
-                // We must unlock the full amount to avoid stranding the fee reserve.
-                let price_scale = types::price_scale();
-                let quote_principal = (((price as u128) * (remaining_qty as u128)) / (price_scale as u128) as u64);
-                let fee_reserve = fees::calculate_max_fee(quote_principal);
-                let quote_unlock = quote_principal + fee_reserve;
+                // Unlock quote funds using the stored locked_quote amount.
+                // This is deterministic regardless of fee config changes since
+                // placement — the exact amount locked at order creation is stored
+                // on the order, and reduced proportionally on each partial fill.
+                let quote_unlock = types::order_locked_quote(order);
                 if (quote_unlock > 0) {
                     accounts::unlock_balance(user_addr, quote_asset, quote_unlock);
                 };
@@ -202,6 +199,8 @@ module cash_orderbook::cancel {
     use aptos_framework::timestamp;
     #[test_only]
     use std::string;
+    #[test_only]
+    use cash_orderbook::fees;
 
     #[test_only]
     /// Setup two users for cancel tests.
@@ -771,6 +770,140 @@ module cash_orderbook::cancel {
         // Full balance restored
         assert!(accounts::get_locked_balance(user_addr, base_addr) == 0, 1201);
         assert!(accounts::get_available_balance(user_addr, base_addr) == initial_available, 1202);
+    }
+
+    // ========== Fee Config Change Regression Tests ==========
+
+    #[test(deployer = @cash_orderbook, user = @0xBEEF)]
+    /// REGRESSION: Place bid with fees, admin changes fees, cancel bid.
+    /// The stored locked_quote ensures the exact original lock is returned,
+    /// regardless of fee config changes between placement and cancellation.
+    ///
+    /// Scenario:
+    ///   1. Fees at 10 bps maker, 30 bps taker
+    ///   2. User places bid: 100 CASH at 2.0 USDC
+    ///      → locked = 200 + max_fee(200) = 200 + 0.6 = 200.6 USDC = 200_600_000
+    ///   3. Admin changes fees to 500 bps taker, 200 bps maker
+    ///   4. User cancels bid
+    ///      → must unlock exactly 200_600_000 (the ORIGINAL lock), not recalculated
+    ///   5. Verify: locked = 0, available = original
+    fun test_cancel_bid_after_fee_config_change(deployer: &signer, user: &signer) {
+        let (_base_metadata, quote_metadata, pair_id) = setup_cancel_test_env(deployer, user);
+        let user_addr = signer::address_of(user);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Step 1: Set initial fees: 10 bps maker, 30 bps taker
+        fees::update_fee_config(deployer, 10, 30);
+
+        let initial_available = accounts::get_available_balance(user_addr, quote_addr);
+        assert!(initial_available == 5_000_000_000, 1300);
+
+        // Step 2: Place bid: 100 CASH at 2.0 USDC
+        // quote_principal = 200_000_000
+        // max_fee = max(30, 10) bps of 200 = 200 * 30/10000 = 600_000
+        // Total locked = 200_600_000
+        cash_orderbook::order_placement::place_limit_order(
+            user, pair_id, 2_000_000, 100_000_000, true, types::order_type_gtc()
+        );
+
+        let locked_after_place = accounts::get_locked_balance(user_addr, quote_addr);
+        assert!(locked_after_place == 200_600_000, 1301);
+
+        // Step 3: Admin changes fees drastically (5x increase)
+        fees::update_fee_config(deployer, 200, 500);
+
+        // Step 4: Cancel the bid — must use stored locked_quote, not recalculated fees
+        cancel_order(user, pair_id, 0);
+
+        // Step 5: Verify: book empty, all funds returned
+        assert!(market::bids_is_empty(), 1302);
+        assert!(accounts::get_locked_balance(user_addr, quote_addr) == 0, 1303);
+        assert!(accounts::get_available_balance(user_addr, quote_addr) == initial_available, 1304);
+    }
+
+    #[test(deployer = @cash_orderbook, user = @0xBEEF)]
+    /// REGRESSION: Place bid with fees, admin LOWERS fees to zero, cancel bid.
+    /// Even when fees go to zero, the original lock (which included a fee reserve)
+    /// must be fully returned.
+    ///
+    /// Without locked_quote: cancel would calculate max_fee=0 and only unlock
+    /// the principal, stranding the original fee reserve forever.
+    fun test_cancel_bid_after_fee_reduced_to_zero(deployer: &signer, user: &signer) {
+        let (_base_metadata, quote_metadata, pair_id) = setup_cancel_test_env(deployer, user);
+        let user_addr = signer::address_of(user);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Set initial fees: 100 bps (1%)
+        fees::update_fee_config(deployer, 100, 100);
+
+        let initial_available = accounts::get_available_balance(user_addr, quote_addr);
+
+        // Place bid: 50 CASH at 1.0 USDC
+        // quote_principal = 50_000_000
+        // max_fee = 50_000_000 * 100 / 10000 = 500_000
+        // Total locked = 50_500_000
+        cash_orderbook::order_placement::place_limit_order(
+            user, pair_id, 1_000_000, 50_000_000, true, types::order_type_gtc()
+        );
+
+        assert!(accounts::get_locked_balance(user_addr, quote_addr) == 50_500_000, 1400);
+
+        // Admin removes all fees
+        fees::update_fee_config(deployer, 0, 0);
+
+        // Cancel — must still unlock the full 50_500_000
+        cancel_order(user, pair_id, 0);
+
+        assert!(accounts::get_locked_balance(user_addr, quote_addr) == 0, 1401);
+        assert!(accounts::get_available_balance(user_addr, quote_addr) == initial_available, 1402);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// REGRESSION: Partial fill with fees, then admin changes fees, then cancel remainder.
+    /// The stored locked_quote is reduced proportionally during matching,
+    /// so cancel uses the correct remaining lock regardless of fee changes.
+    ///
+    /// Scenario:
+    ///   1. Fees at 10 bps maker, 30 bps taker
+    ///   2. Buyer places bid: 100 CASH at 2.0 USDC
+    ///      → locked = 200_600_000
+    ///   3. Seller fills 40 CASH (partial fill)
+    ///      → matching reduces locked_quote proportionally: 200_600_000 * 60/100 = 120_360_000
+    ///   4. Admin changes fees to 0
+    ///   5. Buyer cancels remaining 60 CASH bid
+    ///      → must unlock exactly 120_360_000 (stored proportional lock)
+    fun test_cancel_after_partial_fill_then_fee_change(deployer: &signer, maker: &signer, taker: &signer) {
+        let (_base_metadata, quote_metadata, pair_id) = setup_cancel_test_env_two_users(deployer, maker, taker);
+        let maker_addr = signer::address_of(maker);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Step 1: Set fees: 10 bps maker, 30 bps taker
+        fees::update_fee_config(deployer, 10, 30);
+
+        // Step 2: Buyer places bid: 100 CASH at 2.0 USDC
+        cash_orderbook::order_placement::place_limit_order(
+            maker, pair_id, 2_000_000, 100_000_000, true, types::order_type_gtc()
+        );
+        let locked_after_place = accounts::get_locked_balance(maker_addr, quote_addr);
+        assert!(locked_after_place == 200_600_000, 1500);
+
+        // Step 3: Seller fills 40 CASH at 2.0
+        cash_orderbook::order_placement::place_limit_order(
+            taker, pair_id, 2_000_000, 40_000_000, false, types::order_type_gtc()
+        );
+
+        // After partial fill, locked_quote on the order = 200_600_000 * 60 / 100 = 120_360_000
+        let locked_after_fill = accounts::get_locked_balance(maker_addr, quote_addr);
+        assert!(locked_after_fill == 120_360_000, 1501);
+
+        // Step 4: Admin changes fees to 0
+        fees::update_fee_config(deployer, 0, 0);
+
+        // Step 5: Cancel remaining bid — must unlock stored 120_360_000
+        cancel_order(maker, pair_id, 0);
+
+        assert!(market::bids_is_empty(), 1502);
+        assert!(accounts::get_locked_balance(maker_addr, quote_addr) == 0, 1503);
     }
 
     // ========== Two-User Cancel Test Helper ==========

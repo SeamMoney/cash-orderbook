@@ -195,6 +195,9 @@ module cash_orderbook::order_placement {
         let order_id = types::next_order_id();
 
         // 8. Create Order
+        // For buy orders, locked_quote = total amount locked from user balance
+        // (principal + fee reserve). For sell orders, locked_quote = 0 (they lock base).
+        let locked_quote = if (is_bid) { quote_lock_amount + fee_lock_amount } else { 0 };
         let order = types::new_order(
             order_id,
             user_addr,
@@ -205,6 +208,7 @@ module cash_orderbook::order_placement {
             order_type,
             now,
             pair_id,
+            locked_quote,
         );
 
         // 9. Attempt matching (for GTC, IOC, FOK — PostOnly already verified no crossing)
@@ -263,6 +267,13 @@ module cash_orderbook::order_placement {
         } else {
             // GTC or PostOnly: rest the remaining order on the book
             if (remaining > 0) {
+                // Update locked_quote to reflect only the amount still locked for this
+                // resting order (after settlement consumed some of the original lock).
+                if (is_bid) {
+                    let still_needed_quote = calculate_quote_amount(price, remaining);
+                    let still_needed_fee = fees::calculate_max_fee(still_needed_quote);
+                    types::set_locked_quote(&mut order, still_needed_quote + still_needed_fee);
+                };
                 insert_order_to_book(order, is_bid, price, now, order_id);
             };
         };
@@ -352,6 +363,9 @@ module cash_orderbook::order_placement {
 
         // 6. Create order — use max price for buy (matches anything), 0 for sell
         let effective_price = if (is_bid) { MAX_PRICE } else { 0 };
+        // For market buy orders, locked_quote = entire available balance that was locked.
+        // For market sells, locked_quote = 0 (they lock base).
+        let locked_quote_market = if (is_bid) { quote_lock_amount } else { 0 };
         let order = types::new_order(
             order_id,
             user_addr,
@@ -362,6 +376,7 @@ module cash_orderbook::order_placement {
             types::order_type_ioc(), // Market orders behave like IOC
             now,
             pair_id,
+            locked_quote_market,
         );
 
         // 7. Match against the book

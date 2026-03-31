@@ -223,7 +223,15 @@ module cash_orderbook::matching {
 
             // If maker has remaining quantity, update and re-insert
             if (maker_remaining > fill_qty) {
-                types::set_remaining_quantity(&mut maker_order, maker_remaining - fill_qty);
+                let new_remaining = maker_remaining - fill_qty;
+                types::set_remaining_quantity(&mut maker_order, new_remaining);
+                // Proportionally reduce locked_quote for partial fills on bids.
+                // This ensures cancel returns the exact remaining locked amount.
+                let old_locked = types::order_locked_quote(&maker_order);
+                if (old_locked > 0) {
+                    let new_locked = ((old_locked as u128) * (new_remaining as u128) / (maker_remaining as u128) as u64);
+                    types::set_locked_quote(&mut maker_order, new_locked);
+                };
                 market::reinsert_bid(maker_key, maker_order);
             };
             // If maker is fully filled, it stays removed from the book
