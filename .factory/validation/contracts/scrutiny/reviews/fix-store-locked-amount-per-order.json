@@ -1,0 +1,26 @@
+{
+  "featureId": "fix-store-locked-amount-per-order",
+  "reviewedAt": "2026-03-31T01:42:23Z",
+  "commitId": "7767fca",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "I reviewed both diffs (failed feature commit 321d231 and fix commit 7767fca), the fix worker handoff/transcript skeleton, and the prior fail review. The original failure was that cancel recomputed fee reserve from current config; the fix now persists per-order `locked_quote` at placement, uses it directly on bid cancel, and updates it for resting partial fills. This directly addresses the prior blocking condition under fee-config changes and adds targeted regressions for fee increase/decrease and partial-fill-then-fee-change paths.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Feature specs should avoid directing order-state mutation work to `settlement` when the mutable resting-order state lives in matching flow.",
+      "evidence": "Mission features spec for this feature instructs \"Update settlement to reduce the order's locked_quote\" (features.json:669), but architecture separates responsibilities (`matching` handles orderbook mutation, `settlement` handles asset transfers: .factory/library/architecture.md:15-16), and implementation correctly updates in matching (contracts/sources/matching.move:233)."
+    },
+    {
+      "area": "skills",
+      "observation": "The Move worker skill does not explicitly require regression tests across admin fee-config transitions for lock/unlock accounting fixes.",
+      "evidence": "move-worker procedure is generic/TDD-focused (.factory/skills/move-worker/SKILL.md:26) while this class of bug required config-transition coverage; fix added dedicated tests for fee changes between placement and cancel (contracts/sources/cancel.move:790,831,875) after prior fail review identified this gap (.factory/validation/contracts/scrutiny/reviews/fix-cancel-fee-reserve.json)."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/contracts/scrutiny/reviews/fix-cancel-fee-reserve.json",
+  "summary": "Pass. The fix feature adequately resolves the original failure by removing cancel-time fee recomputation and using stored per-order lock state (`locked_quote`) with partial-fill updates before cancel. I found no new blocking issues in the reviewed fix diff."
+}

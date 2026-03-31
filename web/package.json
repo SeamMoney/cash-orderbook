@@ -7,7 +7,7 @@
     "build": "next build",
     "test": "echo 'test: ok'",
     "typecheck": "tsc --noEmit",
-    "lint": "next lint",
+    "lint": "eslint .",
     "dev": "next dev --port 3102",
     "clean": "rm -rf .next"
   },

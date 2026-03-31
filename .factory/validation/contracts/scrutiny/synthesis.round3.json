@@ -1,0 +1,53 @@
+{
+  "milestone": "contracts",
+  "round": 3,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "cd /Users/maxmohammadi/cash-orderbook && pnpm -r test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "cd /Users/maxmohammadi/cash-orderbook && pnpm -r typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "cd /Users/maxmohammadi/cash-orderbook && pnpm -r lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "failedFeatures": [
+      "fix-fee-lock-accounting"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "fix-fee-lock-accounting",
+      "severity": "blocking",
+      "description": "Buy-order cancellation unlocks only quote principal and does not release the fee reserve now locked at bid placement, leaving funds stranded in locked balance for non-zero-fee cancellations."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": ".factory/skills/move-worker/SKILL.md",
+      "suggestion": "Add a required lock-lifecycle verification checklist: for any change to lock amounts (including fee reserves), reviewers/workers must verify and test all corresponding settlement and cancel unlock/debit paths so every lock source has an explicit release path.",
+      "evidence": "fix-fee-lock-accounting updated bid lock semantics in contracts/sources/order_placement.move:149 but cancel path remained principal-only in contracts/sources/cancel.move:122, leaving locked fee reserve stranded.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Add a new mission/library convention specifically for lock-accounting updates across placement/settlement/cancel.",
+      "reason": "best handled as procedural guidance in move-worker skill rather than duplicating normative rules across mission/library docs"
+    }
+  ],
+  "previousRound": ".factory/validation/contracts/scrutiny/synthesis.round2.json"
+}

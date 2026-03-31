@@ -1,0 +1,21 @@
+{
+  "featureId": "fix-contract-order-semantics",
+  "reviewedAt": "2026-03-31T00:43:23Z",
+  "commitId": "a825310",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix commit directly resolves the two remaining order-semantics defects (FOK partial-fill abort behavior and order_type boundary validation) and also resolves the monorepo-scaffold Next.js 16 requirement. Original blocking findings from prior failed reviews are now addressed in the reviewed code state.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "move-worker procedure requires tests-first TDD, but this fix transcript shows code edits landed before the newly added regression tests while handoff marked followedProcedure=true. This indicates procedure-vs-practice drift in skill feedback reporting.",
+      "evidence": "worker-transcripts.jsonl (workerSessionId cf9b9a5a-42bd-4641-97c5-8dff34c93d9b) shows edits to types.move/order_placement.move before adding test_fok_aborts_on_self_trade_partial_fill and test_invalid_order_type_aborts; handoff.skillFeedback.followedProcedure=true"
+    }
+  ],
+  "addressesFailureFrom": "/Users/maxmohammadi/cash-orderbook/.factory/validation/contracts/scrutiny/reviews/contract-order-placement.json; /Users/maxmohammadi/cash-orderbook/.factory/validation/contracts/scrutiny/reviews/monorepo-scaffold.json",
+  "summary": "Pass. For prior failures: monorepo-scaffold's Next.js mismatch is fixed (web/package.json now ^16.0.0), and contract-order-placement blockers are covered in the reviewed state with matching-enabled IOC/market behavior plus this fix's FOK abort assertion and order_type boundary guard. No blocking issues remain for this fix feature."
+}

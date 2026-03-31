@@ -1,0 +1,53 @@
+{
+  "milestone": "contracts",
+  "round": 4,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "cd /Users/maxmohammadi/cash-orderbook && pnpm -r test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "cd /Users/maxmohammadi/cash-orderbook && pnpm -r typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "cd /Users/maxmohammadi/cash-orderbook && pnpm -r lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "failedFeatures": [
+      "fix-cancel-fee-reserve"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "fix-cancel-fee-reserve",
+      "severity": "blocking",
+      "description": "Bid cancel recomputes fee reserve from current fee config rather than the placement-time locked amount, so fee updates between placement and cancel can strand funds or trigger unlock aborts."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": ".factory/skills/move-worker/SKILL.md",
+      "suggestion": "Require mutable-config transition tests for lock-accounting changes (for example, place under one fee config and cancel/settle after fee updates), and prefer storing exact per-order locked amounts when unlock depends on mutable protocol parameters.",
+      "evidence": "The fix-cancel-fee-reserve review found cancel computes fee reserve from current bps in contracts/sources/cancel.move:124, while order lock sizing is done at placement time in order_placement.move and fee config is admin-updatable in fees.move.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Add mission/library convention text for lock-accounting invariants tied to mutable protocol parameters.",
+      "reason": "This is normative and better owned by orchestrator guidance/skill updates; no low-risk factual services.yaml or library additive update was identified this round."
+    }
+  ],
+  "previousRound": ".factory/validation/contracts/scrutiny/synthesis.round3.json"
+}

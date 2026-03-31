@@ -1,0 +1,45 @@
+{
+  "featureId": "fix-contract-fees-delegation",
+  "reviewedAt": "2026-03-31T00:35:00Z",
+  "commitId": "1e034fb",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The fix commit addresses the two major missing integrations from the prior failure (fees now called in settlement, delegated order/cancel entrypoints now wired through subaccounts authorization). However, fee debits are taken from available quote balances while buy flows lock quote up front, leaving a blocking settlement path for valid non-zero-fee executions.",
+    "issues": [
+      {
+        "file": "contracts/sources/settlement.move",
+        "line": 125,
+        "severity": "blocking",
+        "description": "Settlement deducts taker/maker fees from available quote (`accounts::debit_available`) after transfer bookkeeping. For buy-side participants who have quote locked rather than available at settlement time, this can abort with E_INSUFFICIENT_BALANCE despite sufficient locked funds for trade execution."
+      },
+      {
+        "file": "contracts/sources/order_placement.move",
+        "line": 324,
+        "severity": "blocking",
+        "description": "Market buy path explicitly locks the user's entire available quote before matching (`accounts::lock_balance(..., available_quote)` at lines 330-332), and unlocks only `quote_lock_amount - total_quote_used` later (line 372), not accounting for fee debits. Combined with settlement fee debits from available balances, non-zero-fee market buys can fail deterministically."
+      },
+      {
+        "file": "contracts/sources/order_placement.move",
+        "line": 1843,
+        "severity": "non_blocking",
+        "description": "Delegation tests cover authorized/unauthorized/revocation paths, but there is no direct delegated order/cancel test for expired delegation in this fix despite the feature contract calling out unauthorized/expired behavior."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The move-worker procedure does not explicitly require lock-vs-available balance checks for fee settlement paths, which made it easy to miss buy-side fee failures while still passing broad tests.",
+      "evidence": "Skill: .factory/skills/move-worker/SKILL.md (Work Procedure) has no explicit step for fee deduction source validation; code uses order_placement lock-all behavior (contracts/sources/order_placement.move:324-333) and settlement available-fee debits (contracts/sources/settlement.move:125,131)."
+    },
+    {
+      "area": "conventions",
+      "observation": "Mission-level requirement text for balance views is still ambiguous versus clarified architecture guidance, which previously led to conflicting scrutiny conclusions.",
+      "evidence": "validation-contract.md:100-103 describes VAL-CONTRACT-020 generically; mission AGENTS.md explicitly clarifies asset-parameterized view signatures for balances as the intended pattern."
+    }
+  ],
+  "addressesFailureFrom": "/Users/maxmohammadi/cash-orderbook/.factory/validation/contracts/scrutiny/reviews/contract-views-fees-edge-cases.json",
+  "summary": "Reviewed fix-contract-fees-delegation (commit 1e034fb) against the prior failed review and both relevant diffs. Delegated place/cancel wiring is present and fee hooks were added, but fee charging remains blocking for buy flows because fees are debited from available quote while quote is pre-locked (especially market buys). Blocking issues remain, so this fix does not fully resolve the prior fee-integration failure."
+}

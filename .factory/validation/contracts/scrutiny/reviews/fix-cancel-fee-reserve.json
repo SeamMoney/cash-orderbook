@@ -1,0 +1,33 @@
+{
+  "featureId": "fix-cancel-fee-reserve",
+  "reviewedAt": "2026-03-31T01:24:44Z",
+  "commitId": "321d231",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The fix addresses the original obvious gap (bid cancel now includes fee reserve), but it does not reliably release the true locked amount when fee config changes after order placement. Because cancel recomputes reserve from current bps instead of the amount originally locked, cancellation can under-unlock (stranded funds) or over-unlock and abort.",
+    "issues": [
+      {
+        "file": "contracts/sources/cancel.move",
+        "line": 124,
+        "severity": "blocking",
+        "description": "Bid cancel computes `fee_reserve` using current `fees::calculate_max_fee(quote_principal)` and unlocks `quote_principal + fee_reserve`, but lock sizing was done at placement-time bps (`order_placement.move:145,149`) and fees are admin-mutable (`fees.move:92`). If bps change before cancel, this amount can be wrong: lower bps strands funds, higher bps can make `unlock_balance` abort on `locked >= amount` (`accounts.move:158`). This violates the feature's full-unlock/no-stranded-funds guarantee."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "move-worker guidance does not explicitly require testing state transitions across mutable config changes (e.g., order placement under one fee config, cancel under another), which is critical for lock/unlock accounting fixes.",
+      "evidence": ".factory/skills/move-worker/SKILL.md procedure is generic; new cancel regression tests in contracts/sources/cancel.move (update_fee_config at lines 555/604/648/713/757) set fees before placement but do not cover fee updates between placement and cancel."
+    },
+    {
+      "area": "conventions",
+      "observation": "Shared mission/library docs do not record an invariant for lock accounting that depends on mutable protocol parameters (store exact per-order locked amount vs recomputation).",
+      "evidence": Mission AGENTS and .factory/library/architecture.md describe configurable fees/admin updates but do not document a required pattern for preserving exact unlock semantics when parameters change."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/contracts/scrutiny/reviews/fix-fee-lock-accounting.json",
+  "summary": "I reviewed the prior failed feature (82c1aa0) and this fix commit (321d231), plus handoffs/transcript skeleton. The prior blocking principal-only cancel issue is improved, but the new implementation is still blocking under fee-config changes because cancel recomputes reserve from current fees rather than the originally locked amount. Result: fail."
+}

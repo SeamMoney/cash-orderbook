@@ -1,0 +1,154 @@
+{
+  "milestone": "contracts",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "cd /Users/maxmohammadi/cash-orderbook && pnpm -r test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "cd /Users/maxmohammadi/cash-orderbook && pnpm -r typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "cd /Users/maxmohammadi/cash-orderbook && pnpm -r lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 7,
+    "passed": 2,
+    "failed": 5,
+    "failedFeatures": [
+      "monorepo-scaffold",
+      "contract-core-types-accounts",
+      "contract-market-admin",
+      "contract-order-placement",
+      "contract-views-fees-edge-cases"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "monorepo-scaffold",
+      "severity": "blocking",
+      "description": "web/package.json uses next ^15.3.0 while the feature contract requires Next.js 16."
+    },
+    {
+      "featureId": "contract-core-types-accounts",
+      "severity": "blocking",
+      "description": "contracts/sources/types.move is missing the required OrderBook key resource in the reviewed commit."
+    },
+    {
+      "featureId": "contract-market-admin",
+      "severity": "blocking",
+      "description": "register_market storage shape diverges from feature contract (expected ProtocolState pair_id->address mapping, implemented separate MarketRegistry with pair_id->Market)."
+    },
+    {
+      "featureId": "contract-market-admin",
+      "severity": "blocking",
+      "description": "register_market only creates OrderBook once; subsequent market registrations do not get isolated fresh orderbooks."
+    },
+    {
+      "featureId": "contract-order-placement",
+      "severity": "blocking",
+      "description": "IOC path cancels immediately without attempting fills, violating IOC partial-fill-then-cancel-remainder semantics."
+    },
+    {
+      "featureId": "contract-order-placement",
+      "severity": "blocking",
+      "description": "Market orders lock/unlock and emit events but do not match against opposing liquidity."
+    },
+    {
+      "featureId": "contract-order-placement",
+      "severity": "blocking",
+      "description": "FOK success path can rest orders on book instead of filling atomically or aborting."
+    },
+    {
+      "featureId": "contract-order-placement",
+      "severity": "blocking",
+      "description": "order_type is not validated at entry boundary, allowing unsupported values."
+    },
+    {
+      "featureId": "contract-views-fees-edge-cases",
+      "severity": "blocking",
+      "description": "Trade settlement path does not integrate maker/taker fee deductions and fee vault collection when fees are non-zero."
+    },
+    {
+      "featureId": "contract-views-fees-edge-cases",
+      "severity": "blocking",
+      "description": "Delegated subaccount authorization is not wired into place-order entry paths."
+    },
+    {
+      "featureId": "contract-views-fees-edge-cases",
+      "severity": "blocking",
+      "description": "Delegated subaccount authorization is not wired into cancel-order entry path."
+    },
+    {
+      "featureId": "contract-views-fees-edge-cases",
+      "severity": "blocking",
+      "description": "get_user_balances public view signature diverges from the feature contract API shape."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "services.yaml",
+      "description": "Added commands.deploy-testnet = 'bash scripts/deploy-testnet.sh' so the new deployment workflow is available as shared operational command.",
+      "sourceFeature": "testnet-testcash-deploy"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": ".factory/skills/move-worker/SKILL.md",
+      "suggestion": "Add an explicit cross-module integration checkpoint: when adding new modules (fees/subaccounts), require verification that existing entry/settlement flows call into them before marking feature complete.",
+      "evidence": "contract-views-fees-edge-cases added modules but settlement had no fees integration and entry/cancel flows had no delegation hook.",
+      "isSystemic": true
+    },
+    {
+      "target": ".factory/skills/move-worker/SKILL.md",
+      "suggestion": "Clarify Move testing gotchas: timestamp::set_time_has_started_for_testing requires @0x1 signer; add a short recipe to avoid repeated trial-and-error.",
+      "evidence": "contract-order-placement review and handoff feedback flagged this repeatedly.",
+      "isSystemic": false
+    },
+    {
+      "target": ".factory/skills/move-worker/SKILL.md",
+      "suggestion": "Add guidance for friend declarations and cross-module visibility constraints in Move to reduce compile-debug loops during modular feature work.",
+      "evidence": "contract-views-fees-edge-cases handoff feedback requested this after integration friction.",
+      "isSystemic": false
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Resolve market-scope guidance conflict by explicitly stating whether this mission is single-market CASH/USDC only or multi-market, and align AGENTS.md with .factory/library/architecture.md.",
+      "evidence": "Reviews found AGENTS.md language implying multi-pair support while architecture.md states single market.",
+      "isSystemic": true
+    },
+    {
+      "target": ".factory/skills/move-worker/SKILL.md",
+      "suggestion": "Tighten tests-first procedure wording or enforcement to match observed worker behavior, since multiple completed features implemented code before red-phase tests.",
+      "evidence": "Repeated observation across contract-order-placement, contract-matching-settlement, and testnet-testcash-deploy reviews.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "move-worker skill lacks a note about exposing #[test_only] init_module_for_test helpers",
+      "reason": "covered by broader recommended skill update on Move testing/integration guidance"
+    },
+    {
+      "observation": "move-worker skill lacks note about returning references borrowed from global storage",
+      "reason": "ambiguous as universal guidance without a concrete reproducible pattern in current contract code; defer to targeted skill maintenance"
+    },
+    {
+      "observation": "Feature contract sequencing ambiguity around contract-order-placement matching dependency",
+      "reason": "belongs to mission planning artifact (features.json), not AGENTS/services/library; tracked via blocking review findings instead"
+    },
+    {
+      "observation": "Duplicate tests-first process drift reports from multiple reviews",
+      "reason": "duplicate"
+    }
+  ],
+  "previousRound": null
+}
