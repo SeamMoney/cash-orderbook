@@ -1,0 +1,33 @@
+{
+  "featureId": "fix-indexer-ws-live",
+  "reviewedAt": "2026-03-31T02:47:24Z",
+  "commitId": "37d747c8a61f0df4e1881c00a8a9ac4d0f143eb8",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The fix resolves prior no-op polling and WS/runtime wiring gaps, but a remaining event-ordering bug still causes incorrect live depth on full fills, so prior blocking correctness is not fully addressed.",
+    "issues": [
+      {
+        "file": "api/src/indexer/event-indexer.ts",
+        "line": 137,
+        "severity": "blocking",
+        "description": "Events are polled and applied by type in fixed order, with `settlement::OrderFilled` listed before `settlement::TradeEvent` (lines 37-38). `OrderbookState.processOrderFilled()` deletes fully filled orders (api/src/state/orderbook-state.ts:401), while `processTrade()` only decrements depth if maker order still exists (api/src/state/orderbook-state.ts:344,350). In live polling, full-fill makers can be deleted before trade processing, so depth is not decremented/removed and orderbook deltas may be missed."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The backend-worker skill prescribes tests-first and manual runtime verification, but transcript shows implementation edits before new tests and no manual ws/curl runtime checks; handoff still reports followedProcedure=true.",
+      "evidence": "Transcript skeleton shows multiple Edit calls to api/src/state/orderbook-state.ts, api/src/indexer/event-indexer.ts, api/src/websocket/ws-server.ts, and api/src/ws.ts before Create calls for new test files; verification only lists automated pnpm test/typecheck commands."
+    },
+    {
+      "area": "knowledge",
+      "observation": "Shared guidance does not explicitly document a required invariant for Aptos polling-by-event-type flows: cross-type events must be merged or handlers must be order-independent by transaction/version to avoid state drift.",
+      "evidence": "Current implementation processes each event type in a separate loop (api/src/indexer/event-indexer.ts:137) and exhibits order-dependent behavior in state mutation (api/src/state/orderbook-state.ts:344-401)."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/backend/scrutiny/reviews/api-indexer-rest.json, .factory/validation/backend/scrutiny/reviews/api-websocket-ratelimit.json",
+  "summary": "This fix successfully adds real RPC polling and WS-to-state wiring, addressing major parts of both prior failures. However, a blocking ordering defect remains in live event application (OrderFilled handled before TradeEvent), which can leave full-fill depth stale and prevents full closure of the original indexer/state correctness failure."
+}

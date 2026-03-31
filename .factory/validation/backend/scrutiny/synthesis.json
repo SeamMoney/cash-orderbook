@@ -1,6 +1,6 @@
 {
   "milestone": "backend",
-  "round": 1,
+  "round": 2,
   "status": "fail",
   "validatorsRun": {
     "test": {
@@ -20,83 +20,50 @@
     }
   },
   "reviewsSummary": {
-    "total": 3,
+    "total": 2,
     "passed": 0,
-    "failed": 3,
+    "failed": 2,
     "failedFeatures": [
-      "sdk-core",
-      "api-indexer-rest",
-      "api-websocket-ratelimit"
+      "fix-sdk-build-api",
+      "fix-indexer-ws-live"
     ]
   },
   "blockingIssues": [
     {
-      "featureId": "sdk-core",
+      "featureId": "fix-sdk-build-api",
       "severity": "blocking",
-      "description": "SDK build output does not provide required dual-module ESM + CJS artifacts; package exports only ESM/types."
+      "description": "SDK dual-module packaging is still broken for CommonJS consumers: package is `type: module` while `exports.require` points to `dist/cjs/index.js`, and `require('/Users/maxmohammadi/cash-orderbook/sdk')` fails at runtime."
     },
     {
-      "featureId": "sdk-core",
+      "featureId": "fix-indexer-ws-live",
       "severity": "blocking",
-      "description": "SDK `getBalances` API does not match feature contract (`getBalances(address)`); implementation requires extra asset metadata arguments."
-    },
-    {
-      "featureId": "api-indexer-rest",
-      "severity": "blocking",
-      "description": "Event indexer polling path is effectively unimplemented (`processEventType` no-op), so runtime does not ingest on-chain events as required."
-    },
-    {
-      "featureId": "api-indexer-rest",
-      "severity": "blocking",
-      "description": "Orderbook depth reconciliation can drift on partial fills because order placement adds original quantity while fill handling does not decrement depth appropriately."
-    },
-    {
-      "featureId": "api-indexer-rest",
-      "severity": "blocking",
-      "description": "Balance cache is not reconciled on trade/fill events, which can leave `/balances` stale after fills."
-    },
-    {
-      "featureId": "api-websocket-ratelimit",
-      "severity": "blocking",
-      "description": "WebSocket runtime is not wired to live indexed event/state flow; orderbook/trade/account channel updates are not emitted from real runtime activity."
+      "description": "Indexer applies event types in fixed order with `OrderFilled` before `TradeEvent`; full-fill maker orders can be deleted before trade reconciliation, causing stale depth and missed orderbook deltas."
     }
   ],
-  "appliedUpdates": [],
+  "appliedUpdates": [
+    {
+      "target": "library",
+      "description": "Added `.factory/library/backend-event-ordering.md` documenting the cross-event ordering invariant for per-type Aptos polling and why OrderFilled-before-TradeEvent can corrupt depth reconciliation.",
+      "sourceFeature": "fix-indexer-ws-live"
+    }
+  ],
   "suggestedGuidanceUpdates": [
     {
-      "target": "skills/backend-worker",
-      "suggestion": "Clarify and enforce test-first expectations: if workers implement before tests, they must mark `followedProcedure: false` with explicit deviation and rationale; optionally relax strict tests-first to 'tests in same change set' if that is accepted practice.",
-      "evidence": "All three backend reviews found transcript evidence of implementation before tests while handoffs marked `followedProcedure: true` (features: sdk-core, api-indexer-rest, api-websocket-ratelimit).",
-      "isSystemic": true
-    },
-    {
-      "target": "skills/backend-worker",
-      "suggestion": "Add concrete Aptos event polling implementation guidance/checklist (required API calls, pagination/cursor strategy, and expected data mapping) to prevent no-op indexer stubs.",
-      "evidence": "api-indexer-rest review found placeholder polling logic in `api/src/indexer/event-indexer.ts` where runtime event ingestion should occur.",
-      "isSystemic": false
-    },
-    {
       "target": "validation-contract.md",
-      "suggestion": "Add backend assertion coverage for SDK packaging requirements (dual ESM + CJS outputs and require/import compatibility) when a feature contract states that requirement.",
-      "evidence": "sdk-core review found missing ESM+CJS artifact requirement despite passing VAL-BACKEND-001..005 behavior assertions.",
+      "suggestion": "When feature scope includes dual ESM/CJS packaging, add an explicit runtime compatibility check for both `import` and `require` (not just build artifact presence).",
+      "evidence": "Round-2 review of fix-sdk-build-api still found `require` failure despite passing test/typecheck/lint and dual-output build commands.",
       "isSystemic": true
-    },
-    {
-      "target": "AGENTS.md",
-      "suggestion": "Add explicit commit-scoping guidance to avoid unrelated file changes in feature commits unless justified and documented in handoff.",
-      "evidence": "sdk-core review noted unrelated frontend config file changes bundled with SDK feature commit.",
-      "isSystemic": false
     }
   ],
   "rejectedObservations": [
     {
-      "observation": "backend-worker tests-first deviation noted in api-indexer-rest review",
+      "observation": "backend-worker tests-first deviation noted in fix-sdk-build-api review",
       "reason": "duplicate"
     },
     {
-      "observation": "backend-worker tests-first deviation noted in api-websocket-ratelimit review",
+      "observation": "backend-worker tests-first/manual-runtime verification deviation noted in fix-indexer-ws-live review",
       "reason": "duplicate"
     }
   ],
-  "previousRound": null
+  "previousRound": ".factory/validation/backend/scrutiny/synthesis.round1.json"
 }

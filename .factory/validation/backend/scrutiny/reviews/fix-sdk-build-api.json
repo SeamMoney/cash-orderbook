@@ -1,0 +1,33 @@
+{
+  "featureId": "fix-sdk-build-api",
+  "reviewedAt": "2026-03-31T02:47:13Z",
+  "commitId": "c36c9be",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The fix correctly changes `getBalances` to `getBalances(address)` and adds dual build artifacts, but the CJS path is not actually consumable via `require`, so the original packaging failure is not fully resolved.",
+    "issues": [
+      {
+        "file": "sdk/package.json",
+        "line": 5,
+        "severity": "blocking",
+        "description": "Package remains `\"type\": \"module\"` while the `require` export points to `./dist/cjs/index.js` (a `.js` file). In Node runtime this CJS entry is treated as ESM context and `require('/Users/maxmohammadi/cash-orderbook/sdk')` fails (`MODULE_NOT_FOUND: Cannot find module './client.js'` from `file:///.../dist/cjs/index.js`). This does not satisfy expected behavior that exports resolve for both `import` and `require`."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Backend worker procedure says tests should be written first and run in failing state, but the fix transcript shows baseline passing tests before edits and no red-phase run; handoff still marks `followedProcedure: true`.",
+      "evidence": "Skill requirement: .factory/skills/backend-worker/SKILL.md:28 and :34. Transcript skeleton entry for workerSessionId 1fa394ce... (worker-transcripts.jsonl:23) shows `cd .../sdk && pnpm test` before implementation and then direct edits. Handoff marks `\"followedProcedure\": true` in mission handoff file line 61."
+    },
+    {
+      "area": "conventions",
+      "observation": "Feature expectations require import/require resolution correctness, but prescribed verification only checks build output existence and tests/typecheck, so module-format regressions can pass feature verification.",
+      "evidence": "Feature contract in mission features.json includes `Package exports resolve correctly for import and require` (line 751), while verification steps list only build/test/typecheck commands (lines 756-758) with no runtime `require` smoke check."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/backend/scrutiny/reviews/sdk-core.json",
+  "summary": "Fix review result: fail. The API signature issue from sdk-core is addressed, but the dual ESM/CJS packaging fix is incomplete because CommonJS consumption via `require` still fails at runtime, so the original failure is only partially resolved."
+}
