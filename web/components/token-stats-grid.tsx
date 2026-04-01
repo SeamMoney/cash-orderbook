@@ -26,7 +26,7 @@ interface StatItemProps {
 /** A single stat item with label and value. */
 function StatItem({ label, value, loading }: StatItemProps): React.ReactElement {
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div>
       <p className="text-xs text-muted-foreground mb-2">{label}</p>
       {loading ? (
         <Skeleton className="h-5 w-20 rounded-md" />

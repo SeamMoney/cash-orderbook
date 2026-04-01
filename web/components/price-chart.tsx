@@ -77,7 +77,7 @@ export function PriceChart({
     : "rgba(255, 59, 48, 0.0)";
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div>
       {/* Chart type toggle + Time range tabs */}
       <div className="mb-4 flex items-center justify-between">
         {/* Chart mode toggle */}

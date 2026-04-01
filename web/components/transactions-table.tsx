@@ -159,7 +159,7 @@ export function TransactionsTable({
   });
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div>
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-medium text-white">Transactions</h3>

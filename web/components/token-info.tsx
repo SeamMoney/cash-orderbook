@@ -46,7 +46,7 @@ export function TokenInfo(): React.ReactElement {
   const explorerUrl = `${EXPLORER_BASE}/${CONTRACT_ADDRESS}${NETWORK_PARAM}`;
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div>
       <h3 className="mb-3 text-sm font-medium text-white">Token Info</h3>
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">

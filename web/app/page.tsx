@@ -80,11 +80,11 @@ export default function Home(): React.ReactElement {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
-        className="mx-auto w-full max-w-[1280px] flex-1 px-3 py-4 sm:px-4 md:px-6 md:py-6"
+        className="mx-auto w-full max-w-[1200px] flex-1 px-5 xl:px-10 mt-8 pb-12"
       >
-        <div className="flex flex-col md:flex-row md:gap-6 lg:gap-8">
+        <div className="flex flex-col xl:flex-row gap-20">
           {/* Left Column (~65%) — Token Info + Chart + Stats + Transactions */}
-          <div className="w-full md:w-[65%] space-y-4 md:space-y-6">
+          <div className="flex-1 min-w-0 space-y-4 md:space-y-6">
             {/* Token Header */}
             <TokenHeader
               price={displayPrice}
@@ -102,7 +102,7 @@ export default function Home(): React.ReactElement {
             <TokenStatsGrid market={market} loading={marketLoading} />
 
             {/* Swap Widget — shown inline on mobile, hidden on desktop (shown in right column) */}
-            <div className="md:hidden">
+            <div className="xl:hidden">
               <SwapWidget />
             </div>
 
@@ -114,8 +114,8 @@ export default function Home(): React.ReactElement {
           </div>
 
           {/* Right Column (~35%) — Sticky Swap Widget (desktop only) */}
-          <div className="hidden md:block md:w-[35%]">
-            <div className="md:sticky md:top-[72px]">
+          <div className="hidden xl:block w-[360px] flex-shrink-0">
+            <div className="sticky top-[72px]">
               <SwapWidget />
             </div>
           </div>
