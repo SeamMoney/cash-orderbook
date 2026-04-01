@@ -1,0 +1,87 @@
+{
+  "groupId": "rerun-font-chart",
+  "testedAt": "2026-04-01T09:12:05.416694+00:00",
+  "isolation": {
+    "appUrl": "http://localhost:3102",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-TYPE-001",
+      "title": "Proportional font for prices",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Open homepage and inspect swap amount input fields",
+          "expected": "Swap amount inputs use proportional sans font (not monospace)",
+          "observed": "Both swap inputs use class `font-sans` with computed `font-family: GeistSans, \"GeistSans Fallback\"`"
+        },
+        {
+          "action": "Inspect key price/value texts (price overlay + stats value)",
+          "expected": "Price/stat values use proportional sans font",
+          "observed": "Price overlay (`$0.000000`) and sampled stat/value texts use `font-sans` and computed GeistSans"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/rerun-font-chart/VAL-TYPE-001-font-evidence.png",
+          "layout-overhaul/rerun-font-chart/VAL-TYPE-001-font-evidence-annotated.png"
+        ],
+        "computedStyles": [
+          "layout-overhaul/rerun-font-chart/VAL-TYPE-001-computed-styles.json"
+        ],
+        "consoleErrors": "none",
+        "consoleEvidence": "layout-overhaul/rerun-font-chart/VAL-TYPE-001-console-errors.txt",
+        "network": "No additional API polling performed during rerun"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CHART-005",
+      "title": "Chart has no card border",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect chart section wrapper/container computed styles",
+          "expected": "Chart wrapper has no card border/background padding wrapper",
+          "observed": "Chart container chain shows borderless wrapper (`relative h-[356px] w-full overflow-hidden rounded-lg`) with computed border `0px`, background `transparent`, padding `0px`; parent wrappers are also borderless"
+        },
+        {
+          "action": "Capture visual evidence of chart area",
+          "expected": "No outer card border around chart section",
+          "observed": "Screenshot confirms chart flows directly in page layout without an outer bordered card wrapper"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/rerun-font-chart/VAL-CHART-005-chart-borderless.png",
+          "layout-overhaul/rerun-font-chart/VAL-CHART-005-chart-borderless-annotated.png"
+        ],
+        "computedStyles": [
+          "layout-overhaul/rerun-font-chart/VAL-CHART-005-computed-styles.json"
+        ],
+        "consoleErrors": "none",
+        "consoleEvidence": "layout-overhaul/rerun-font-chart/VAL-CHART-005-console-errors.txt",
+        "network": "No requests captured in agent-browser network log; structural style validated via computed styles"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Chart rendered in empty-data fallback state (`No chart data available`), but required borderless-wrapper assertion remained verifiable via computed styles.",
+      "resolved": true,
+      "resolution": "Validated wrapper/container styles directly (border/background/padding/class chain) instead of relying on live chart data.",
+      "affectedAssertions": [
+        "VAL-CHART-005"
+      ]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 2 rerun assertions; both passed. VAL-TYPE-001 confirmed swap/price/value typography is proportional (GeistSans). VAL-CHART-005 confirmed chart wrapper is borderless via computed style evidence."
+}
