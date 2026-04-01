@@ -1,0 +1,167 @@
+{
+  "groupId": "visual-uniswap-exact",
+  "testedAt": "2026-04-01T14:00:39.357182+00:00",
+  "isolation": {
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "appUrl": "http://localhost:3102",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "browserSession": "visual-uniswap-exact-79476079",
+    "scope": "Read-only visual validation for assigned assertions"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-FIX-002",
+      "title": "Page background and theme colors match Uniswap dark mode",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Open / at 1440px viewport and capture full-page screenshot",
+          "expected": "Dark theme baseline is visually Uniswap-style",
+          "observed": "Page renders dark theme and layout correctly in screenshot"
+        },
+        {
+          "action": "Run computed-style checks for body/background and border tokens",
+          "expected": "body #131313 and border token rgba(255,255,255,0.12)",
+          "observed": "bodyBackground=rgb(19,19,19); border samples include rgba(255,255,255,0.12)"
+        },
+        {
+          "action": "Inspect muted/secondary/surface-raised theme indicators",
+          "expected": "secondary ~white/65, muted ~white/38, surface-raised #393939, themed scrollbar",
+          "observed": "Explore button color white/65, Line toggle white/38, scrollbar thumb rule background rgb(57,57,57)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "uniswap-exact-match/visual-uniswap-exact/VAL-FIX-002-theme-colors.png"
+        ],
+        "consoleErrors": "Repeated fetch errors: HTTP 429 Too Many Requests from localhost:3100 endpoints during session",
+        "network": "Observed GET /market and GET /depth from http://localhost:3100; repeated 429 responses surfaced in console"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-FIX-003",
+      "title": "All component text colors use Uniswap neutral tokens",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Capture page screenshot including nav, stats, table header, breadcrumb, and links",
+          "expected": "Neutral token usage visible across sections",
+          "observed": "All required sections rendered and visible for inspection"
+        },
+        {
+          "action": "Measure computed text colors on key labels/tabs/links",
+          "expected": "text-white/65 for secondary labels and text-white/38 for inactive muted toggles",
+          "observed": "Explore, Tokens, Market cap, table headers, Explorer/Website all compute to white/65; Line/1H/1W compute to white/38"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "uniswap-exact-match/visual-uniswap-exact/VAL-FIX-003-text-color-tokens.png"
+        ],
+        "consoleErrors": "Repeated fetch errors: HTTP 429 Too Many Requests from localhost:3100 endpoints during session",
+        "network": "GET /market and GET /depth requests observed while validating token detail sections"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-FIX-004",
+      "title": "Swap widget matches Uniswap swap component exactly",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Measure swap widget dimensions/typography",
+          "expected": "Input sections min-h 120px+, amount input >=28px, CTA 56px tall at 17px",
+          "observed": "Input containers minHeight=120px; amount input fontSize=28px; Connect Wallet button box=342x56 and font=17px"
+        },
+        {
+          "action": "Validate hover/focus border and arrow hover behavior",
+          "expected": "Hover border #242424, focus-within border white/12, arrow hover opacity change without scale",
+          "observed": "Container hover border rgb(36,36,36); focus border white/12; arrow hover opacity ~0.80 with transform none"
+        },
+        {
+          "action": "Check tab spacing and token icon sizing",
+          "expected": "Tab bar margin-bottom 12px and selector icon 24px",
+          "observed": "Tab bar marginBottom=12px; USD1 token avatar child measures 24x24"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "uniswap-exact-match/visual-uniswap-exact/VAL-FIX-004-swap-widget.png"
+        ],
+        "consoleErrors": "Repeated fetch errors: HTTP 429 Too Many Requests from localhost:3100 endpoints during session",
+        "network": "GET /market and GET /depth observed while swap panel rendered"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-FIX-005",
+      "title": "Section spacing, breadcrumbs, and typography details correct",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Validate spacing and typography via computed layout/style checks",
+          "expected": "Section spacing 24-40px, breadcrumb chevron SVG, breadcrumb 15px, description 19px, link pill 17px white/65",
+          "observed": "Left-column spacing class is space-y-6 md:space-y-10 and measured section gaps are 40px for major sections; breadcrumb includes SVG chevron at 15px text; description is 19px; link pill is 17px white/65"
+        },
+        {
+          "action": "Validate md breakpoint horizontal padding switch",
+          "expected": "Main content padding x changes at 768px (md)",
+          "observed": "At 767px main padding is 20px; at 768px main padding is 40px"
+        },
+        {
+          "action": "Validate transaction table row padding py-3.5",
+          "expected": "Renderable transaction rows expose py-3.5 row spacing",
+          "observed": "Table remained in 'No recent transactions' empty state; only empty-state cell padding (48px) was measurable"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "uniswap-exact-match/visual-uniswap-exact/VAL-FIX-005-spacing-breadcrumb-typography.png",
+          "uniswap-exact-match/visual-uniswap-exact/VAL-FIX-005-md-breakpoint-768.png"
+        ],
+        "consoleErrors": "Repeated fetch errors: HTTP 429 Too Many Requests from localhost:3100 endpoints during session",
+        "network": "Only GET /market and GET /depth observed; no transaction payloads surfaced for row-level validation"
+      },
+      "issues": "Blocked by missing transaction-row prerequisite (persistent API rate limiting/empty transaction feed prevented row padding verification)."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Local API repeatedly returned HTTP 429, leaving transactions empty and causing frequent console noise during otherwise visual checks.",
+      "resolved": false,
+      "resolution": "N/A",
+      "affectedAssertions": [
+        "VAL-FIX-002",
+        "VAL-FIX-003",
+        "VAL-FIX-004",
+        "VAL-FIX-005"
+      ]
+    },
+    {
+      "description": "`agent-browser errors` output intermittently included repeated 'Unexpected token \"P\"' parsing messages, while `agent-browser console` provided usable diagnostics.",
+      "resolved": true,
+      "resolution": "Used `agent-browser console` as primary console evidence source.",
+      "affectedAssertions": [
+        "VAL-FIX-002",
+        "VAL-FIX-003",
+        "VAL-FIX-004",
+        "VAL-FIX-005"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Transaction table had no real trade rows due repeated API 429/empty feed, preventing direct verification of py-3.5 row padding.",
+      "affectedAssertions": [
+        "VAL-FIX-005"
+      ],
+      "quickFixAttempted": "Retried through normal page interactions and responsive viewport checks; table remained in empty state."
+    }
+  ],
+  "summary": "Tested 4 assertions: 3 passed (VAL-FIX-002/003/004), 1 blocked (VAL-FIX-005 row-padding sub-check blocked by missing transaction rows under persistent API 429 conditions)."
+}
