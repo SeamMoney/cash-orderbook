@@ -1,0 +1,65 @@
+{
+  "milestone": "testnet-deploy",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "pnpm -r test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm -r typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm -r lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 2,
+    "passed": 0,
+    "failed": 2,
+    "failedFeatures": [
+      "contract-decimal-flexibility",
+      "testnet-deploy-and-seed"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "contract-decimal-flexibility",
+      "severity": "blocking",
+      "description": "register_market accepts caller-provided quote_decimals and only range-checks it (1..18) without validating against quote asset metadata decimals, allowing mismatched market metadata and incorrect client-side price encoding."
+    },
+    {
+      "featureId": "testnet-deploy-and-seed",
+      "severity": "blocking",
+      "description": "Default deploy-testnet-full seeding uses REFERENCE_PRICE=0.0001 with PRICE_SCALE rounding, collapsing intended ladder levels into duplicate prices; recorded output shows only 2 bid levels and 1 ask level instead of the expected 10/10 depth."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "skills",
+      "suggestion": "Update .factory/skills/move-worker/SKILL.md to remove fixed 6-decimal quote assumptions and add explicit guidance for validating quote_decimals against on-chain asset metadata.",
+      "evidence": "Review of contract-decimal-flexibility flagged stale guidance in move-worker skill (fixed USDC=6 assumptions) and handoff feedback requested this update.",
+      "isSystemic": true
+    },
+    {
+      "target": "skills",
+      "suggestion": "Extend backend-worker (or add a deployment-focused variant) with Aptos testnet deployment runbook steps, seeding verification criteria, and required explorer evidence capture.",
+      "evidence": "Review of testnet-deploy-and-seed and worker handoff feedback showed current backend-worker guidance is API/SDK-focused and underspecified for deployment-heavy tasks.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Document in library that UserBalances.usdc is currently the generic quote bucket and remains USDC-scaled in SDK internals.",
+      "reason": "Rejected for now: this should be resolved in code (non-blocking review issue) rather than codified as durable guidance before the quote-balance model is corrected."
+    }
+  ],
+  "previousRound": null
+}

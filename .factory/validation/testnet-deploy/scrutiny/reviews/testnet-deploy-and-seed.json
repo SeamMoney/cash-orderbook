@@ -1,0 +1,39 @@
+{
+  "featureId": "testnet-deploy-and-seed",
+  "reviewedAt": "2026-04-01T00:56:54Z",
+  "commitId": "9f5198b",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature successfully introduced deployment tooling and testnet execution evidence, but the default seeding behavior does not satisfy the expected 10-bid/10-ask level outcome due to price rounding collapse at the configured default reference price.",
+    "issues": [
+      {
+        "file": "scripts/src/deploy-testnet-full.ts",
+        "line": 65,
+        "severity": "blocking",
+        "description": "Default `REFERENCE_PRICE` is `0.0001`, and generated prices are rounded to `PRICE_SCALE` precision (`Math.round(... * PRICE_SCALE) / PRICE_SCALE` at lines 277-278). This collapses intended ladder levels into duplicate prices at this scale; deployment evidence records only 2 bid levels + 1 ask level after seeding (`.factory/library/testnet-deployment.md:30-32`). That does not meet the feature expectation of seeding 10 bid + 10 ask levels."
+      },
+      {
+        "file": "scripts/src/seed-orderbook.ts",
+        "line": 219,
+        "severity": "non_blocking",
+        "description": "The USD1-capable seeding script still hardcodes quote balance/messages as USDC (`balances.usdc`, `Insufficient USDC`) at lines 219, 225-226, and 289. In USD1 (8-decimal) runs this is misleading for operators and can produce inaccurate balance warnings in the script output."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The assigned `backend-worker` skill is primarily API/SDK/TDD-focused and does not explicitly cover deployment-heavy workflows (Aptos profile creation, faucet funding, chunked publish, explorer evidence collection) required by this feature.",
+      "evidence": "Handoff skillFeedback includes a suggested change requesting a deployment-oriented skill variant (handoffs/2026-04-01T00-54-06-839Z__testnet-deploy-and-seed__c62d0186-d87f-4a61-889f-293ba318979a.json, lines 84-88)."
+    },
+    {
+      "area": "knowledge",
+      "observation": "Shared state does not document that `UserBalances.usdc` currently acts as the generic quote bucket and remains USDC-scaled in SDK internals, which conflicts with USD1-primary workflows.",
+      "evidence": "`shared/src/index.ts:211-213` defines balances as `{ cash, usdc }`; `sdk/src/client.ts:397-399` scales quote balances with `USDC_DECIMALS`; `scripts/src/seed-orderbook.ts:219,225-226` consumes this as USD1 seeding feedback."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review result: fail. Deployment artifacts and transaction evidence are present, but default deployment seeding currently does not realize 10 distinct bid/ask levels due to low default reference price with PRICE_SCALE rounding."
+}

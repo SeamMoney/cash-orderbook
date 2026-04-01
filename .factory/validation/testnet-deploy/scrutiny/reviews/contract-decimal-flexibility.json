@@ -1,0 +1,34 @@
+{
+  "featureId": "contract-decimal-flexibility",
+  "reviewedAt": "2026-04-01T00:57:55Z",
+  "commitId": "9e67813",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature adds quote_decimals plumbing and broad 8-decimal tests, but market registration trusts a caller-provided quote_decimals value without validating it against the actual quote asset metadata decimals, which can create misconfigured markets and incorrect client price encoding.",
+    "issues": [
+      {
+        "file": "contracts/sources/market.move",
+        "line": 98,
+        "severity": "blocking",
+        "description": "register_market only range-checks quote_decimals (1..18) and stores it, but never verifies it matches the quote asset's real metadata decimals. A mismatched value (e.g., passing 6 for an 8-decimal FA) will publish incorrect market metadata and can cause downstream clients to encode prices incorrectly. Evidence: range check at line 98 and immediate use of caller input at lines 101-116; no fungible_asset::decimals validation in this module."
+      },
+      {
+        "file": "contracts/sources/order_placement.move",
+        "line": 2432,
+        "severity": "non_blocking",
+        "description": "In test_8dec_gtc_limit_buy, comments say price is 2.0 USD1 and locked amount is 200 USD1, but the encoded test price is 2_000_000, which computes to 200_000_000 quote subunits (2 USD1 at 8 decimals). The assertion is correct for 2 USD1, but comments are inconsistent and can mislead future decimal-encoding changes."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The move-worker skill still states quote precision assumptions as fixed 6-decimal USDC/CASH, which is now stale after this feature introduced configurable quote_decimals.",
+      "evidence": ".factory/skills/move-worker/SKILL.md:37 ('CASH and USDC both have 6 decimals. PRICE_SCALE = 1_000_000.') and line 89 ('Unsure about decimal precision... USDC=6 decimals'). Handoff skillFeedback also flags this needed update."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed feature contract-decimal-flexibility (commit 9e67813) via handoff, transcript skeleton, skill, and diff. Core decimal support was added, but registration lacks a metadata-decimals consistency check, so this review is marked fail with one blocking issue."
+}
