@@ -89,7 +89,7 @@ export function TransactionsTable({
         accessorKey: "timestamp",
         header: "Time",
         cell: ({ getValue }) => (
-          <span className="text-text-secondary">{timeAgo(getValue<number>())}</span>
+          <span className="text-[#9B9B9B]">{timeAgo(getValue<number>())}</span>
         ),
         sortingFn: "basic",
       },
@@ -114,7 +114,7 @@ export function TransactionsTable({
         accessorKey: "price",
         header: "Price",
         cell: ({ getValue }) => (
-          <span className="font-mono text-white">{formatPrice(getValue<number>())}</span>
+          <span className="font-sans text-white">{formatPrice(getValue<number>())}</span>
         ),
         sortingFn: "basic",
       },
@@ -122,7 +122,7 @@ export function TransactionsTable({
         accessorKey: "quantity",
         header: "Amount",
         cell: ({ getValue }) => (
-          <span className="font-mono text-white">{formatAmount(getValue<number>())}</span>
+          <span className="font-sans text-white">{formatAmount(getValue<number>())}</span>
         ),
         sortingFn: "basic",
       },
@@ -138,7 +138,7 @@ export function TransactionsTable({
         cell: ({ getValue }) => {
           const addr = getValue<string | null>();
           return (
-            <span className="font-mono text-text-muted">
+            <span className="font-sans text-[#9B9B9B]">
               {addr ? truncateAddr(addr) : "—"}
             </span>
           );
@@ -161,9 +161,8 @@ export function TransactionsTable({
   return (
     <div>
       {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-white">Transactions</h3>
-        <span className="text-xs text-text-muted">Recent activity</span>
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold text-white">Transactions</h3>
       </div>
 
       {/* Table */}
@@ -174,7 +173,7 @@ export function TransactionsTable({
             {table.getHeaderGroups().map((headerGroup) => (
               <tr
                 key={headerGroup.id}
-                className="border-b border-border text-text-muted"
+                className="border-b border-border text-[#9B9B9B]"
               >
                 {headerGroup.headers.map((header) => (
                   <th

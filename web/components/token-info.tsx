@@ -1,19 +1,19 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Copy, Check, ExternalLink } from "lucide-react";
+import { Copy, Check, ExternalLink, Globe } from "lucide-react";
 import { CONTRACT_ADDRESS } from "@/lib/sdk";
 
 const EXPLORER_BASE = "https://explorer.aptoslabs.com/account";
 const NETWORK_PARAM = "?network=mainnet";
+const WEBSITE_URL = "https://github.com/nicholasgasior/cash-orderbook";
+
+const TOKEN_DESCRIPTION =
+  "CASH is a token on the Aptos blockchain powering the CASH Orderbook, a high-performance Central Limit Order Book (CLOB) for zero-slippage trading.";
 
 /**
- * TokenInfo — displays the contract address with copy-to-clipboard and explorer link.
- *
- * Features:
- * - Truncated contract address
- * - Copy button with "Copied!" feedback
- * - Link to Aptos Explorer (opens in new tab)
+ * TokenInfo — About section with token description, contract address pill,
+ * and link pills for Explorer and Website.
  */
 export function TokenInfo(): React.ReactElement {
   const [copied, setCopied] = useState(false);
@@ -47,48 +47,55 @@ export function TokenInfo(): React.ReactElement {
 
   return (
     <div>
-      <h3 className="mb-3 text-sm font-medium text-white">Token Info</h3>
+      <h3 className="text-lg font-semibold text-white mb-3">About</h3>
+      <p className="text-sm text-[#9B9B9B] mb-4 leading-relaxed">
+        {TOKEN_DESCRIPTION}
+      </p>
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
-        {/* Contract Address */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-text-muted">Contract</span>
-          <span className="font-mono text-xs text-text-secondary">{truncated}</span>
-        </div>
+      {/* Link pills */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Contract pill with copy */}
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-[#1A1A1A] text-sm text-[#9B9B9B] transition-colors hover:bg-[#252525] hover:text-white"
+          title="Copy contract address"
+        >
+          {copied ? (
+            <>
+              <Check className="h-3.5 w-3.5 text-cash-green" />
+              <span className="text-cash-green">Copied!</span>
+            </>
+          ) : (
+            <>
+              <Copy className="h-3.5 w-3.5" />
+              <span>{truncated}</span>
+            </>
+          )}
+        </button>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2">
-          {/* Copy Button */}
-          <button
-            onClick={handleCopy}
-            className="flex items-center gap-1 rounded-lg px-2 py-2 min-h-[44px] text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text-secondary"
-            title="Copy contract address"
-          >
-            {copied ? (
-              <>
-                <Check className="h-3 w-3 text-cash-green" />
-                <span className="text-cash-green">Copied!</span>
-              </>
-            ) : (
-              <>
-                <Copy className="h-3 w-3" />
-                <span>Copy</span>
-              </>
-            )}
-          </button>
+        {/* Explorer pill */}
+        <a
+          href={explorerUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-[#1A1A1A] text-sm text-[#9B9B9B] transition-colors hover:bg-[#252525] hover:text-white"
+          title="View on Aptos Explorer"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          <span>Explorer</span>
+        </a>
 
-          {/* Explorer Link */}
-          <a
-            href={explorerUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 rounded-lg px-2 py-2 min-h-[44px] text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text-secondary"
-            title="View on Aptos Explorer"
-          >
-            <ExternalLink className="h-3 w-3" />
-            <span>Explorer</span>
-          </a>
-        </div>
+        {/* Website pill */}
+        <a
+          href={WEBSITE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-[#1A1A1A] text-sm text-[#9B9B9B] transition-colors hover:bg-[#252525] hover:text-white"
+          title="Visit website"
+        >
+          <Globe className="h-3.5 w-3.5" />
+          <span>Website</span>
+        </a>
       </div>
     </div>
   );

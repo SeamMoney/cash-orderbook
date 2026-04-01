@@ -27,11 +27,11 @@ interface StatItemProps {
 function StatItem({ label, value, loading }: StatItemProps): React.ReactElement {
   return (
     <div>
-      <p className="text-xs text-muted-foreground mb-2">{label}</p>
+      <p className="text-xs text-[#9B9B9B] mb-1">{label}</p>
       {loading ? (
         <Skeleton className="h-5 w-20 rounded-md" />
       ) : (
-        <p className="font-mono text-sm font-bold text-white">
+        <p className="font-sans text-sm font-medium text-white">
           {value ?? "--"}
         </p>
       )}
@@ -72,11 +72,14 @@ export function TokenStatsGrid({
   const totalSupply: string | null = null;
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:gap-4 sm:grid-cols-4">
-      <StatItem label="Market cap" value={marketCap} loading={loading} />
-      <StatItem label="24H volume" value={volume24h} loading={loading} />
-      <StatItem label="FDV" value={fdv} loading={loading} />
-      <StatItem label="Total supply" value={totalSupply} loading={loading} />
+    <div>
+      <h3 className="text-lg font-semibold text-white mb-4">Stats</h3>
+      <div className="flex flex-wrap gap-5">
+        <StatItem label="Market cap" value={marketCap} loading={loading} />
+        <StatItem label="24H volume" value={volume24h} loading={loading} />
+        <StatItem label="FDV" value={fdv} loading={loading} />
+        <StatItem label="Total supply" value={totalSupply} loading={loading} />
+      </div>
     </div>
   );
 }
