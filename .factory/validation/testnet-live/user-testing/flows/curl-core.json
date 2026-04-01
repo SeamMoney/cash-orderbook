@@ -1,0 +1,288 @@
+{
+  "groupId": "curl-core",
+  "testedAt": "2026-04-01T07:25:45Z",
+  "isolation": {
+    "surface": "curl/scripts only",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "repoRoot": "/Users/maxmohammadi/cash-orderbook",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "webUrl": "http://localhost:3102",
+    "sharedServicesModified": false
+  },
+  "toolsUsed": ["curl", "pnpm", "rg", "python3"],
+  "assertions": [
+    {
+      "id": "VAL-WALLET-001",
+      "title": "Testnet network configuration",
+      "status": "pass",
+      "reason": "wallet-provider.tsx sets ACTIVE_NETWORK to Network.TESTNET and uses it for wallet provider and derived wallet setup.",
+      "steps": [
+        {
+          "action": "Run rg for ACTIVE_NETWORK and Network.TESTNET in wallet-provider.tsx",
+          "expected": "Network.TESTNET is configured",
+          "observed": "Found const ACTIVE_NETWORK = Network.TESTNET and provider uses ACTIVE_NETWORK"
+        }
+      ],
+      "evidence": {
+        "files": [
+          "testnet-live/curl-core/VAL-WALLET-001-wallet-provider-rg.txt"
+        ],
+        "network": "n/a (source inspection)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-WALLET-005",
+      "title": "SDK uses testnet contract",
+      "status": "pass",
+      "reason": "web/lib/sdk.ts imports CONTRACT_ADDRESS from config.ts and builds payloads with that variable; web/.env.local sets testnet contract address and NEXT_PUBLIC_APTOS_NETWORK=testnet.",
+      "steps": [
+        {
+          "action": "Run rg in web/lib/sdk.ts for CONTRACT_ADDRESS/config usage",
+          "expected": "SDK uses config-derived contract address",
+          "observed": "CONTRACT_ADDRESS is assigned from ENV_CONTRACT_ADDRESS imported from @/lib/config"
+        },
+        {
+          "action": "Run rg in web/.env.local for NEXT_PUBLIC_APTOS_NETWORK and NEXT_PUBLIC_CONTRACT_ADDRESS",
+          "expected": "Environment points to testnet contract",
+          "observed": "NEXT_PUBLIC_APTOS_NETWORK=testnet and NEXT_PUBLIC_CONTRACT_ADDRESS set to deployed testnet address"
+        }
+      ],
+      "evidence": {
+        "files": [
+          "testnet-live/curl-core/VAL-WALLET-005-sdk-rg.txt",
+          "testnet-live/curl-core/VAL-WALLET-005-config-rg.txt",
+          "testnet-live/curl-core/VAL-WALLET-005-web-env-rg.txt"
+        ],
+        "network": "n/a (source inspection)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SEED-001",
+      "title": "Deep ask-side liquidity",
+      "status": "pass",
+      "reason": "API depth response shows ask-side notional > $5,000 (observed ~202,100 USD1) with many levels.",
+      "steps": [
+        {
+          "action": "Fetch GET /depth with retry/backoff and save successful 200 JSON",
+          "expected": "Populated asks suitable for deep liquidity validation",
+          "observed": "Asks populated with 21 levels and large quantities"
+        },
+        {
+          "action": "Compute ask notional from depth JSON",
+          "expected": "Ask notional >= 5000 USD1",
+          "observed": "ask_notional_usd1=202100.103525"
+        }
+      ],
+      "evidence": {
+        "files": [
+          "testnet-live/curl-core/depth-200.json",
+          "testnet-live/curl-core/depth-metrics.txt",
+          "testnet-live/curl-core/depth-retry-attempts.txt"
+        ],
+        "network": "GET /depth -> intermittent 429/200; 200 responses returned populated asks"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SEED-002",
+      "title": "Deep bid-side liquidity",
+      "status": "pass",
+      "reason": "API depth response shows bid-side notional > $5,000 (observed ~197,900 USD1) across multiple levels.",
+      "steps": [
+        {
+          "action": "Fetch GET /depth and parse bids",
+          "expected": "Populated bids",
+          "observed": "20 bid levels present"
+        },
+        {
+          "action": "Compute bid notional from depth JSON",
+          "expected": "Bid notional >= 5000 USD1",
+          "observed": "bid_notional_usd1=197900.000000"
+        }
+      ],
+      "evidence": {
+        "files": [
+          "testnet-live/curl-core/depth-200.json",
+          "testnet-live/curl-core/depth-metrics.txt"
+        ],
+        "network": "GET /depth -> 200 with populated bids"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SEED-003",
+      "title": "Realistic spread",
+      "status": "fail",
+      "reason": "Best bid/ask from API depth are not within 0.5%; observed best_bid=0.09990000 and best_ask=0.00010100 (spread_percent=-99.898899).",
+      "steps": [
+        {
+          "action": "Fetch GET /depth and derive best bid/ask",
+          "expected": "Best bid/ask within 0.5%",
+          "observed": "Depth includes a very low ask level at 0.000101"
+        },
+        {
+          "action": "Calculate spread percent",
+          "expected": "|spread| <= 0.5%",
+          "observed": "spread_percent=-99.898899"
+        }
+      ],
+      "evidence": {
+        "files": [
+          "testnet-live/curl-core/depth-200.json",
+          "testnet-live/curl-core/depth-metrics.txt",
+          "testnet-live/curl-core/depth-post-buy-200.json",
+          "testnet-live/curl-core/depth-post-buy-metrics.txt"
+        ],
+        "network": "GET /depth -> 200 responses repeatedly include anomalous best ask"
+      },
+      "issues": "API /depth reports an anomalous ask level that makes spread unrealistic."
+    },
+    {
+      "id": "VAL-SEED-004",
+      "title": "Multiple price levels",
+      "status": "pass",
+      "reason": "Depth response shows at least 10 levels per side (observed 20 bid levels and 21 ask levels).",
+      "steps": [
+        {
+          "action": "Fetch GET /depth and count levels",
+          "expected": "At least 10 levels each side",
+          "observed": "bid_levels=20, ask_levels=21"
+        }
+      ],
+      "evidence": {
+        "files": [
+          "testnet-live/curl-core/depth-200.json",
+          "testnet-live/curl-core/depth-metrics.txt"
+        ],
+        "network": "GET /depth -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SETUP-001",
+      "title": "Demo wallet funded",
+      "status": "blocked",
+      "reason": "setup-demo-wallet script cannot complete because available deployer key is unauthorized for test_cash::mint_test_cash, and local Aptos config does not include cash-testnet profile required by script fallback.",
+      "steps": [
+        {
+          "action": "Run setup-demo-wallet without env key",
+          "expected": "Script loads deployer key and completes setup",
+          "observed": "Failed: no deployer private key available / missing cash-testnet profile"
+        },
+        {
+          "action": "Retry setup-demo-wallet with default profile key exported as APTOS_PRIVATE_KEY",
+          "expected": "Script funds, mints, deposits, and prints wallet details",
+          "observed": "Step 3 mint TestCASH aborts with E_UNAUTHORIZED and script exits"
+        }
+      ],
+      "evidence": {
+        "files": [
+          "testnet-live/curl-core/VAL-SETUP-001-002-setup-demo-wallet.txt",
+          "testnet-live/curl-core/VAL-SETUP-001-002-setup-demo-wallet-retry2.txt",
+          "testnet-live/curl-core/setup-key-prereq-check.txt"
+        ],
+        "network": "Script submitted initial testnet txs (APT transfer, USD1 mint) but failed before completion"
+      },
+      "issues": "Required authorized deployer credentials for TestCASH minting were not available in this isolation context."
+    },
+    {
+      "id": "VAL-SETUP-002",
+      "title": "USD1 deposited into orderbook",
+      "status": "blocked",
+      "reason": "Same blocker as VAL-SETUP-001; script exits at Step 3 before reaching Step 4 USD1 deposit.",
+      "steps": [
+        {
+          "action": "Execute setup-demo-wallet script",
+          "expected": "Script confirms USD1 deposit transaction",
+          "observed": "Script aborts during TestCASH mint with E_UNAUTHORIZED before deposit step"
+        }
+      ],
+      "evidence": {
+        "files": [
+          "testnet-live/curl-core/VAL-SETUP-001-002-setup-demo-wallet-retry2.txt",
+          "testnet-live/curl-core/setup-key-prereq-check.txt"
+        ],
+        "network": "No deposit confirmation emitted due earlier abort"
+      },
+      "issues": "Unable to reach deposit step because deployer authorization prerequisite failed."
+    },
+    {
+      "id": "VAL-DEMO-001",
+      "title": "API serves testnet depth",
+      "status": "pass",
+      "reason": "GET /depth returns populated bids/asks arrays with deep liquidity from testnet data.",
+      "steps": [
+        {
+          "action": "Call GET /depth with retries",
+          "expected": "Populated orderbook arrays",
+          "observed": "200 responses contain non-empty bids/asks arrays"
+        }
+      ],
+      "evidence": {
+        "files": [
+          "testnet-live/curl-core/depth-retry-attempts.txt",
+          "testnet-live/curl-core/depth-200.json",
+          "testnet-live/curl-core/VAL-DEMO-001-depth-response.txt"
+        ],
+        "network": "GET /depth -> intermittent 429, recovered to 200 with populated data"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-DEMO-003",
+      "title": "$1000 buy simulation fills",
+      "status": "pass",
+      "reason": "buy-simulation succeeded on testnet with verified fill and reported slippage 0.1000% (<5%).",
+      "steps": [
+        {
+          "action": "Run buy-simulation with testnet contract and exported APTOS_PRIVATE_KEY",
+          "expected": "Script executes market buy and verifies fill",
+          "observed": "Transaction succeeded and fill verified via trade events"
+        },
+        {
+          "action": "Check reported slippage",
+          "expected": "slippage < 5%",
+          "observed": "Slippage reported as 0.1000%"
+        }
+      ],
+      "evidence": {
+        "files": [
+          "testnet-live/curl-core/VAL-DEMO-003-buy-simulation.txt"
+        ],
+        "network": "On-chain tx 0x8f6294c3c1bc06198f05a3171291f7236eeab969591e185e373de54f1743025a (testnet)"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Local API /depth intermittently returned HTTP 429 RATE_LIMITED during validation.",
+      "resolved": true,
+      "resolution": "Applied 5-second backoff retries and used successful 200 responses for assertions.",
+      "affectedAssertions": ["VAL-SEED-001", "VAL-SEED-002", "VAL-SEED-003", "VAL-SEED-004", "VAL-DEMO-001"]
+    },
+    {
+      "description": "Mission guidance expects .aptos/config.yaml cash-testnet profile, but local config only had default profile.",
+      "resolved": false,
+      "resolution": "Exported default profile key for retries; this allowed buy-simulation but not admin-only setup-demo-wallet completion.",
+      "affectedAssertions": ["VAL-SETUP-001", "VAL-SETUP-002", "VAL-DEMO-003"]
+    },
+    {
+      "description": "Testnet faucet programmatic minting was unavailable.",
+      "resolved": true,
+      "resolution": "Used deployer APT transfer fallback where scripts support it.",
+      "affectedAssertions": ["VAL-SETUP-001", "VAL-DEMO-003"]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "setup-demo-wallet requires authorized TestCASH deployer key; available key failed with test_cash::mint_test_cash E_UNAUTHORIZED and no cash-testnet profile was present for fallback.",
+      "affectedAssertions": ["VAL-SETUP-001", "VAL-SETUP-002"],
+      "quickFixAttempted": "Retried script with exported default-profile APTOS_PRIVATE_KEY and confirmed profile metadata; script still failed before deposit step."
+    }
+  ],
+  "summary": "Tested 10 assigned curl/script assertions: 7 passed, 1 failed (VAL-SEED-003 unrealistic spread from /depth best ask anomaly), and 2 blocked (VAL-SETUP-001/002 due missing authorized deployer credentials for setup-demo-wallet)."
+}

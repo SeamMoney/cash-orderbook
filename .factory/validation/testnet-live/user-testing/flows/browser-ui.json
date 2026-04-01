@@ -1,0 +1,182 @@
+{
+  "groupId": "browser-ui",
+  "testedAt": "2026-04-01T07:24:20.200152+00:00",
+  "isolation": {
+    "surface": "agent-browser",
+    "session": "val-browser-ui-79476079",
+    "appUrl": "http://localhost:3102",
+    "milestone": "testnet-live",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-WALLET-002",
+      "title": "Polymarket-style login buttons",
+      "status": "pass",
+      "reason": "When disconnected, the top navbar displayed both 'Log In' and 'Sign Up' buttons.",
+      "steps": [
+        {
+          "action": "Open http://localhost:3102",
+          "expected": "Navbar shows Log In and Sign Up while disconnected",
+          "observed": "Navbar showed both Log In and Sign Up buttons"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "testnet-live/browser-ui/VAL-WALLET-002-navbar-disconnected.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Frontend polled GET http://localhost:3100/market and GET http://localhost:3100/depth"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-WALLET-003",
+      "title": "Connected wallet display",
+      "status": "blocked",
+      "reason": "No connectable wallet/credentials were available in the isolated browser; Aptos wallet options were install links and Google OAuth required external credentials.",
+      "steps": [
+        {
+          "action": "Click Log In in navbar",
+          "expected": "Connect wallet and return with connected state (truncated address + green pulse + badge)",
+          "observed": "Wallet modal opened with social buttons and Aptos install links only"
+        },
+        {
+          "action": "Attempt Continue with Google",
+          "expected": "Complete login and return connected",
+          "observed": "New tab opened to accounts.google.com sign-in requiring credentials not provided in isolation context"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "testnet-live/browser-ui/VAL-WALLET-003-connect-modal.png",
+          "testnet-live/browser-ui/VAL-WALLET-003-google-oauth-screen.png",
+          "testnet-live/browser-ui/VAL-WALLET-003-disconnected-after-oauth-attempt.png"
+        ],
+        "consoleErrors": "none",
+        "network": "OAuth redirect to https://accounts.google.com/... observed; no authenticated wallet session established"
+      },
+      "issues": "Blocked by missing provisioned wallet extension or social-login credentials in this validation environment."
+    },
+    {
+      "id": "VAL-WALLET-004",
+      "title": "USD1 balance in dropdown",
+      "status": "blocked",
+      "reason": "Wallet connection prerequisite could not be satisfied, so connected wallet dropdown (and USD1 balance line) was not reachable.",
+      "steps": [
+        {
+          "action": "Attempt to connect wallet from Log In modal",
+          "expected": "Connected dropdown opens and shows USD1 balance",
+          "observed": "Could not complete wallet authentication due missing wallet/credentials"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "testnet-live/browser-ui/VAL-WALLET-003-connect-modal.png",
+          "testnet-live/browser-ui/VAL-WALLET-003-google-oauth-screen.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Authentication flow could not be completed to reach dropdown state"
+      },
+      "issues": "Blocked by unavailable authenticated wallet connection in the assigned isolation context."
+    },
+    {
+      "id": "VAL-DEMO-002",
+      "title": "Frontend loads testnet data",
+      "status": "blocked",
+      "reason": "UI loaded CASH/USD1 surface, but backend market/depth endpoints repeatedly returned 429, preventing confirmation that displayed values came from live testnet orderbook data.",
+      "steps": [
+        {
+          "action": "Load frontend and inspect market surface",
+          "expected": "CASH/USD1 chart/depth/market info from testnet data",
+          "observed": "Frontend rendered CASH/USD1 UI and quote text, but data provenance could not be validated"
+        },
+        {
+          "action": "Run browser-side fetch checks for /market and /depth with retries",
+          "expected": "HTTP 200 with populated market/depth payloads",
+          "observed": "Three retry attempts over ~20s all returned marketStatus=429 and depthStatus=429"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "testnet-live/browser-ui/VAL-DEMO-002-frontend-testnet-view.png",
+          "testnet-live/browser-ui/VAL-DEMO-002-market-and-quote.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET http://localhost:3100/market and GET http://localhost:3100/depth observed repeatedly; browser eval retries returned 429 on both endpoints"
+      },
+      "issues": "Blocked by persistent API rate limiting (HTTP 429) during validation window."
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "title": "Wallet connect to testnet orderbook",
+      "status": "blocked",
+      "reason": "Could not complete wallet authentication (required for connected dropdown with USD1 balance), and /market-/depth endpoints were rate-limited during validation.",
+      "steps": [
+        {
+          "action": "Attempt wallet login flow",
+          "expected": "Wallet connects and navbar shows connected address",
+          "observed": "Authentication could not be completed in isolated session"
+        },
+        {
+          "action": "Enter amount in swap widget",
+          "expected": "Connected-wallet quote flow with testnet orderbook quote",
+          "observed": "Quote detail rendered (1 CASH = 0.049432 USD1) but session remained disconnected and backend market/depth checks returned 429"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "testnet-live/browser-ui/VAL-CROSS-001-swap-widget-after-amount.png",
+          "testnet-live/browser-ui/VAL-WALLET-003-connect-modal.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Repeated GET http://localhost:3100/market and GET http://localhost:3100/depth observed; direct browser fetch checks returned 429 for both"
+      },
+      "issues": "Blocked by two prerequisites: no authenticated wallet session and persistent API rate limiting."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Wallet social login opened external OAuth page requiring credentials not provided in isolation context.",
+      "resolved": false,
+      "resolution": "No safe in-scope resolution available; marked wallet-dependent assertions blocked.",
+      "affectedAssertions": [
+        "VAL-WALLET-003",
+        "VAL-WALLET-004",
+        "VAL-CROSS-001"
+      ]
+    },
+    {
+      "description": "Frontend aggressively polled /market and /depth, creating very large network logs and repeated 429 responses.",
+      "resolved": false,
+      "resolution": "Retried endpoint checks 3 times with backoff; 429 persisted.",
+      "affectedAssertions": [
+        "VAL-DEMO-002",
+        "VAL-CROSS-001"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "No provisioned connectable wallet (extension) or social-login credentials available in assigned browser isolation for completing authenticated wallet state.",
+      "affectedAssertions": [
+        "VAL-WALLET-003",
+        "VAL-WALLET-004",
+        "VAL-CROSS-001"
+      ],
+      "quickFixAttempted": "Opened Log In modal, checked Aptos tab (install-only links), attempted Google OAuth redirect; flow required external credentials."
+    },
+    {
+      "description": "API endpoints required to verify live testnet market/depth data returned HTTP 429 repeatedly.",
+      "affectedAssertions": [
+        "VAL-DEMO-002",
+        "VAL-CROSS-001"
+      ],
+      "quickFixAttempted": "Retried browser-side /market and /depth fetches three times over ~20s; all attempts remained 429."
+    }
+  ],
+  "summary": "Tested 5 assertions: 1 passed, 0 failed, 4 blocked (wallet-auth prerequisites and API 429 rate limiting)."
+}

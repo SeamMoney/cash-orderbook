@@ -1,0 +1,61 @@
+{
+  "milestone": "testnet-live",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 15,
+    "passed": 8,
+    "failed": 1,
+    "blocked": 6
+  },
+  "passedAssertions": [
+    "VAL-WALLET-001",
+    "VAL-WALLET-002",
+    "VAL-WALLET-005",
+    "VAL-SEED-001",
+    "VAL-SEED-002",
+    "VAL-SEED-004",
+    "VAL-DEMO-001",
+    "VAL-DEMO-003"
+  ],
+  "failedAssertions": [
+    {
+      "id": "VAL-SEED-003",
+      "reason": "Best ask from /depth was 0.000101 while best bid was 0.0999, producing a spread far outside the <=0.5% requirement."
+    }
+  ],
+  "blockedAssertions": [
+    {
+      "id": "VAL-WALLET-003",
+      "blockedBy": "No provisioned connectable wallet extension or social-login credentials in isolated browser environment."
+    },
+    {
+      "id": "VAL-WALLET-004",
+      "blockedBy": "Could not reach connected wallet dropdown because wallet authentication could not be completed."
+    },
+    {
+      "id": "VAL-SETUP-001",
+      "blockedBy": "setup-demo-wallet could not complete because available deployer identity was unauthorized for test_cash::mint_test_cash and cash-testnet profile fallback was unavailable."
+    },
+    {
+      "id": "VAL-SETUP-002",
+      "blockedBy": "setup-demo-wallet exited before USD1 deposit step after failing TestCASH mint authorization."
+    },
+    {
+      "id": "VAL-DEMO-002",
+      "blockedBy": "Repeated HTTP 429 responses from /market and /depth prevented confirmation of live testnet-backed frontend data."
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "blockedBy": "Wallet auth prerequisites were unavailable and /market-/depth returned persistent HTTP 429 during validation."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added testnet-live guidance for anomalous /depth low-ask spread failures and setup-demo-wallet deployer authorization prerequisites.",
+      "source": "flow-report"
+    }
+  ],
+  "previousRound": null
+}
