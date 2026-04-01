@@ -1,0 +1,170 @@
+{
+  "groupId": "stats-nav-activity",
+  "testedAt": "2026-04-01T08:57:25Z",
+  "isolation": {
+    "surface": "agent-browser",
+    "session": "flow-stats-nav-activity-79476079",
+    "appUrl": "http://localhost:3102/",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "readOnly": true
+  },
+  "toolsUsed": ["agent-browser"],
+  "assertions": [
+    {
+      "id": "VAL-STATS-001",
+      "title": "Flat stats layout",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Open app at http://localhost:3102/ and inspect Stats section at desktop viewport",
+          "expected": "Stats render as a flat flowing row without individual card borders",
+          "observed": "Stats values render inline under a single Stats heading with no card wrappers"
+        },
+        {
+          "action": "Check computed style of the section containing the Stats heading",
+          "expected": "No visible section/card border",
+          "observed": "Computed border is 0px solid with transparent background"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/stats-nav-activity/VAL-STATS-001-002-stats-section.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /market, GET /depth, GET /candles?interval=5m observed during page load/reload"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-STATS-002",
+      "title": "Stats section heading",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect section above stat values",
+          "expected": "Heading text 'Stats' appears above stats row",
+          "observed": "Heading 'Stats' is visible directly above Market cap/24H volume/FDV/Total supply"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/stats-nav-activity/VAL-STATS-001-002-stats-section.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /market present while stats values render"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-STATS-003",
+      "title": "About section",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Scroll to token info section",
+          "expected": "Section is named 'About' and includes token description",
+          "observed": "Section heading is 'About' and contains CASH description text"
+        },
+        {
+          "action": "Verify social/link pills in About section",
+          "expected": "Explorer and Website link pills are present",
+          "observed": "Explorer and Website pills are visible (plus contract/address pill)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/stats-nav-activity/VAL-STATS-003-about-section.png"
+        ],
+        "consoleErrors": "none",
+        "network": "UI remained responsive while API polling continued (GET /market, /trades, /candles)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-ACTIVITY-001",
+      "title": "Borderless transactions",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect Transactions section wrapper",
+          "expected": "No card border around transactions/activity section",
+          "observed": "Transactions heading/table area appears borderless (only table divider lines are present)"
+        },
+        {
+          "action": "Check computed styles around Transactions heading container",
+          "expected": "No card-style border",
+          "observed": "Computed border is 0px solid"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/stats-nav-activity/VAL-ACTIVITY-001-transactions-section.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /trades?limit=10 and GET /trades?limit=50 observed"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-NAV-001",
+      "title": "No pill animation on tabs",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect navbar Trade/Explore tab styling",
+          "expected": "Active tab indicated by color only, without animated pill background",
+          "observed": "Trade and Explore are plain text buttons; active state is color difference only"
+        },
+        {
+          "action": "Check computed styles for Trade/Explore buttons",
+          "expected": "Transparent backgrounds and no rounded-pill indicator",
+          "observed": "Both buttons have transparent background and 0px border radius"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/stats-nav-activity/VAL-NAV-001-002-navbar.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Standard page/API polling requests; no nav interaction errors"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-NAV-002",
+      "title": "Opaque navbar background",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect sticky header/navbar container",
+          "expected": "Opaque background and no backdrop blur effect",
+          "observed": "Header uses solid black background"
+        },
+        {
+          "action": "Check computed header styles",
+          "expected": "backdrop-filter disabled",
+          "observed": "backgroundColor rgb(0, 0, 0), backdropFilter none"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/stats-nav-activity/VAL-NAV-001-002-navbar.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /market, /depth, /candles, /trades observed; no errors tied to navbar rendering"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Chart region alternated between 'Unable to load chart data' and 'No chart data available' while validating layout; did not impact assigned stats/activity/navbar assertions.",
+      "resolved": true,
+      "resolution": "Continued validation using static UI structure and style checks for assigned assertions only.",
+      "affectedAssertions": []
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 6 assigned assertions (VAL-STATS-001/002/003, VAL-ACTIVITY-001, VAL-NAV-001/002): all passed with screenshot, console, and network evidence captured."
+}

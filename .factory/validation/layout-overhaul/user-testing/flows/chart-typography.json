@@ -1,0 +1,197 @@
+{
+  "groupId": "chart-typography",
+  "testedAt": "2026-04-01T08:58:39Z",
+  "isolation": {
+    "surface": "agent-browser",
+    "appUrl": "http://localhost:3102/",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "browserSession": "chart-typography-79476079",
+    "mode": "read-only UI validation"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-CHART-001",
+      "title": "Price inside chart area",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Open / at 1440x1200 and inspect token header + chart section",
+          "expected": "Price and percentage are shown inside/above chart area, not in token header",
+          "observed": "Token header text was identity-only (\"CASH $CASH\"). Price/change row appeared in chart section above chart controls."
+        },
+        {
+          "action": "Check element positions via browser eval",
+          "expected": "Price row is part of chart section structure",
+          "observed": "Price row y=180..216 and chart shell y=276..632 (same chart section flow, 60px spacing above chart)."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/chart-typography/VAL-CHART-001-price-inside-chart.png",
+          "layout-overhaul/chart-typography/VAL-CHART-001-price-inside-chart-annotated.png"
+        ],
+        "consoleErrors": "Console contained repeated 429 resource-load errors from localhost:3100 endpoints.",
+        "network": "GET /candles?interval=5m -> 429, GET /market -> 429, GET /depth -> 429, GET /trades?limit=10|50 -> 429 (via performance entries)."
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CHART-002",
+      "title": "Chart height 356px",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Measure chart shell in rendered UI",
+          "expected": "Chart area approximately 356px tall",
+          "observed": "Chart shell measured 680x356 at y=276..632."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/chart-typography/VAL-CHART-002-chart-height.png"
+        ],
+        "consoleErrors": "Repeated 429 errors in console while chart data endpoints were requested.",
+        "network": "GET /candles?interval=5m -> 429; fallback empty-state chart rendered."
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CHART-003",
+      "title": "Token header without price",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect header row under breadcrumb",
+          "expected": "Header shows only token logo/name/symbol (no price or percentage)",
+          "observed": "Header displayed token identity only: logo, \"CASH\", \"$CASH\"; price/change appeared in separate chart price row."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/chart-typography/VAL-CHART-003-token-header-no-price.png"
+        ],
+        "consoleErrors": "Repeated 429 resource errors present in console.",
+        "network": "Background market/candles requests were rate-limited (429), but header composition remained verifiable."
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CHART-004",
+      "title": "Breadcrumb navigation",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Check top-of-content breadcrumb above token header",
+          "expected": "Breadcrumb displays \"Tokens > CASH\"",
+          "observed": "Breadcrumb text rendered as \"Tokens > CASH\" above the token header."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/chart-typography/VAL-CHART-004-breadcrumb.png"
+        ],
+        "consoleErrors": "Repeated 429 errors in console from API fetches.",
+        "network": "Frontend continued polling /depth, /market, /candles with 429 responses."
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CHART-005",
+      "title": "Chart has no card border",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Inspect chart wrapper and rendered chart region styles",
+          "expected": "No card border/background/padding wrapper around rendered chart",
+          "observed": "Outer chart shell had border=0 and transparent background, but chart data failed and error-state placeholder rendered with dashed border and background."
+        },
+        {
+          "action": "Retry load 3 times",
+          "expected": "Recover chart data and validate true rendered chart container state",
+          "observed": "All retries still produced 429 on chart/market endpoints; UI remained in error placeholder state."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/chart-typography/VAL-CHART-005-borderless-chart-check.png"
+        ],
+        "consoleErrors": "High-volume `Failed to load resource: 429 (Too Many Requests)` errors.",
+        "network": "GET /candles?interval=5m -> 429 and related market/depth/trades requests -> 429; chart stayed in fallback."
+      },
+      "issues": "Blocked by API rate limiting (429), preventing validation of normal rendered chart state; only fallback box with dashed border was available."
+    },
+    {
+      "id": "VAL-CHART-006",
+      "title": "Time selector clean style",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect 1H/1D/1W/1M/1Y/ALL controls visually and via computed styles",
+          "expected": "Text-style controls, no pill backgrounds; active state subtle highlight",
+          "observed": "Buttons had transparent backgrounds and 0px border radius; active 1D used text color/weight emphasis (no pill)."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/chart-typography/VAL-CHART-006-time-selector-style.png",
+          "layout-overhaul/chart-typography/VAL-CHART-006-time-selector-style-annotated.png"
+        ],
+        "consoleErrors": "Repeated 429 API errors in console.",
+        "network": "Range controls visible despite /candles and related endpoints returning 429."
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-TYPE-001",
+      "title": "Proportional font for prices",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Check computed fonts for price, stat values, and amount fields",
+          "expected": "All use proportional sans-serif (no monospace for price/stat/amount values)",
+          "observed": "Price/stat values used GeistSans, but amount input (`textbox \"0\"`) used `GeistMono` (24px), which is monospace."
+        },
+        {
+          "action": "Capture element style for amount input",
+          "expected": "Amount input should match proportional font requirement",
+          "observed": "`agent-browser get styles @e18` reported `font: 24px 400 GeistMono`."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/chart-typography/VAL-TYPE-001-proportional-font.png"
+        ],
+        "consoleErrors": "Repeated 429 errors from API requests during page runtime.",
+        "network": "N/A for typography check; background polling still showed 429 responses."
+      },
+      "issues": "Typography requirement not fully met: amount field remains monospace."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Local API endpoints (`/candles`, `/market`, `/depth`, `/trades`) repeatedly returned HTTP 429, causing chart fallback state and noisy console errors.",
+      "resolved": false,
+      "resolution": "Performed non-disruptive retries (reload + networkidle) and continued with assertions that remained visually verifiable.",
+      "affectedAssertions": [
+        "VAL-CHART-001",
+        "VAL-CHART-002",
+        "VAL-CHART-005",
+        "VAL-CHART-006"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Unable to validate normal borderless rendered chart state because chart data requests remained rate-limited (429) and only error fallback UI was displayed.",
+      "affectedAssertions": [
+        "VAL-CHART-005"
+      ],
+      "quickFixAttempted": "Reloaded page 3 times with network-idle waits; 429 responses persisted."
+    }
+  ],
+  "summary": "Tested 7 assertions: 5 passed, 1 failed (VAL-TYPE-001), 1 blocked (VAL-CHART-005 due API 429 fallback-only chart state)."
+}

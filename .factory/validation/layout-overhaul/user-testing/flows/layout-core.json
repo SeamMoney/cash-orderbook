@@ -1,0 +1,178 @@
+{
+  "groupId": "layout-core",
+  "testedAt": "2026-04-01T08:57:58Z",
+  "isolation": {
+    "surface": "agent-browser",
+    "appUrl": "http://localhost:3102/",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "browserSession": "layout-core-79476079",
+    "mode": "read-only visual validation"
+  },
+  "toolsUsed": ["agent-browser"],
+  "assertions": [
+    {
+      "id": "VAL-LAYOUT-001",
+      "title": "Content max width",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Open / at 1440x900 viewport and inspect main container computed styles",
+          "expected": "Main content container max-width is 1200px",
+          "observed": "Computed style reports maxWidth=1200px and rendered width=1200px"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/layout-core/VAL-LAYOUT-001-content-max-width-1440.png"
+        ],
+        "consoleErrors": "none",
+        "network": "not captured (agent-browser tracked requests list empty)",
+        "computed": "viewport=1440x900, main.maxWidth=1200px, main.width=1200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-LAYOUT-002",
+      "title": "Fixed right panel width",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect right column computed styles at 1440x900 viewport",
+          "expected": "Right panel width is exactly 360px",
+          "observed": "Computed width is 360px (cssWidth=360px, flex-shrink=0)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/layout-core/VAL-LAYOUT-002-fixed-right-panel-width.png"
+        ],
+        "consoleErrors": "none",
+        "network": "not captured (agent-browser tracked requests list empty)",
+        "computed": "rightColumn.width=360, rightColumn.cssWidth=360px"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-LAYOUT-003",
+      "title": "Column gap 80px",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect flex wrapper gap and measure distance between left and right columns at 1440x900",
+          "expected": "Column gap is 80px",
+          "observed": "Computed gap=80px, columnGap=80px, measured visual gap=80px"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/layout-core/VAL-LAYOUT-003-column-gap-80.png"
+        ],
+        "consoleErrors": "none",
+        "network": "not captured (agent-browser tracked requests list empty)",
+        "computed": "wrapper.gap=80px, measuredGapPx=80"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-LAYOUT-004",
+      "title": "Horizontal padding",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect main container padding at desktop viewport 1440x900",
+          "expected": "Desktop horizontal padding is 40px",
+          "observed": "Computed paddingLeft=40px and paddingRight=40px"
+        },
+        {
+          "action": "Inspect main container padding at mobile viewport 375x812",
+          "expected": "Mobile horizontal padding is 20px",
+          "observed": "Computed paddingLeft=20px and paddingRight=20px"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/layout-core/VAL-LAYOUT-004-desktop-padding-40.png",
+          "layout-overhaul/layout-core/VAL-LAYOUT-004-mobile-padding-20.png"
+        ],
+        "consoleErrors": "none",
+        "network": "not captured (agent-browser tracked requests list empty)",
+        "computed": "desktop padding=40px/40px, mobile padding=20px/20px"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-LAYOUT-005",
+      "title": "Borderless design",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect chart, stats, transactions, and about section wrappers for border styles",
+          "expected": "No card border wrappers around these sections",
+          "observed": "All tested section wrappers report border widths of 0px on all sides"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/layout-core/VAL-LAYOUT-005-borderless-design.png"
+        ],
+        "consoleErrors": "none",
+        "network": "not captured (agent-browser tracked requests list empty)",
+        "computed": "chart/stats/transactions/about wrappers all borderTop/Right/Bottom/Left=0px"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-LAYOUT-006",
+      "title": "Responsive single column at xl",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Set viewport to 1200x900 and inspect layout direction and right column visibility",
+          "expected": "Below 1280px, layout switches to single column and desktop right panel hides",
+          "observed": "Wrapper flexDirection=column and right column display=none at 1200px"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/layout-core/VAL-LAYOUT-006-single-column-1200.png"
+        ],
+        "consoleErrors": "none",
+        "network": "not captured (agent-browser tracked requests list empty)",
+        "computed": "viewport=1200x900, wrapper.flexDirection=column, rightColumn.display=none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "title": "Full page visual coherence",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Validate full page at 1440x900 for required cross-area composition and measurements",
+          "expected": "Breadcrumb, token header without price, chart with price overlay, stats heading+row, About, borderless transactions, 80px gap, 360px swap panel",
+          "observed": "All required elements present; token header text is identity-only; chart section includes price and percent; chart area height=356px; gap=80px; right panel width=360px"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "layout-overhaul/layout-core/VAL-CROSS-001-full-page-coherence-1440.png"
+        ],
+        "consoleErrors": "none",
+        "network": "not captured (agent-browser tracked requests list empty)",
+        "computed": "breadcrumbPresent=true, tokenHeaderContainsPrice=false, stats/about/transactions headings present, chartAreaHeightPx=356, measuredGapPx=80, rightColumnWidthPx=360"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Chart data area showed empty-state text (\"No chart data available\") during validation, but required layout structure remained testable and measurable.",
+      "resolved": true,
+      "resolution": "Performed assertions using viewport screenshots and computed style/geometry checks that do not depend on live candle payloads.",
+      "affectedAssertions": ["VAL-LAYOUT-005", "VAL-CROSS-001"]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 7 assertions: 7 passed, 0 failed, 0 blocked."
+}
