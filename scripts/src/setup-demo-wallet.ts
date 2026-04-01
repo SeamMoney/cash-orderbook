@@ -151,7 +151,11 @@ async function getCashWalletBalance(
 // Steps
 // ============================================================
 
-async function fundWithApt(aptos: Aptos, account: Account): Promise<void> {
+async function fundWithApt(
+  aptos: Aptos,
+  account: Account,
+  deployerAccount?: Account,
+): Promise<void> {
   console.log("\n═══════════════════════════════════════════");
   console.log("  Step 1: Fund Demo Wallet with APT");
   console.log("═══════════════════════════════════════════\n");
@@ -160,11 +164,13 @@ async function fundWithApt(aptos: Aptos, account: Account): Promise<void> {
   const currentBalance = await getAptBalance(aptos, address);
   console.log(`  Current APT balance: ${currentBalance.toFixed(4)} APT`);
 
-  if (currentBalance >= 1.0) {
-    console.log("  ✓ Already has sufficient APT (1+), skipping faucet.");
+  if (currentBalance >= 0.1) {
+    console.log("  ✓ Already has sufficient APT (0.1+), skipping funding.");
     return;
   }
 
+  // Try faucet first
+  let funded = false;
   console.log("  → Requesting APT from faucet...");
   try {
     await aptos.fundAccount({
@@ -172,21 +178,37 @@ async function fundWithApt(aptos: Aptos, account: Account): Promise<void> {
       amount: 200_000_000, // 2 APT
     });
     console.log("  ✓ Funded with 2 APT from faucet");
+    funded = true;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    console.warn(`  ⚠ Faucet request failed: ${message}`);
-    console.log("  Retrying with 1 APT...");
+    console.log(`  ✗ Faucet unavailable: ${message}`);
+  }
+
+  // Fall back to deployer APT transfer
+  if (!funded && deployerAccount) {
+    console.log("  → Funding via APT transfer from deployer...");
+    const fundAmount = 20_000_000; // 0.2 APT
     try {
-      await aptos.fundAccount({
-        accountAddress: account.accountAddress,
-        amount: 100_000_000, // 1 APT
+      const fundTxn = await aptos.transferCoinTransaction({
+        sender: deployerAccount.accountAddress,
+        recipient: account.accountAddress,
+        amount: fundAmount,
       });
-      console.log("  ✓ Funded with 1 APT from faucet (retry)");
-    } catch (err2: unknown) {
-      const message2 = err2 instanceof Error ? err2.message : String(err2);
-      console.error(`  ✗ Faucet retry also failed: ${message2}`);
-      console.log("  Continuing with existing balance...");
+      const fundPending = await aptos.signAndSubmitTransaction({
+        signer: deployerAccount,
+        transaction: fundTxn,
+      });
+      await aptos.waitForTransaction({ transactionHash: fundPending.hash });
+      console.log(`  ✓ Funded with 0.2 APT from deployer: ${fundPending.hash.slice(0, 16)}...`);
+      funded = true;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`  ✗ Deployer transfer failed: ${message}`);
     }
+  }
+
+  if (!funded) {
+    console.log("  Continuing with existing balance...");
   }
 
   await sleep(2000);
@@ -194,8 +216,8 @@ async function fundWithApt(aptos: Aptos, account: Account): Promise<void> {
   const updatedBalance = await getAptBalance(aptos, address);
   console.log(`  Updated APT balance: ${updatedBalance.toFixed(4)} APT`);
 
-  if (updatedBalance < 1.0) {
-    console.warn("  ⚠ APT balance is below 1 APT — some transactions may fail");
+  if (updatedBalance < 0.05) {
+    console.warn("  ⚠ APT balance is very low — some transactions may fail");
   }
 }
 
@@ -215,6 +237,7 @@ async function mintUsd1(aptos: Aptos, account: Account, amount: number): Promise
   const txn = await aptos.transaction.build.simple({
     sender: account.accountAddress,
     data,
+    options: { maxGasAmount: 50000 },
   });
 
   const pendingTxn = await aptos.signAndSubmitTransaction({
@@ -254,6 +277,7 @@ async function mintTestCash(
   const txn = await aptos.transaction.build.simple({
     sender: deployerAccount.accountAddress,
     data,
+    options: { maxGasAmount: 50000 },
   });
 
   const pendingTxn = await aptos.signAndSubmitTransaction({
@@ -270,9 +294,10 @@ async function mintTestCash(
 }
 
 async function depositUsd1(
-  sdk: CashOrderbook,
+  aptos: Aptos,
   account: Account,
   amount: number,
+  contractAddress: string,
 ): Promise<string> {
   console.log("\n═══════════════════════════════════════════");
   console.log("  Step 4: Deposit USD1 into Orderbook");
@@ -280,15 +305,26 @@ async function depositUsd1(
 
   console.log(`  Depositing ${amount.toLocaleString()} USD1 into orderbook...`);
 
-  const result = await sdk.deposit(
-    account,
-    USD1_TESTNET_TOKEN_ADDRESS,
-    amount,
-    USD1_DECIMALS,
-  );
+  const onChainAmount = toOnChainAmount(amount, USD1_DECIMALS);
+  const depositData: InputEntryFunctionData = {
+    function: `${contractAddress}::accounts::deposit`,
+    functionArguments: [USD1_TESTNET_TOKEN_ADDRESS, onChainAmount],
+  };
+  const txn = await aptos.transaction.build.simple({
+    sender: account.accountAddress,
+    data: depositData,
+    options: { maxGasAmount: 50000 },
+  });
+  const pendingTxn = await aptos.signAndSubmitTransaction({
+    signer: account,
+    transaction: txn,
+  });
+  const committed = await aptos.waitForTransaction({
+    transactionHash: pendingTxn.hash,
+  });
 
-  console.log(`  ✓ USD1 deposited: ${result.txHash}`);
-  return result.txHash;
+  console.log(`  ✓ USD1 deposited: ${committed.hash}`);
+  return committed.hash;
 }
 
 // ============================================================
@@ -368,8 +404,8 @@ async function main(): Promise<void> {
   // ── Transaction hashes ──
   const txHashes: Record<string, string> = {};
 
-  // Step 1: Fund with APT
-  await fundWithApt(aptos, demoAccount);
+  // Step 1: Fund with APT (faucet → deployer transfer fallback)
+  await fundWithApt(aptos, demoAccount, deployerAccount);
   await sleep(1000);
 
   // Step 2: Mint USD1 to demo wallet (anyone can call mint_to_self)
@@ -389,7 +425,7 @@ async function main(): Promise<void> {
   await sleep(1000);
 
   // Step 4: Deposit USD1 into orderbook
-  const depositTxHash = await depositUsd1(sdk, demoAccount, usd1DepositAmount);
+  const depositTxHash = await depositUsd1(aptos, demoAccount, usd1DepositAmount, contractAddress);
   txHashes["deposit_usd1"] = depositTxHash;
   await sleep(1000);
 

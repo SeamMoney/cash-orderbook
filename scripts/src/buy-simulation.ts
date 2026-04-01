@@ -189,15 +189,19 @@ async function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Create a separate buyer account, fund it via faucet, mint USD1, and deposit
+ * Create a separate buyer account, fund it, mint USD1, and deposit
  * into the orderbook. This avoids self-trade prevention (the seed account placed
  * the asks, so it cannot buy against its own orders).
+ *
+ * Funding strategy: tries the faucet first; if that fails (testnet faucet is now
+ * web-only), falls back to a direct APT transfer from the deployer account.
  */
 async function setupBuyerAccount(
   aptos: Aptos,
   contractAddress: string,
   quoteAssetAddress: string,
   usd1Budget: number,
+  deployerAccount?: Account,
 ): Promise<{ buyerAccount: Account; buyerSdk: CashOrderbook; baseAssetAddress: string }> {
   const buyerKeyHex = process.env.BUYER_PRIVATE_KEY;
   let buyerAccount: Account;
@@ -211,17 +215,44 @@ async function setupBuyerAccount(
     console.log(`  Generated new buyer account: ${buyerAccount.accountAddress.toString()}`);
   }
 
-  // Fund buyer via faucet
+  // Fund buyer: try faucet first, fall back to deployer APT transfer
+  let funded = false;
   console.log("  → Funding buyer via faucet...");
   try {
     await aptos.fundAccount({
       accountAddress: buyerAccount.accountAddress,
       amount: 200_000_000, // 2 APT for gas
     });
-    console.log("    ✓ Buyer funded with 2 APT");
+    console.log("    ✓ Buyer funded with 2 APT via faucet");
+    funded = true;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error(`    ✗ Faucet funding failed: ${message}`);
+    console.log(`    ✗ Faucet unavailable: ${message}`);
+  }
+
+  if (!funded && deployerAccount) {
+    console.log("  → Funding buyer via APT transfer from deployer...");
+    const fundAmount = 20_000_000; // 0.2 APT — covers gas for mint, deposit, and order
+    try {
+      const fundTxn = await aptos.transferCoinTransaction({
+        sender: deployerAccount.accountAddress,
+        recipient: buyerAccount.accountAddress,
+        amount: fundAmount,
+      });
+      const fundPending = await aptos.signAndSubmitTransaction({
+        signer: deployerAccount,
+        transaction: fundTxn,
+      });
+      await aptos.waitForTransaction({ transactionHash: fundPending.hash });
+      console.log(`    ✓ Buyer funded with 0.2 APT from deployer: ${fundPending.hash.slice(0, 16)}...`);
+      funded = true;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`    ✗ Deployer APT transfer failed: ${message}`);
+    }
+  }
+
+  if (!funded) {
     console.log("    Continuing anyway (account may already be funded)...");
   }
   await sleep(2000);
@@ -237,9 +268,14 @@ async function setupBuyerAccount(
     functionArguments: [buyerAccount.accountAddress.toString(), onChainAmount],
   };
 
+  // Use explicit maxGasAmount to avoid INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE
+  // when the buyer has limited APT (funded via deployer transfer, not faucet)
+  const txnOptions = { maxGasAmount: 50000 };
+
   const mintTxn = await aptos.transaction.build.simple({
     sender: buyerAccount.accountAddress,
     data: mintData,
+    options: txnOptions,
   });
   const mintPending = await aptos.signAndSubmitTransaction({ signer: buyerAccount, transaction: mintTxn });
   await aptos.waitForTransaction({ transactionHash: mintPending.hash });
@@ -262,6 +298,25 @@ async function setupBuyerAccount(
     }
   }
 
+  // Deposit USD1 into orderbook for the buyer
+  console.log(`  → Depositing ${mintBuffer.toFixed(8)} USD1 into orderbook for buyer...`);
+  const depositData: InputEntryFunctionData = {
+    function: `${contractAddress}::accounts::deposit`,
+    functionArguments: [quoteAssetAddress, Math.round(mintBuffer * 10 ** USD1_DECIMALS)],
+  };
+  const depositTxn = await aptos.transaction.build.simple({
+    sender: buyerAccount.accountAddress,
+    data: depositData,
+    options: txnOptions,
+  });
+  const depositPending = await aptos.signAndSubmitTransaction({
+    signer: buyerAccount,
+    transaction: depositTxn,
+  });
+  await aptos.waitForTransaction({ transactionHash: depositPending.hash });
+  console.log(`    ✓ USD1 deposited: ${depositPending.hash.slice(0, 16)}...`);
+  await sleep(1000);
+
   // Create buyer SDK instance
   const buyerSdk = new CashOrderbook({
     network: "testnet",
@@ -269,12 +324,6 @@ async function setupBuyerAccount(
     baseAsset: baseAssetAddress,
     quoteAsset: quoteAssetAddress,
   });
-
-  // Deposit USD1 into orderbook for the buyer
-  console.log(`  → Depositing ${mintBuffer.toFixed(8)} USD1 into orderbook for buyer...`);
-  const depositResult = await buyerSdk.deposit(buyerAccount, quoteAssetAddress, mintBuffer, USD1_DECIMALS);
-  console.log(`    ✓ USD1 deposited: ${depositResult.txHash.slice(0, 16)}...`);
-  await sleep(1000);
 
   return { buyerAccount, buyerSdk, baseAssetAddress };
 }
@@ -402,6 +451,7 @@ async function main(): Promise<void> {
     contractAddress,
     quoteAssetAddress,
     buyAmountUsd1,
+    seedAccount,
   );
   const traderAddress = buyerAccount.accountAddress.toString();
 
@@ -480,13 +530,24 @@ async function main(): Promise<void> {
   let report: ExecutionReport;
 
   try {
-    const result = await sdk.placeOrder(buyerAccount, {
-      pairId,
-      price: 0, // ignored for market orders
-      quantity: orderQuantity,
-      side: "buy",
-      orderType: "Market",
+    // Build market order transaction manually with explicit maxGasAmount
+    // to avoid INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE on low-balance accounts
+    const onChainQuantity = Math.round(orderQuantity * 10 ** CASH_DECIMALS);
+    const marketOrderData: InputEntryFunctionData = {
+      function: `${contractAddress}::order_placement::place_market_order`,
+      functionArguments: [pairId, onChainQuantity, true], // true = buy
+    };
+    const orderTxn = await aptos.transaction.build.simple({
+      sender: buyerAccount.accountAddress,
+      data: marketOrderData,
+      options: { maxGasAmount: 50000 },
     });
+    const orderPending = await aptos.signAndSubmitTransaction({
+      signer: buyerAccount,
+      transaction: orderTxn,
+    });
+    const committed = await aptos.waitForTransaction({ transactionHash: orderPending.hash });
+    const result = { txHash: (committed as UserTransactionResponse).hash };
 
     const endTime = performance.now();
     const latencyMs = endTime - startTime;
