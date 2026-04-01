@@ -1,0 +1,81 @@
+{
+  "milestone": "integration-test",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "pnpm -r test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm -r typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm -r lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 2,
+    "passed": 0,
+    "failed": 2,
+    "failedFeatures": [
+      "buy-simulation-script",
+      "frontend-testnet-connection"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "buy-simulation-script",
+      "severity": "blocking",
+      "description": "scripts/src/market-maker-test.ts uses the same account for maker and taker flow; matching engine self-trade prevention skips same-owner matches so required taker-fill simulation is not reliable."
+    },
+    {
+      "featureId": "buy-simulation-script",
+      "severity": "blocking",
+      "description": "scripts/src/market-maker-test.ts treats transaction success as fill success, but market orders can commit with zero trades; the script can report a successful fill without an executed trade."
+    },
+    {
+      "featureId": "frontend-testnet-connection",
+      "severity": "blocking",
+      "description": "api/src/indexer/event-indexer.ts testnet/devnet fallback polls /accounts/{contract}/transactions only, which can miss user-submitted transactions and cause stale orderbook/trade/candle state."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "services.yaml",
+      "description": "Added command entries for buy-simulation and market-maker-test scripts.",
+      "sourceFeature": "buy-simulation-script"
+    },
+    {
+      "target": "library",
+      "description": "Added matching-self-trade-prevention.md documenting same-owner match prevention and fill-verification requirement for simulations.",
+      "sourceFeature": "buy-simulation-script"
+    },
+    {
+      "target": "library",
+      "description": "Updated aptos-events-v1-deprecation.md with caveat that contract-account transaction polling misses user-submitted module events.",
+      "sourceFeature": "frontend-testnet-connection"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "skills",
+      "suggestion": "Update backend-worker skill to clarify that strict test-first expectations may not apply to live-chain integration scripts requiring funded accounts and external state; require alternative verification strategy when deterministic tests are impractical.",
+      "evidence": "buy-simulation-script handoff documented deviation from test-first process due to live testnet dependencies; reviewer observed this as a recurring mismatch for operational scripts.",
+      "isSystemic": true
+    },
+    {
+      "target": "skills",
+      "suggestion": "Add Aptos indexer deprecation guidance and safe fallback constraints to backend-worker skill, including explicit warning that /accounts/{contract}/transactions is not complete event coverage.",
+      "evidence": "frontend-testnet-connection implemented account-transaction polling fallback that can miss user-generated events; reviewer flagged this as blocking integration correctness.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [],
+  "previousRound": null
+}

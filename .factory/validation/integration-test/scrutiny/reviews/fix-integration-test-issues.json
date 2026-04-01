@@ -1,0 +1,21 @@
+{
+  "featureId": "fix-integration-test-issues",
+  "reviewedAt": "2026-04-01T01:46:48Z",
+  "commitId": "041c060",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Pass. The fix commit addresses the prior blocking failures from both reviewed features: market-maker-test now uses a separate taker account and verifies actual fill quantity, buy-simulation reports verified fill data via trade events/balance delta, and the indexer REST fallback now includes global transaction polling with contract-event filtering and deduplication beyond contract-account polling.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The backend-worker skill still mandates strict tests-first TDD, but this fix transcript again shows implementation edits before tests were added. This suggests a recurring mismatch between documented procedure and real workflow for integration-script/indexer fixes.",
+      "evidence": ".factory/skills/backend-worker/SKILL.md step 3 requires \"Write tests FIRST\"; transcript skeleton for workerSessionId 349b8529-4012-4060-b944-b3046b4f44e1 shows many Edit calls on scripts/src/market-maker-test.ts, scripts/src/buy-simulation.ts, and api/src/indexer/event-indexer.ts before adding tests in api/src/indexer/event-indexer.test.ts."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/integration-test/scrutiny/reviews/buy-simulation-script.json; .factory/validation/integration-test/scrutiny/reviews/frontend-testnet-connection.json",
+  "summary": "PASS — The rerun fix resolves the previously blocking scrutiny findings: separate maker/taker flow is implemented in market-maker-test, fill verification is now based on trade evidence/balance deltas (not tx success alone), and testnet REST indexing is broadened to include global user-submitted transactions with deduplication."
+}
