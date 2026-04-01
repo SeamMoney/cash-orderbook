@@ -4,24 +4,24 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-background: #000000;
+  --color-background: #131313;
   --color-foreground: #FFFFFF;
   --color-card: #131313;
   --color-card-foreground: #FFFFFF;
-  --color-popover: #111111;
+  --color-popover: #131313;
   --color-popover-foreground: #FFFFFF;
   --color-primary: #00D54B;
   --color-primary-foreground: #000000;
   --color-secondary: #1F1F1F;
   --color-secondary-foreground: #FFFFFF;
-  --color-muted: #1A1A1A;
-  --color-muted-foreground: #888888;
+  --color-muted: rgba(255, 255, 255, 0.12);
+  --color-muted-foreground: rgba(255, 255, 255, 0.65);
   --color-accent: #00D54B;
   --color-accent-foreground: #000000;
   --color-destructive: #FF3B30;
   --color-destructive-foreground: #FFFFFF;
-  --color-border: #1A1A1A;
-  --color-input: #1A1A1A;
+  --color-border: rgba(255, 255, 255, 0.12);
+  --color-input: #1F1F1F;
   --color-ring: #00D54B;
   --color-chart-1: #00D54B;
   --color-chart-2: #FF3B30;
@@ -29,24 +29,24 @@
   --color-chart-4: #06b6d4;
   --color-chart-5: #8b5cf6;
 
-  --color-sidebar-background: #111111;
+  --color-sidebar-background: #131313;
   --color-sidebar-foreground: #FFFFFF;
   --color-sidebar-primary: #00D54B;
   --color-sidebar-primary-foreground: #000000;
-  --color-sidebar-accent: #1A1A1A;
+  --color-sidebar-accent: rgba(255, 255, 255, 0.12);
   --color-sidebar-accent-foreground: #FFFFFF;
-  --color-sidebar-border: #1A1A1A;
+  --color-sidebar-border: rgba(255, 255, 255, 0.12);
   --color-sidebar-ring: #00D54B;
 
   /* Custom trading colors */
   --color-cash-green: #00D54B;
   --color-cash-red: #FF3B30;
-  --color-surface: #111111;
+  --color-surface: #131313;
   --color-surface-hover: #1A1A1A;
-  --color-surface-raised: #2A2A2A;
+  --color-surface-raised: #393939;
   --color-text-primary: #FFFFFF;
-  --color-text-secondary: #888888;
-  --color-text-muted: #555555;
+  --color-text-secondary: rgba(255, 255, 255, 0.65);
+  --color-text-muted: rgba(255, 255, 255, 0.38);
   --color-surface2-hovered: #242424;
 
   --radius: 0.625rem;
@@ -61,7 +61,7 @@
 
 /* Global styles */
 body {
-  background-color: #000000;
+  background-color: #131313;
   color: #FFFFFF;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
@@ -77,12 +77,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1A1A1A;
+  background: #393939;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555555;
+  background: rgba(255, 255, 255, 0.38);
 }
 
 /* Shimmer animation */
@@ -92,7 +92,7 @@ body {
 }
 
 .animate-shimmer {
-  background: linear-gradient(90deg, #111111 25%, #1A1A1A 50%, #111111 75%);
+  background: linear-gradient(90deg, #131313 25%, #1F1F1F 50%, #131313 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
 }
