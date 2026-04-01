@@ -1,0 +1,38 @@
+{
+  "featureId": "wallet-testnet-polymarket-login",
+  "reviewedAt": "2026-04-01T06:48:48Z",
+  "commitId": "cbc7ee6",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature correctly switches wallet provider network to testnet and implements polymarket-style disconnected login buttons with connected-state badge/dot UI, but the USD1 balance requirement is not fully implemented: the dropdown only relabels the existing `usdc` balance field instead of sourcing a USD1-specific balance/token mapping.",
+    "issues": [
+      {
+        "file": "web/components/wallet/connect-button.tsx",
+        "line": 148,
+        "severity": "blocking",
+        "description": "The dropdown displays label `USD1` while still reading `balances.usdc.available`, so the code does not actually switch balance sourcing to USD1. This is a correctness risk (mislabeling) and does not satisfy the requirement to use USD1 token/address mapping. Supporting evidence: `web/hooks/use-balances.ts:8` still describes CASH+USDC balance fetch, and `api/src/routes/balances.ts:7` still returns `{ cash, usdc }`."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Architecture library is stale about wallet provider mutability.",
+      "evidence": ".factory/library/architecture.md:23 says `wallet-provider.tsx  # DO NOT MODIFY`, but this milestone explicitly requires switching wallet-provider network to testnet."
+    },
+    {
+      "area": "skills",
+      "observation": "The frontend-worker skill hardcodes mainnet derivation guidance that conflicts with this testnet mission.",
+      "evidence": ".factory/skills/frontend-worker/SKILL.md:38-39 instructs `defaultNetwork: Network.MAINNET` for Ethereum/Solana derivation, while this feature required and implemented `Network.TESTNET`."
+    },
+    {
+      "area": "knowledge",
+      "observation": "Shared naming/docs around quote balances are ambiguous (`usdc` key used where product now presents USD1), which can cause incorrect UI implementations.",
+      "evidence": "web/hooks/use-balances.ts:8 says CASH+USDC balances; api/src/routes/balances.ts:7 documents response `{ cash, usdc }`; this feature then relabeled `balances.usdc` as USD1 in web/components/wallet/connect-button.tsx:146-148."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed transcript skeleton, handoff, skill file, shared-state docs, and commit `cbc7ee6`. Result: fail due to a blocking correctness issue in the wallet dropdown where USD1 is only relabeled and not actually sourced as a USD1-specific balance."
+}

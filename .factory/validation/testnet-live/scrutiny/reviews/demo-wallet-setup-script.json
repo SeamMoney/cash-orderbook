@@ -1,0 +1,39 @@
+{
+  "featureId": "demo-wallet-setup-script",
+  "reviewedAt": "2026-04-01T06:48:49Z",
+  "commitId": "bfbb999",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature is close to the requested workflow, but it has two blocking issues: a hardcoded deployer private key in source code and incorrect USD1 orderbook balance reporting caused by USDC-decimal scaling.",
+    "issues": [
+      {
+        "file": "scripts/src/setup-demo-wallet.ts",
+        "line": 59,
+        "severity": "blocking",
+        "description": "A deployer private key is hardcoded as DEFAULT_DEPLOYER_KEY and used as fallback (line 96). This violates project security policy (AGENTS.md line 79: no hardcoded private keys) and can leak privileged credentials."
+      },
+      {
+        "file": "scripts/src/setup-demo-wallet.ts",
+        "line": 445,
+        "severity": "blocking",
+        "description": "USD1 orderbook balance is read from balances.usdc.available and printed as USD1. SDK getBalances scales quote balances by USDC_DECIMALS=6 (sdk/src/client.ts lines 397-399), but USD1 uses 8 decimals, so reported USD1 orderbook/total balances are incorrect."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "backend-worker skill is API/service-centric and does not explicitly require running new blockchain scripts as part of verification, which can miss feature requirements like 'script must actually RUN'.",
+      "evidence": ".factory/skills/backend-worker/SKILL.md lines 28-51 focus on tests + starting API service; handoff verification only ran pnpm -r typecheck and pnpm -r test (.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/handoffs/2026-04-01T06-28-07-968Z__demo-wallet-setup-script__edc3f53c-3a4d-4eed-87b1-3602d2a254e8.json lines 14-23)."
+    },
+    {
+      "area": "knowledge",
+      "observation": "Shared architecture states quote decimals are configurable (6 or 8), but SDK getBalances remains USDC-shaped/USDC-decimal scaled. This hidden limitation should be documented in library until fixed to prevent misuse in scripts.",
+      "evidence": ".factory/library/architecture.md line 82; sdk/src/client.ts lines 397-399."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review failed: the commit introduces a hardcoded private key and misreports USD1 orderbook balances due to USDC decimal scaling. I reviewed the transcript skeleton, handoff, skill file, and full commit diff."
+}

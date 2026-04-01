@@ -1,0 +1,90 @@
+{
+  "milestone": "testnet-live",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "pnpm -C \"/Users/maxmohammadi/cash-orderbook\" -r test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm -C \"/Users/maxmohammadi/cash-orderbook\" -r typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm -C \"/Users/maxmohammadi/cash-orderbook\" -r lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 4,
+    "passed": 1,
+    "failed": 3,
+    "failedFeatures": [
+      "wallet-testnet-polymarket-login",
+      "heavy-reseed-testnet",
+      "demo-wallet-setup-script"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "wallet-testnet-polymarket-login",
+      "severity": "blocking",
+      "description": "Wallet dropdown labels quote balance as USD1 but still reads `balances.usdc.available`, so the USD1 source mapping requirement is not satisfied."
+    },
+    {
+      "featureId": "heavy-reseed-testnet",
+      "severity": "blocking",
+      "description": "Reseed script hardcodes a deployer private key in source (`scripts/src/reseed-testnet.ts`) instead of loading it from local config or environment."
+    },
+    {
+      "featureId": "demo-wallet-setup-script",
+      "severity": "blocking",
+      "description": "Demo wallet setup script hardcodes a deployer private key fallback in source (`scripts/src/setup-demo-wallet.ts`)."
+    },
+    {
+      "featureId": "demo-wallet-setup-script",
+      "severity": "blocking",
+      "description": "USD1 orderbook balance reporting uses `balances.usdc.available` and USDC-decimal scaling, producing incorrect USD1 balance output."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": ".factory/skills/frontend-worker/SKILL.md",
+      "suggestion": "Replace hardcoded mainnet-only wallet derivation guidance with environment-aware guidance so testnet milestones do not conflict with skill instructions.",
+      "evidence": "wallet-testnet-polymarket-login required `Network.TESTNET`, while frontend-worker skill guidance currently directs `Network.MAINNET` for derivation settings.",
+      "isSystemic": false
+    },
+    {
+      "target": ".factory/skills/backend-worker/SKILL.md",
+      "suggestion": "Add an explicit branch for operational on-chain scripts: require live execution verification, enforce secret loading from env/profile (no hardcoded fallback keys), and allow pragmatic non-TDD flow for one-shot operational scripts.",
+      "evidence": "Both heavy-reseed-testnet and demo-wallet-setup-script introduced hardcoded deployer key fallbacks; heavy-reseed-testnet also reported mismatch with mandatory TDD step for a one-shot live script.",
+      "isSystemic": true
+    },
+    {
+      "target": ".factory/skills/backend-worker/SKILL.md",
+      "suggestion": "Document Aptos testnet faucet instability/deprecation handling and a safe deployer-transfer fallback pattern for account funding in live-demo workflows.",
+      "evidence": "verify-live-demo required repeated fallback handling due faucet failures and explicitly requested this skill guidance in feedback.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "WebSocket healthcheck command masks failures because it always succeeds via `|| echo \"ws check\"`.",
+      "reason": "Not applied in this run because changing it requires mutating an existing services.yaml entry (non-additive shared-state change)."
+    },
+    {
+      "observation": "Architecture library note saying `wallet-provider.tsx` should not be modified.",
+      "reason": "Deferred because this is guidance curation and should be handled by orchestrator alongside broader AGENTS/skill updates."
+    },
+    {
+      "observation": "USD1/USDC naming ambiguity across API/hooks/docs.",
+      "reason": "Already represented as concrete blocking implementation issues in feature reviews; not independently actionable as a shared-state update in this pass."
+    }
+  ],
+  "previousRound": null
+}

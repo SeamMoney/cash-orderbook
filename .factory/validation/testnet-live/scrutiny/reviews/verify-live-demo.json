@@ -1,0 +1,26 @@
+{
+  "featureId": "verify-live-demo",
+  "reviewedAt": "2026-04-01T06:48:52Z",
+  "commitId": "05ce972",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Reviewed the worker handoff, transcript skeleton, and commit 05ce972 diff. The implementation and verification evidence support the feature goals: testnet services were started, /health-/depth-/market checks were run, buy-simulation completed with verified fill and low slippage, frontend data flow was interactively checked, and services were stopped afterward. No high-confidence correctness or security defects were identified in the reviewed diff for this feature.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The backend-worker skill does not document the Aptos testnet faucet deprecation pattern and deployer-transfer fallback for funding new accounts, even though this was a central blocker in this feature run.",
+      "evidence": "worker-transcripts skeleton (session c0b92879-cb1b-4f65-b182-c3959e68833d) shows repeated faucet-failure handling and workaround iterations (e.g., lines 331, 339, 360, 737 in extracted skeleton search), and handoff.skillFeedback.suggestedChanges explicitly requests adding this guidance."
+    },
+    {
+      "area": "services",
+      "observation": "WebSocket healthcheck in services.yaml is effectively non-failing and can mask WS startup failures during mission verification flows.",
+      "evidence": ".factory/services.yaml:34 uses `healthcheck: curl -sf http://localhost:3101/health 2>/dev/null || echo \"ws check\"`, where the fallback `echo` makes the command succeed even if WS health is unreachable."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature verify-live-demo passes review: evidence in handoff/transcript and commit diff supports end-to-end live-demo verification on testnet without high-confidence blocking defects. Added shared-state observations for skill guidance (faucet deprecation) and WebSocket healthcheck robustness."
+}

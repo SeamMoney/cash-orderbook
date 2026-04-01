@@ -1,0 +1,34 @@
+{
+  "featureId": "heavy-reseed-testnet",
+  "reviewedAt": "2026-04-01T06:48:45Z",
+  "commitId": "a8f040c0070e5fe88c2c0588543cc428540c6107",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The reseed flow is largely implemented end-to-end (cancel, mint, deposit, ladder placement, verification), but it contains a blocking security/compliance issue: the deployer private key is hardcoded in source instead of being read from local config/environment as required.",
+    "issues": [
+      {
+        "file": "scripts/src/reseed-testnet.ts",
+        "line": 50,
+        "severity": "blocking",
+        "description": "Hardcoded private key (`PRIVATE_KEY_HEX`) is committed in repo and used to build the signer (line 501). This violates secret-handling expectations and does not satisfy the feature requirement to read the key from `.aptos/config.yaml`."
+      },
+      {
+        "file": "scripts/src/reseed-testnet.ts",
+        "line": 131,
+        "severity": "non_blocking",
+        "description": "If faucet funding fails, the script logs `Continuing with existing balance...` and only warns when balance is below 2 APT (line 146), but does not abort early. This can lead to partial reseeds when gas is insufficient."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The backend-worker skill enforces test-first (TDD) as a mandatory step, but this feature is an operational testnet reseed script where primary validation is live chain execution. The worker explicitly flagged this mismatch in handoff feedback.",
+      "evidence": ".factory/skills/backend-worker/SKILL.md step 3 requires \"Write tests FIRST\"; handoff `skillFeedback.suggestedChanges` for worker session 1a85866e-18ef-4988-9382-cbeb87eda835 states TDD does not apply for this one-shot script."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed feature heavy-reseed-testnet (commit a8f040c) via handoff, transcript skeleton, and full diff. Marked FAIL due to a blocking hardcoded private key in `reseed-testnet.ts`; also noted a non-blocking robustness issue around insufficient APT handling and one skill-procedure mismatch observation."
+}
