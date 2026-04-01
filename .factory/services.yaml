@@ -15,6 +15,7 @@ commands:
   buy-simulation: pnpm --filter @cash/scripts buy-simulation
   market-maker-test: pnpm --filter @cash/scripts market-maker-test
   import-history: pnpm --filter @cash/scripts import-history
+  reseed-testnet: pnpm --filter @cash/scripts reseed-testnet
   performance-report: pnpm --filter @cash/scripts performance-report
   dev-all: pnpm dev
 
