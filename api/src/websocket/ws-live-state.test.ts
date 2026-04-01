@@ -276,7 +276,7 @@ describe("WS broadcasting from live state updates", () => {
       state.processDeposit({
         user: "0xBEEF",
         asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
-        amount: 500_000_000,
+        amount: 50_000_000_000, // 500 USD1 (8 decimals)
       });
 
       const msg = await msgPromise;
@@ -289,7 +289,7 @@ describe("WS broadcasting from live state updates", () => {
       state.processDeposit({
         user: "0xBEEF",
         asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
-        amount: 1000_000_000,
+        amount: 100_000_000_000, // 1000 USD1 (8 decimals)
       });
 
       const ws = await connect();
@@ -301,7 +301,7 @@ describe("WS broadcasting from live state updates", () => {
       state.processWithdraw({
         user: "0xBEEF",
         asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
-        amount: 300_000_000,
+        amount: 30_000_000_000, // 300 USD1 (8 decimals)
       });
 
       const msg = await msgPromise;

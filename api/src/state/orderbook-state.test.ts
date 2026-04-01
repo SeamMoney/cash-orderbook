@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { OrderbookState } from "./orderbook-state.js";
-import { PRICE_SCALE, CASH_DECIMALS, USDC_DECIMALS } from "@cash/shared";
+import { PRICE_SCALE, CASH_DECIMALS, USD1_DECIMALS } from "@cash/shared";
 
 describe("OrderbookState", () => {
   let state: OrderbookState;
@@ -584,11 +584,11 @@ describe("OrderbookState", () => {
   // ============================================================
 
   describe("processDeposit", () => {
-    it("increases available balance for USDC", () => {
+    it("increases available balance for USD1 (quote)", () => {
       state.processDeposit({
         user: "0xBEEF",
         asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
-        amount: 1000_000_000, // 1000 USDC
+        amount: 100_000_000_000, // 1000 USD1 (8 decimals)
       });
 
       const balances = state.getBalances("0xBEEF");
@@ -599,7 +599,7 @@ describe("OrderbookState", () => {
       state.processDeposit({
         user: "0xBEEF",
         asset: "0x61ed8b048636516b4eaf4c74250fa4f9440d9c3e163d96aeb863fe658a4bdc67::CASH::CASH",
-        amount: 500_000_000, // 500 CASH
+        amount: 500_000_000, // 500 CASH (6 decimals)
       });
 
       const balances = state.getBalances("0xBEEF");
@@ -612,13 +612,13 @@ describe("OrderbookState", () => {
       state.processDeposit({
         user: "0xBEEF",
         asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
-        amount: 1000_000_000,
+        amount: 100_000_000_000, // 1000 USD1 (8 decimals)
       });
 
       state.processWithdraw({
         user: "0xBEEF",
         asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
-        amount: 300_000_000,
+        amount: 30_000_000_000, // 300 USD1 (8 decimals)
       });
 
       const balances = state.getBalances("0xBEEF");
@@ -629,7 +629,7 @@ describe("OrderbookState", () => {
       state.processWithdraw({
         user: "0xBEEF",
         asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
-        amount: 1000_000_000,
+        amount: 100_000_000_000, // 1000 USD1 (8 decimals)
       });
 
       const balances = state.getBalances("0xBEEF");

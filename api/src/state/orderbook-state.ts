@@ -28,7 +28,7 @@ import type {
   MarketInfo,
 } from "@cash/shared";
 
-import { PRICE_SCALE, CASH_DECIMALS, USDC_DECIMALS } from "@cash/shared";
+import { PRICE_SCALE, CASH_DECIMALS, USD1_DECIMALS } from "@cash/shared";
 
 // ============================================================
 // Event types emitted by OrderbookState
@@ -314,7 +314,7 @@ export class OrderbookState extends EventEmitter {
     const side: OrderSide = event.taker_is_bid ? "buy" : "sell";
     const humanPrice = event.price / PRICE_SCALE;
     const humanQuantity = event.quantity / 10 ** CASH_DECIMALS;
-    const humanQuoteAmount = event.quote_amount / 10 ** USDC_DECIMALS;
+    const humanQuoteAmount = event.quote_amount / 10 ** USD1_DECIMALS;
 
     const trade: Trade = {
       tradeId: String(this.tradeIdCounter),
@@ -416,7 +416,7 @@ export class OrderbookState extends EventEmitter {
     const balances = this.getOrCreateBalances(event.user);
     const assetKey = this.assetKey(event.asset);
     if (assetKey) {
-      balances[assetKey].available += event.amount / 10 ** (assetKey === "cash" ? CASH_DECIMALS : USDC_DECIMALS);
+      balances[assetKey].available += event.amount / 10 ** (assetKey === "cash" ? CASH_DECIMALS : USD1_DECIMALS);
     }
     this.balances.set(event.user, balances);
 
@@ -435,7 +435,7 @@ export class OrderbookState extends EventEmitter {
     const balances = this.getOrCreateBalances(event.user);
     const assetKey = this.assetKey(event.asset);
     if (assetKey) {
-      const decimals = assetKey === "cash" ? CASH_DECIMALS : USDC_DECIMALS;
+      const decimals = assetKey === "cash" ? CASH_DECIMALS : USD1_DECIMALS;
       balances[assetKey].available = Math.max(0, balances[assetKey].available - event.amount / 10 ** decimals);
     }
     this.balances.set(event.user, balances);
@@ -502,8 +502,9 @@ export class OrderbookState extends EventEmitter {
   }): void {
     const balances = this.getOrCreateBalances(event.owner);
     if (event.is_bid) {
-      // Buy: lock quote (USDC)
-      const quoteAmount = (event.price * event.quantity) / PRICE_SCALE / 10 ** USDC_DECIMALS;
+      // Buy: lock quote (USD1)
+      // quoteAmount = humanPrice * humanQuantity = (price/PRICE_SCALE) * (quantity/10^CASH_DECIMALS)
+      const quoteAmount = (event.price * event.quantity) / PRICE_SCALE / 10 ** CASH_DECIMALS;
       balances.usdc.locked += quoteAmount;
       balances.usdc.available = Math.max(0, balances.usdc.available - quoteAmount);
     } else {
@@ -517,8 +518,8 @@ export class OrderbookState extends EventEmitter {
 
   /**
    * Update balances for both buyer and seller when a trade executes.
-   * Buyer receives base (CASH), seller receives quote (USDC).
-   * Buyer's locked USDC is released and debited; seller's locked CASH is released and debited.
+   * Buyer receives base (CASH), seller receives quote (USD1).
+   * Buyer's locked USD1 is released and debited; seller's locked CASH is released and debited.
    */
   private updateBalancesOnTrade(
     buyer: string,
@@ -526,14 +527,14 @@ export class OrderbookState extends EventEmitter {
     baseAmount: number,
     quoteAmount: number,
   ): void {
-    // Buyer: receives CASH (base), pays USDC (quote)
+    // Buyer: receives CASH (base), pays USD1 (quote)
     const buyerBalances = this.getOrCreateBalances(buyer);
     buyerBalances.cash.available += baseAmount;
-    // Unlock and debit USDC — the USDC was locked when the buy order was placed
+    // Unlock and debit USD1 — the USD1 was locked when the buy order was placed
     buyerBalances.usdc.locked = Math.max(0, buyerBalances.usdc.locked - quoteAmount);
     this.balances.set(buyer, buyerBalances);
 
-    // Seller: receives USDC (quote), pays CASH (base)
+    // Seller: receives USD1 (quote), pays CASH (base)
     const sellerBalances = this.getOrCreateBalances(seller);
     sellerBalances.usdc.available += quoteAmount;
     // Unlock and debit CASH — the CASH was locked when the sell order was placed
@@ -549,7 +550,8 @@ export class OrderbookState extends EventEmitter {
   }): void {
     const balances = this.getOrCreateBalances(event.owner);
     if (event.is_bid) {
-      const quoteAmount = (event.price * event.remaining_quantity) / PRICE_SCALE / 10 ** USDC_DECIMALS;
+      // quoteAmount = humanPrice * humanQuantity = (price/PRICE_SCALE) * (remaining/10^CASH_DECIMALS)
+      const quoteAmount = (event.price * event.remaining_quantity) / PRICE_SCALE / 10 ** CASH_DECIMALS;
       balances.usdc.locked = Math.max(0, balances.usdc.locked - quoteAmount);
       balances.usdc.available += quoteAmount;
     } else {

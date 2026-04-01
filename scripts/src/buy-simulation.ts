@@ -317,12 +317,13 @@ async function setupBuyerAccount(
   console.log(`    ✓ USD1 deposited: ${depositPending.hash.slice(0, 16)}...`);
   await sleep(1000);
 
-  // Create buyer SDK instance
+  // Create buyer SDK instance (USD1 has 8 decimals on testnet)
   const buyerSdk = new CashOrderbook({
     network: "testnet",
     contractAddress,
     baseAsset: baseAssetAddress,
     quoteAsset: quoteAssetAddress,
+    quoteDecimals: USD1_DECIMALS,
   });
 
   return { buyerAccount, buyerSdk, baseAssetAddress };

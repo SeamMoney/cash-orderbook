@@ -125,7 +125,7 @@ describe("EventIndexer", () => {
       indexer.processEvent("DepositEvent", {
         user: "0xBEEF",
         asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
-        amount: 1000_000_000,
+        amount: 100_000_000_000, // 1000 USD1 (8 decimals)
       });
 
       const balances = state.getBalances("0xBEEF");
@@ -136,13 +136,13 @@ describe("EventIndexer", () => {
       indexer.processEvent("DepositEvent", {
         user: "0xBEEF",
         asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
-        amount: 1000_000_000,
+        amount: 100_000_000_000, // 1000 USD1 (8 decimals)
       });
 
       indexer.processEvent("WithdrawEvent", {
         user: "0xBEEF",
         asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
-        amount: 300_000_000,
+        amount: 30_000_000_000, // 300 USD1 (8 decimals)
       });
 
       const balances = state.getBalances("0xBEEF");
@@ -230,11 +230,11 @@ describe("EventIndexer", () => {
       state.on("trade", tradeHandler);
       state.on("balanceUpdate", balanceHandler);
 
-      // Deposit
+      // Deposit USD1 for buyer
       indexer.processEvent("DepositEvent", {
         user: "0xBUYER",
         asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
-        amount: 1000_000_000,
+        amount: 100_000_000_000, // 1000 USD1 (8 decimals)
       });
       expect(balanceHandler).toHaveBeenCalled();
 
@@ -251,13 +251,13 @@ describe("EventIndexer", () => {
       });
       expect(orderbookHandler).toHaveBeenCalled();
 
-      // Trade
+      // Trade: 50 CASH at 2.0 = 100 USD1
       indexer.processEvent("TradeEvent", {
         taker_order_id: 200,
         maker_order_id: 100,
         price: 2_000_000,
         quantity: 50_000_000,
-        quote_amount: 100_000_000,
+        quote_amount: 10_000_000_000, // 100 USD1 (8 decimals)
         buyer: "0xBUYER",
         seller: "0xSELLER",
         pair_id: 0,
@@ -271,18 +271,18 @@ describe("EventIndexer", () => {
     });
 
     it("processes events with balance updates for both parties", () => {
-      // Deposit for buyer
+      // Deposit USD1 for buyer
       indexer.processEvent("DepositEvent", {
         user: "0xBUYER",
         asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
-        amount: 500_000_000,
+        amount: 50_000_000_000, // 500 USD1 (8 decimals)
       });
 
       // Deposit CASH for seller
       indexer.processEvent("DepositEvent", {
         user: "0xSELLER",
         asset: "0x61ed8b048636516b4eaf4c74250fa4f9440d9c3e163d96aeb863fe658a4bdc67::CASH::CASH",
-        amount: 100_000_000,
+        amount: 100_000_000, // 100 CASH (6 decimals)
       });
 
       // Place bid
@@ -309,13 +309,13 @@ describe("EventIndexer", () => {
         timestamp: 1001,
       });
 
-      // Trade
+      // Trade: 50 CASH at 2.0 USD1 = 100 USD1
       indexer.processEvent("TradeEvent", {
         taker_order_id: 1,
         maker_order_id: 2,
         price: 2_000_000,
         quantity: 50_000_000,
-        quote_amount: 100_000_000,
+        quote_amount: 10_000_000_000, // 100 USD1 (8 decimals)
         buyer: "0xBUYER",
         seller: "0xSELLER",
         pair_id: 0,
@@ -325,10 +325,10 @@ describe("EventIndexer", () => {
       // Verify balances
       const buyerBal = state.getBalances("0xBUYER");
       expect(buyerBal.cash.available).toBe(50); // received 50 CASH
-      expect(buyerBal.usdc.locked).toBe(0);     // locked USDC settled
+      expect(buyerBal.usdc.locked).toBe(0);     // locked USD1 settled
 
       const sellerBal = state.getBalances("0xSELLER");
-      expect(sellerBal.usdc.available).toBe(100); // received 100 USDC
+      expect(sellerBal.usdc.available).toBe(100); // received 100 USD1
       expect(sellerBal.cash.locked).toBe(0);      // locked CASH settled
     });
   });
@@ -470,11 +470,11 @@ describe("EventIndexer", () => {
        */
 
       // Process in transaction_version order
-      // Version 10: Deposit
+      // Version 10: Deposit USD1
       indexer.processEvent("DepositEvent", {
         user: "0xBUYER",
         asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
-        amount: 1000_000_000,
+        amount: 100_000_000_000, // 1000 USD1 (8 decimals)
       });
 
       // Version 20: Place order

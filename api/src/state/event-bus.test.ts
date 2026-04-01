@@ -249,7 +249,7 @@ describe("OrderbookState EventEmitter", () => {
       state.processDeposit({
         user: "0xBEEF",
         asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
-        amount: 1000_000_000,
+        amount: 100_000_000_000, // 1000 USD1 (8 decimals)
       });
 
       const handler = vi.fn();
@@ -258,7 +258,7 @@ describe("OrderbookState EventEmitter", () => {
       state.processWithdraw({
         user: "0xBEEF",
         asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
-        amount: 300_000_000,
+        amount: 30_000_000_000, // 300 USD1 (8 decimals)
       });
 
       expect(handler).toHaveBeenCalledTimes(1);

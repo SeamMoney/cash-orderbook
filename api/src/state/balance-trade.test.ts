@@ -21,25 +21,25 @@ describe("Balance cache on Trade events", () => {
     state = new OrderbookState();
   });
 
-  it("buyer receives CASH and seller receives USDC on trade", () => {
+  it("buyer receives CASH and seller receives USD1 on trade", () => {
     // Deposit initial balances
     state.processDeposit({
       user: "0xBUYER",
-      asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b", // USDC
-      amount: 500_000_000, // 500 USDC
+      asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b", // USD1 (quote)
+      amount: 50_000_000_000, // 500 USD1 (8 decimals)
     });
     state.processDeposit({
       user: "0xSELLER",
       asset: "0x61ed8b048636516b4eaf4c74250fa4f9440d9c3e163d96aeb863fe658a4bdc67::CASH::CASH",
-      amount: 100_000_000, // 100 CASH
+      amount: 100_000_000, // 100 CASH (6 decimals)
     });
 
-    // Place buy order → locks USDC
+    // Place buy order → locks USD1
     state.processOrderPlaced({
       order_id: "1",
       owner: "0xBUYER",
       pair_id: 0,
-      price: 2_000_000, // 2.0 USDC per CASH
+      price: 2_000_000, // 2.0 USD1 per CASH
       quantity: 50_000_000, // 50 CASH
       is_bid: true,
       order_type: 0,
@@ -58,41 +58,41 @@ describe("Balance cache on Trade events", () => {
       timestamp: 1001,
     });
 
-    // Trade: 50 CASH at 2.0 USDC = 100 USDC quote
+    // Trade: 50 CASH at 2.0 USD1 = 100 USD1 quote
     state.processTrade({
       taker_order_id: "1",
       maker_order_id: "2",
       price: 2_000_000,
       quantity: 50_000_000,
-      quote_amount: 100_000_000,
+      quote_amount: 10_000_000_000, // 100 USD1 (8 decimals)
       buyer: "0xBUYER",
       seller: "0xSELLER",
       pair_id: 0,
       taker_is_bid: true,
     });
 
-    // Buyer: receives 50 CASH, USDC locked decreases by 100
+    // Buyer: receives 50 CASH, USD1 locked decreases by 100
     const buyerBal = state.getBalances("0xBUYER");
     expect(buyerBal.cash.available).toBe(50);
     expect(buyerBal.usdc.locked).toBe(0); // 100 was locked, 100 settled
 
-    // Seller: receives 100 USDC, CASH locked decreases by 50
+    // Seller: receives 100 USD1, CASH locked decreases by 50
     const sellerBal = state.getBalances("0xSELLER");
     expect(sellerBal.usdc.available).toBe(100);
     expect(sellerBal.cash.locked).toBe(0); // 50 was locked, 50 settled
   });
 
   it("updates both maker and taker balances on sell-taker trade", () => {
-    // Seller has CASH, buyer has USDC
+    // Seller has CASH, buyer has USD1
     state.processDeposit({
       user: "0xMAKER",
       asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
-      amount: 200_000_000, // 200 USDC
+      amount: 20_000_000_000, // 200 USD1 (8 decimals)
     });
     state.processDeposit({
       user: "0xTAKER",
       asset: "0x61ed8b048636516b4eaf4c74250fa4f9440d9c3e163d96aeb863fe658a4bdc67::CASH::CASH",
-      amount: 100_000_000, // 100 CASH
+      amount: 100_000_000, // 100 CASH (6 decimals)
     });
 
     // Maker places bid (buys CASH at 1.5)
@@ -119,24 +119,24 @@ describe("Balance cache on Trade events", () => {
       timestamp: 2001,
     });
 
-    // Trade: 50 CASH at 1.5 USDC = 75 USDC quote
+    // Trade: 50 CASH at 1.5 USD1 = 75 USD1 quote
     state.processTrade({
       taker_order_id: "20",
       maker_order_id: "10",
       price: 1_500_000,
       quantity: 50_000_000,
-      quote_amount: 75_000_000,
+      quote_amount: 7_500_000_000, // 75 USD1 (8 decimals)
       buyer: "0xMAKER",
       seller: "0xTAKER",
       pair_id: 0,
       taker_is_bid: false,
     });
 
-    // Maker (buyer): gets 50 CASH, locked USDC decreases
+    // Maker (buyer): gets 50 CASH, locked USD1 decreases
     const makerBal = state.getBalances("0xMAKER");
     expect(makerBal.cash.available).toBe(50);
 
-    // Taker (seller): gets 75 USDC, locked CASH decreases
+    // Taker (seller): gets 75 USD1, locked CASH decreases
     const takerBal = state.getBalances("0xTAKER");
     expect(takerBal.usdc.available).toBe(75);
   });
@@ -146,10 +146,10 @@ describe("Balance cache on Trade events", () => {
     state.processDeposit({
       user: "0xALICE",
       asset: "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
-      amount: 1000_000_000, // 1000 USDC
+      amount: 100_000_000_000, // 1000 USD1 (8 decimals)
     });
 
-    // Place buy order → locks 300 USDC (100 CASH at 3.0)
+    // Place buy order → locks 300 USD1 (100 CASH at 3.0)
     state.processOrderPlaced({
       order_id: "5",
       owner: "0xALICE",
@@ -165,13 +165,13 @@ describe("Balance cache on Trade events", () => {
     expect(aliceBal.usdc.locked).toBe(300);
     expect(aliceBal.usdc.available).toBe(700);
 
-    // Trade fills → buyer gets 100 CASH, pays 300 USDC
+    // Trade fills → buyer gets 100 CASH, pays 300 USD1
     state.processTrade({
       taker_order_id: "6",
       maker_order_id: "5",
       price: 3_000_000,
       quantity: 100_000_000,
-      quote_amount: 300_000_000,
+      quote_amount: 30_000_000_000, // 300 USD1 (8 decimals)
       buyer: "0xALICE",
       seller: "0xBOB",
       pair_id: 0,
@@ -186,7 +186,7 @@ describe("Balance cache on Trade events", () => {
     state.processWithdraw({
       user: "0xALICE",
       asset: "0x61ed8b048636516b4eaf4c74250fa4f9440d9c3e163d96aeb863fe658a4bdc67::CASH::CASH",
-      amount: 50_000_000, // withdraw 50 CASH
+      amount: 50_000_000, // withdraw 50 CASH (6 decimals)
     });
 
     aliceBal = state.getBalances("0xALICE");

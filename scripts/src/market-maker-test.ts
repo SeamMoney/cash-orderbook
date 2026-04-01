@@ -323,6 +323,7 @@ async function setupTakerAccount(
     contractAddress,
     baseAsset: baseAssetAddress,
     quoteAsset: quoteAssetAddress,
+    quoteDecimals: USD1_DECIMALS,
   });
 
   // Deposit tokens into the orderbook for the taker
@@ -593,12 +594,13 @@ async function main(): Promise<void> {
   console.log(`  Quote asset:     ${quoteAssetAddress}`);
   console.log("");
 
-  // Initialize maker SDK
+  // Initialize maker SDK (USD1 has 8 decimals on testnet)
   const sdk = new CashOrderbook({
     network: networkStr === "testnet" ? "testnet" : "mainnet",
     contractAddress,
     baseAsset: baseAssetAddress,
     quoteAsset: quoteAssetAddress,
+    quoteDecimals: USD1_DECIMALS,
   });
 
   // ── Setup: Create separate taker account ──

@@ -55,9 +55,7 @@ const DEFAULT_CONTRACT_ADDRESS =
 const USD1_CONTRACT =
   "0xca4d40eae9f07fb28a121862d649203fb4335ece9536ee51790e19f812ff7aea";
 
-/** Default deployer private key from .aptos/config.yaml cash-testnet profile */
-const DEFAULT_DEPLOYER_KEY =
-  "0x39acaec09e85fdc2200e1312136dc08f4d131ffbe939c1bb23c74dce7d458b0b";
+// No hardcoded deployer key — loaded from APTOS_PRIVATE_KEY or .aptos/config.yaml
 
 // ============================================================
 // Helpers
@@ -74,26 +72,42 @@ async function sleep(ms: number): Promise<void> {
 /**
  * Read the deployer private key from APTOS_PRIVATE_KEY env var,
  * or fall back to .aptos/config.yaml cash-testnet profile.
+ * Fails fast with a clear error if neither is available.
  */
 function loadDeployerKey(): string {
   const envKey = process.env.APTOS_PRIVATE_KEY;
-  if (envKey) return envKey;
+  if (envKey) {
+    console.log("  → Using deployer key from APTOS_PRIVATE_KEY env var");
+    return envKey;
+  }
 
   // Try reading from .aptos/config.yaml using simple regex
   // (avoids requiring a yaml parser dependency)
-  try {
-    const configPath = resolve(process.cwd(), ".aptos", "config.yaml");
-    const raw = readFileSync(configPath, "utf8");
-    // Find the cash-testnet profile section and extract its private_key
-    const profileMatch = raw.match(/cash-testnet:[\s\S]*?private_key:\s*"?([^\s"]+)"?/);
-    if (profileMatch?.[1]) {
-      return profileMatch[1];
+  const configPaths = [
+    resolve(process.env.HOME ?? "~", ".aptos", "config.yaml"),
+    resolve(process.cwd(), ".aptos", "config.yaml"),
+  ];
+
+  for (const configPath of configPaths) {
+    try {
+      const raw = readFileSync(configPath, "utf8");
+      // Find the cash-testnet profile section and extract its private_key
+      const profileMatch = raw.match(
+        /cash-testnet:[\s\S]*?private_key:\s*"?([^\s"]+)"?/,
+      );
+      if (profileMatch?.[1]) {
+        console.log(`  → Using deployer key from ${configPath} (cash-testnet profile)`);
+        return profileMatch[1];
+      }
+    } catch {
+      // File not found or not readable — try next path
     }
-  } catch {
-    // Ignore — will use default
   }
 
-  return DEFAULT_DEPLOYER_KEY;
+  console.error("\n  ✗ ERROR: No deployer private key available.");
+  console.error("    Set APTOS_PRIVATE_KEY env var, or ensure .aptos/config.yaml");
+  console.error("    has a cash-testnet profile with a private_key field.");
+  process.exit(1);
 }
 
 /**
@@ -393,12 +407,13 @@ async function main(): Promise<void> {
   const cashMetadataAddress = viewResult[0] as string;
   console.log(`    TestCASH metadata: ${cashMetadataAddress}`);
 
-  // ── Initialize SDK ──
+  // ── Initialize SDK (USD1 has 8 decimals on testnet) ──
   const sdk = new CashOrderbook({
     network: "testnet",
     contractAddress,
     baseAsset: cashMetadataAddress,
     quoteAsset: USD1_TESTNET_TOKEN_ADDRESS,
+    quoteDecimals: USD1_DECIMALS,
   });
 
   // ── Transaction hashes ──

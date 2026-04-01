@@ -38,8 +38,10 @@ export interface CashOrderbookConfig {
   contractAddress: string;
   /** Base asset (CASH) metadata address */
   baseAsset: string;
-  /** Quote asset (USDC) metadata address */
+  /** Quote asset (USDC/USD1) metadata address */
   quoteAsset: string;
+  /** Quote asset decimal places (default: 6 for USDC, use 8 for USD1) */
+  quoteDecimals?: number;
   /** Optional API key for RPC rate limit bypass */
   apiKey?: string;
   /** Optional custom fullnode URL override */

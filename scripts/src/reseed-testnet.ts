@@ -34,6 +34,9 @@ import {
   PRICE_SCALE,
 } from "@cash/shared";
 
+import { readFileSync } from "fs";
+import { resolve } from "path";
+
 // ============================================================
 // Constants
 // ============================================================
@@ -45,10 +48,6 @@ const CONTRACT_ADDRESS =
 /** USD1 contract on testnet */
 const USD1_CONTRACT =
   "0xca4d40eae9f07fb28a121862d649203fb4335ece9536ee51790e19f812ff7aea";
-
-/** Private key from .aptos/config.yaml cash-testnet profile */
-const PRIVATE_KEY_HEX =
-  "0x39acaec09e85fdc2200e1312136dc08f4d131ffbe939c1bb23c74dce7d458b0b";
 
 /** Market pair ID */
 const PAIR_ID = 0;
@@ -70,6 +69,51 @@ const USD1_MINT_AMOUNT = 2_000_000;
 
 /** All recorded transaction hashes */
 const txHashes: Record<string, string> = {};
+
+// ============================================================
+// Private Key Loading
+// ============================================================
+
+/**
+ * Load the deployer private key from APTOS_PRIVATE_KEY env var,
+ * or fall back to parsing .aptos/config.yaml for the cash-testnet profile.
+ * Fails fast with a clear error if neither is available.
+ */
+function loadPrivateKey(): string {
+  // 1. Check env var
+  const envKey = process.env.APTOS_PRIVATE_KEY;
+  if (envKey) {
+    console.log("  → Using private key from APTOS_PRIVATE_KEY env var");
+    return envKey;
+  }
+
+  // 2. Try .aptos/config.yaml
+  const configPaths = [
+    resolve(process.env.HOME ?? "~", ".aptos", "config.yaml"),
+    resolve(process.cwd(), ".aptos", "config.yaml"),
+  ];
+
+  for (const configPath of configPaths) {
+    try {
+      const raw = readFileSync(configPath, "utf8");
+      const profileMatch = raw.match(
+        /cash-testnet:[\s\S]*?private_key:\s*"?([^\s"]+)"?/,
+      );
+      if (profileMatch?.[1]) {
+        console.log(`  → Using private key from ${configPath} (cash-testnet profile)`);
+        return profileMatch[1];
+      }
+    } catch {
+      // File not found or not readable — try next path
+    }
+  }
+
+  // 3. Fail fast
+  console.error("\n  ✗ ERROR: No private key available.");
+  console.error("    Set APTOS_PRIVATE_KEY env var, or ensure .aptos/config.yaml");
+  console.error("    has a cash-testnet profile with a private_key field.");
+  process.exit(1);
+}
 
 // ============================================================
 // Helpers
@@ -497,8 +541,9 @@ async function main(): Promise<void> {
   const aptosConfig = new AptosConfig({ network: Network.TESTNET });
   const aptos = new Aptos(aptosConfig);
 
-  // Create account from private key
-  const privateKey = new Ed25519PrivateKey(PRIVATE_KEY_HEX);
+  // Create account from private key (env var or .aptos/config.yaml)
+  const privateKeyHex = loadPrivateKey();
+  const privateKey = new Ed25519PrivateKey(privateKeyHex);
   const account = Account.fromPrivateKey({ privateKey });
   const deployerAddress = account.accountAddress.toString();
   console.log(`  Deployer:       ${deployerAddress}`);
@@ -516,12 +561,13 @@ async function main(): Promise<void> {
   const quoteAssetAddress = USD1_TESTNET_TOKEN_ADDRESS;
   console.log(`    USD1 metadata:     ${quoteAssetAddress}`);
 
-  // Initialize SDK
+  // Initialize SDK (USD1 has 8 decimals on testnet)
   const sdk = new CashOrderbook({
     network: "testnet",
     contractAddress: CONTRACT_ADDRESS,
     baseAsset: baseAssetAddress,
     quoteAsset: quoteAssetAddress,
+    quoteDecimals: USD1_DECIMALS,
   });
 
   // Execute all steps

@@ -146,14 +146,17 @@ export class CashOrderbook {
   public readonly network: NetworkType;
   /** Base asset (CASH) metadata address */
   public readonly baseAsset: string;
-  /** Quote asset (USDC) metadata address */
+  /** Quote asset (USDC/USD1) metadata address */
   public readonly quoteAsset: string;
+  /** Quote asset decimal places (6 for USDC, 8 for USD1) */
+  public readonly quoteDecimals: number;
 
   constructor(config: CashOrderbookConfig) {
     this.contractAddress = config.contractAddress;
     this.network = config.network;
     this.baseAsset = config.baseAsset;
     this.quoteAsset = config.quoteAsset;
+    this.quoteDecimals = config.quoteDecimals ?? USDC_DECIMALS;
 
     const aptosConfig = new AptosConfig({
       network: toAptosNetwork(config.network),
@@ -395,8 +398,8 @@ export class CashOrderbook {
         locked: baseLocked / 10 ** CASH_DECIMALS,
       },
       usdc: {
-        available: quoteAvailable / 10 ** USDC_DECIMALS,
-        locked: quoteLocked / 10 ** USDC_DECIMALS,
+        available: quoteAvailable / 10 ** this.quoteDecimals,
+        locked: quoteLocked / 10 ** this.quoteDecimals,
       },
     };
   }

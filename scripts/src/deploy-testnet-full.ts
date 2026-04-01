@@ -422,6 +422,7 @@ async function main(): Promise<void> {
     contractAddress,
     baseAsset: baseAssetAddress,
     quoteAsset: quoteAssetAddress,
+    quoteDecimals: USD1_DECIMALS,
   });
 
   await depositTokens(sdk, account, baseAssetAddress, quoteAssetAddress, config.cashMintAmount, config.usd1MintAmount);
