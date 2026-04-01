@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
+import { ChevronRight } from "lucide-react";
 import { Nav, type NavTab } from "@/components/nav";
 import { Toaster } from "sonner";
 import { TokenHeader } from "@/components/token-header";
@@ -19,9 +20,9 @@ import { useRealtimePrice } from "@/hooks/use-realtime-price";
 /** Breadcrumb displayed above the token header. */
 function Breadcrumb(): React.ReactElement {
   return (
-    <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-5">
-      <span className="hover:text-white cursor-pointer transition-colors">Tokens</span>
-      <span className="text-text-muted">&gt;</span>
+    <nav className="flex items-center gap-1 text-[15px] text-white/65 mb-5">
+      <span className="hover:text-white/85 cursor-pointer transition-colors">Tokens</span>
+      <ChevronRight className="h-4 w-4 text-white/38" />
       <span className="text-white">CASH</span>
     </nav>
   );
@@ -91,11 +92,11 @@ export default function Home(): React.ReactElement {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
-        className="mx-auto w-full max-w-[1200px] flex-1 px-5 xl:px-10 mt-8 pb-12"
+        className="mx-auto w-full max-w-[1200px] flex-1 px-5 md:px-10 mt-8 pb-12"
       >
         <div className="flex flex-col lg:flex-row gap-20">
           {/* Left Column (~65%) — Token Info + Chart + Stats + Transactions */}
-          <div className="flex-1 min-w-0 space-y-4 md:space-y-6">
+          <div className="flex-1 min-w-0 space-y-6 md:space-y-10">
             {/* Breadcrumb */}
             <Breadcrumb />
 

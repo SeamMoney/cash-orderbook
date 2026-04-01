@@ -197,13 +197,13 @@ export function PriceChart({
       {/* Chart type toggle + Time range tabs */}
       <div className="mb-4 flex items-center justify-between">
         {/* Chart mode toggle */}
-        <div className="flex items-center gap-1 rounded-lg bg-secondary/50 p-0.5">
+        <div className="flex items-center gap-1 rounded-lg bg-[#1F1F1F] p-0.5">
           <button
             onClick={() => setChartMode("candle")}
             className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
               chartMode === "candle"
                 ? "bg-primary text-black"
-                : "text-text-muted hover:text-muted-foreground cursor-pointer"
+                : "text-white/38 hover:text-muted-foreground cursor-pointer"
             }`}
             aria-label="Candlestick chart"
             aria-pressed={chartMode === "candle"}
@@ -215,7 +215,7 @@ export function PriceChart({
             className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
               chartMode === "line"
                 ? "bg-primary text-black"
-                : "text-text-muted hover:text-muted-foreground cursor-pointer"
+                : "text-white/38 hover:text-muted-foreground cursor-pointer"
             }`}
             aria-label="Line chart"
             aria-pressed={chartMode === "line"}
@@ -233,7 +233,7 @@ export function PriceChart({
               className={`px-2.5 py-1.5 text-xs font-medium transition-colors ${
                 idx === activeRange
                   ? "text-white font-semibold"
-                  : "text-text-muted hover:text-muted-foreground cursor-pointer"
+                  : "text-white/38 hover:text-muted-foreground cursor-pointer"
               }`}
               aria-label={`Show ${range.label} chart range`}
               aria-pressed={idx === activeRange}
@@ -245,7 +245,7 @@ export function PriceChart({
       </div>
 
       {/* Chart area */}
-      <div className="relative h-[356px] w-full overflow-hidden rounded-lg">
+      <div className="relative h-[356px] w-full overflow-hidden">
         {loading ? (
           <ChartSkeleton />
         ) : isEmpty ? (
@@ -424,7 +424,7 @@ function LightweightChart({
         },
         grid: {
           vertLines: { visible: false },
-          horzLines: { color: "#1A1A1A", style: 2 },
+          horzLines: { color: "rgba(255,255,255,0.12)", style: 2 },
         },
         crosshair: {
           mode: CrosshairMode.Normal,
@@ -432,24 +432,24 @@ function LightweightChart({
             color: "#555555",
             width: 1,
             style: 2,
-            labelBackgroundColor: "#1A1A1A",
+            labelBackgroundColor: "#1F1F1F",
           },
           horzLine: {
             color: "#555555",
             width: 1,
             style: 2,
-            labelBackgroundColor: "#1A1A1A",
+            labelBackgroundColor: "#1F1F1F",
           },
         },
         rightPriceScale: {
-          borderColor: "#1A1A1A",
+          borderColor: "rgba(255,255,255,0.12)",
           scaleMargins: {
             top: 0.1,
             bottom: 0.1,
           },
         },
         timeScale: {
-          borderColor: "#1A1A1A",
+          borderColor: "rgba(255,255,255,0.12)",
           timeVisible: true,
           secondsVisible: false,
         },

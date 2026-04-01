@@ -518,7 +518,7 @@ export function SwapWidget(): React.ReactElement {
   return (
     <div className="rounded-2xl border border-border bg-card p-2">
       {/* Swap / Limit Tabs */}
-      <div className="mb-5 flex items-center gap-1 rounded-full bg-background p-1">
+      <div className="mb-3 flex items-center gap-1 rounded-full bg-background p-1">
         {(["swap", "limit"] as const).map((tab) => (
           <button
             key={tab}
@@ -554,7 +554,7 @@ export function SwapWidget(): React.ReactElement {
             transition={{ duration: 0.15 }}
           >
             {/* You Pay */}
-            <div className="rounded-2xl bg-[#1F1F1F] border border-[#1F1F1F] hover:border-white/10 focus-within:border-white/15 p-4 mb-1 transition-colors">
+            <div className="rounded-2xl bg-[#1F1F1F] border border-[#1F1F1F] hover:border-[#242424] focus-within:border-white/12 p-4 mb-1 min-h-[120px] transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-text-muted">You pay</span>
                 {connected && fromBalance !== null && (
@@ -573,7 +573,7 @@ export function SwapWidget(): React.ReactElement {
                   placeholder="0"
                   value={inputAmount}
                   onChange={handleInputChange}
-                  className="flex-1 bg-transparent text-2xl font-sans text-white placeholder:text-text-muted outline-none min-w-0"
+                  className="flex-1 bg-transparent text-[28px] font-sans text-white placeholder:text-text-muted outline-none min-w-0"
                 />
                 <TokenSelectorButton
                   ref={fromTokenBtnRef}
@@ -593,8 +593,7 @@ export function SwapWidget(): React.ReactElement {
               <motion.button
                 animate={{ rotate: directionRotation }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                whileHover={{ opacity: 0.8 }}
                 onClick={handleDirectionToggle}
                 className="flex items-center justify-center rounded-xl h-10 w-10 border-4 border-[#131313] bg-[#1F1F1F] text-text-muted hover:text-white transition-colors"
               >
@@ -603,7 +602,7 @@ export function SwapWidget(): React.ReactElement {
             </div>
 
             {/* You Receive */}
-            <div className="rounded-2xl bg-[#1F1F1F] border border-[#1F1F1F] hover:border-white/10 focus-within:border-white/15 p-4 mt-1 transition-colors">
+            <div className="rounded-2xl bg-[#1F1F1F] border border-[#1F1F1F] hover:border-[#242424] focus-within:border-white/12 p-4 mt-1 min-h-[120px] transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-text-muted">You receive</span>
                 {connected && toBalance !== null && (
@@ -623,7 +622,7 @@ export function SwapWidget(): React.ReactElement {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -4 }}
                     transition={{ duration: 0.15 }}
-                    className="flex-1 text-2xl font-sans text-white min-w-0"
+                    className="flex-1 text-[28px] font-sans text-white min-w-0"
                   >
                     {activeOutputAmount !== null
                       ? formatBalance(activeOutputAmount, 6)
@@ -656,9 +655,9 @@ export function SwapWidget(): React.ReactElement {
             <button
               onClick={swapCta.connectWallet ? () => setWalletSelectorOpen(true) : handleSwap}
               disabled={swapCta.disabled}
-              className="mt-4 w-full rounded-[20px] py-3.5 min-h-[44px] text-base font-semibold transition-all
+              className="mt-4 w-full rounded-[20px] py-3.5 min-h-[56px] text-[17px] font-semibold transition-all
                 bg-primary text-primary-foreground hover:brightness-110
-                disabled:bg-secondary disabled:text-text-muted disabled:cursor-not-allowed"
+                disabled:bg-[#393939] disabled:text-white/38 disabled:cursor-not-allowed"
             >
               {isSwapping ? (
                 <span className="flex items-center justify-center gap-2">
@@ -725,7 +724,7 @@ export function SwapWidget(): React.ReactElement {
             </div>
 
             {/* Price Input */}
-            <div className="rounded-2xl bg-[#1F1F1F] border border-[#1F1F1F] hover:border-white/10 focus-within:border-white/15 p-4 mb-3 transition-colors">
+            <div className="rounded-2xl bg-[#1F1F1F] border border-[#1F1F1F] hover:border-[#242424] focus-within:border-white/12 p-4 mb-3 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-text-muted">Price (USD1)</span>
               </div>
@@ -735,12 +734,12 @@ export function SwapWidget(): React.ReactElement {
                 placeholder="0.00"
                 value={limitPrice}
                 onChange={handleLimitPriceChange}
-                className="w-full bg-transparent text-2xl font-sans text-white placeholder:text-text-muted outline-none"
+                className="w-full bg-transparent text-[28px] font-sans text-white placeholder:text-text-muted outline-none"
               />
             </div>
 
             {/* Amount Input */}
-            <div className="rounded-2xl bg-[#1F1F1F] border border-[#1F1F1F] hover:border-white/10 focus-within:border-white/15 p-4 mb-3 transition-colors">
+            <div className="rounded-2xl bg-[#1F1F1F] border border-[#1F1F1F] hover:border-[#242424] focus-within:border-white/12 p-4 mb-3 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-text-muted">Amount (CASH)</span>
                 {connected && balances && (
@@ -760,7 +759,7 @@ export function SwapWidget(): React.ReactElement {
                 placeholder="0.00"
                 value={limitAmount}
                 onChange={handleLimitAmountChange}
-                className="w-full bg-transparent text-2xl font-sans text-white placeholder:text-text-muted outline-none"
+                className="w-full bg-transparent text-[28px] font-sans text-white placeholder:text-text-muted outline-none"
               />
             </div>
 
@@ -784,8 +783,8 @@ export function SwapWidget(): React.ReactElement {
             <button
               onClick={limitCta.connectWallet ? () => setWalletSelectorOpen(true) : handlePlaceLimitOrder}
               disabled={limitCta.disabled}
-              className={`mt-1 w-full rounded-[20px] py-3.5 min-h-[44px] text-base font-semibold transition-all
-                disabled:bg-secondary disabled:text-text-muted disabled:cursor-not-allowed
+              className={`mt-1 w-full rounded-[20px] py-3.5 min-h-[56px] text-[17px] font-semibold transition-all
+                disabled:bg-[#393939] disabled:text-white/38 disabled:cursor-not-allowed
                 ${
                   !limitCta.disabled
                     ? limitCta.connectWallet
@@ -852,14 +851,14 @@ const TokenSelectorButton = forwardRef<
       className="flex items-center gap-2 rounded-full bg-secondary px-3 py-2 min-h-[44px] shrink-0 hover:bg-surface-hover transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card"
     >
       <div
-        className={`h-5 w-5 rounded-full bg-gradient-to-br ${token.gradient} flex items-center justify-center`}
+        className={`h-6 w-6 rounded-full bg-gradient-to-br ${token.gradient} flex items-center justify-center`}
       >
         <span className="text-[10px] font-bold text-white">
           {token.symbol[0]}
         </span>
       </div>
       <span className="text-sm font-medium text-white">{token.symbol}</span>
-      <ChevronDown className="h-3 w-3 text-text-muted" />
+      <ChevronDown className="h-3.5 w-3.5 text-text-muted" />
     </button>
   );
 });

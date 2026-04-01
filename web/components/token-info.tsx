@@ -57,12 +57,12 @@ export function TokenInfo(): React.ReactElement {
   return (
     <div>
       <h3 className="text-[25px] leading-[30px] font-medium text-white mb-3">About</h3>
-      <p className="text-[17px] leading-6 text-white mb-4">
+      <p className="text-[19px] leading-6 text-white mb-4">
         {displayDescription}
         {shouldTruncate && (
           <button
             onClick={() => setExpanded((prev) => !prev)}
-            className="ml-1 text-[#9B9B9B] hover:text-white transition-colors"
+            className="ml-1 text-white/65 hover:text-white transition-colors"
           >
             {expanded ? "Show less" : "Show more"}
           </button>
@@ -74,7 +74,7 @@ export function TokenInfo(): React.ReactElement {
         {/* Contract pill with copy */}
         <button
           onClick={handleCopy}
-          className="flex items-center gap-2 rounded-[20px] px-3 py-2 bg-[#1F1F1F] text-[15px] text-[#9B9B9B] transition-colors hover:bg-[#242424] hover:text-white"
+          className="flex items-center gap-2 rounded-[20px] px-3 py-2 bg-[#1F1F1F] text-[17px] text-white/65 transition-colors hover:bg-[#242424] hover:text-white"
           title="Copy contract address"
         >
           {copied ? (
@@ -95,7 +95,7 @@ export function TokenInfo(): React.ReactElement {
           href={explorerUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 rounded-[20px] px-3 py-2 bg-[#1F1F1F] text-[15px] text-[#9B9B9B] transition-colors hover:bg-[#242424] hover:text-white"
+          className="flex items-center gap-2 rounded-[20px] px-3 py-2 bg-[#1F1F1F] text-[17px] text-white/65 transition-colors hover:bg-[#242424] hover:text-white"
           title="View on Aptos Explorer"
         >
           <ExternalLink className="h-4 w-4" />
@@ -107,7 +107,7 @@ export function TokenInfo(): React.ReactElement {
           href={WEBSITE_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 rounded-[20px] px-3 py-2 bg-[#1F1F1F] text-[15px] text-[#9B9B9B] transition-colors hover:bg-[#242424] hover:text-white"
+          className="flex items-center gap-2 rounded-[20px] px-3 py-2 bg-[#1F1F1F] text-[17px] text-white/65 transition-colors hover:bg-[#242424] hover:text-white"
           title="Visit website"
         >
           <Globe className="h-4 w-4" />

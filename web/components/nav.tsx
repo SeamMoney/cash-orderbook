@@ -45,7 +45,7 @@ export function Nav({
   return (
     <>
       <header className="sticky top-0 z-50 w-full bg-background">
-        <div className="mx-auto flex h-[72px] max-w-[1400px] items-center justify-between px-3">
+        <div className="mx-auto flex h-[72px] items-center justify-between px-3">
           {/* Left: Logo */}
           <div className="flex items-center gap-6">
             <span className="text-xl font-bold tracking-tight text-white">
@@ -59,10 +59,10 @@ export function Nav({
               <button
                 key={tab.id}
                 onClick={() => onTabChange?.(tab.id)}
-                className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+                className={`px-4 py-1.5 text-[15px] font-medium transition-colors ${
                   activeTab === tab.id
                     ? "text-white"
-                    : "text-[#9B9B9B] hover:text-white"
+                    : "text-white/65 hover:text-white"
                 }`}
               >
                 {tab.label}
@@ -73,7 +73,7 @@ export function Nav({
           {/* Right: Search + Wallet (desktop) + Hamburger (mobile) */}
           <div className="flex items-center gap-3">
             {/* Search placeholder — hidden on mobile and tablet */}
-            <div className="hidden lg:flex items-center gap-2 rounded-full bg-[#1F1F1F] border border-border px-3 py-1.5 text-sm text-text-muted w-[200px] cursor-pointer hover:border-surface-hover transition-colors">
+            <div className="hidden lg:flex items-center gap-2 rounded-full bg-[#1F1F1F] border border-transparent hover:border-white/10 px-3 h-10 text-sm text-text-muted w-[280px] cursor-pointer transition-colors">
               <Search className="h-3.5 w-3.5" />
               <span>Search tokens</span>
             </div>

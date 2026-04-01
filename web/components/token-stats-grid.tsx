@@ -26,8 +26,8 @@ interface StatItemProps {
 /** A single stat item with label on left, value on right (row layout). */
 function StatItem({ label, value, loading }: StatItemProps): React.ReactElement {
   return (
-    <div className="flex flex-row items-center justify-between w-[calc(50%-10px)] border-b border-white/10 pb-4">
-      <p className="text-[17px] font-medium text-[#9B9B9B]">{label}</p>
+    <div className="flex flex-row items-center justify-between w-[calc(50%-10px)] border-b border-white/12 pb-4">
+      <p className="text-[17px] font-medium text-white/65">{label}</p>
       {loading ? (
         <Skeleton className="h-7 w-24 rounded-md" />
       ) : (

@@ -173,7 +173,7 @@ export function TransactionsTable({
             {table.getHeaderGroups().map((headerGroup) => (
               <tr
                 key={headerGroup.id}
-                className="border-b border-border text-[#9B9B9B]"
+                className="border-b border-border text-white/65"
               >
                 {headerGroup.headers.map((header) => (
                   <th
@@ -247,7 +247,7 @@ export function TransactionsTable({
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
-                        className={`py-2.5 ${
+                        className={`py-3.5 ${
                           cell.column.id === "price" ||
                           cell.column.id === "quantity" ||
                           cell.column.id === "address"
