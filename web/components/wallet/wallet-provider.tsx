@@ -7,7 +7,7 @@ import {
 } from "@aptos-labs/wallet-adapter-react";
 import { Network } from "@aptos-labs/ts-sdk";
 
-const ACTIVE_NETWORK = Network.MAINNET;
+const ACTIVE_NETWORK = Network.TESTNET;
 
 // Initialize X-Chain wallet derivation at module level (client-side only)
 // This allows Phantom, MetaMask, Rainbow, etc. to derive Aptos accounts
