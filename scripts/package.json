@@ -13,6 +13,8 @@
     "deploy-testnet-full": "tsx src/deploy-testnet-full.ts",
     "integration-test": "tsx src/integration-test.ts",
     "import-history": "tsx src/import-history.ts",
+    "buy-simulation": "tsx src/buy-simulation.ts",
+    "market-maker-test": "tsx src/market-maker-test.ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {
