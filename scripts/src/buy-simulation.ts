@@ -28,6 +28,7 @@ import {
   Network,
   Ed25519PrivateKey,
   Account,
+  type InputEntryFunctionData,
   type InputViewFunctionData,
   type UserTransactionResponse,
 } from "@aptos-labs/ts-sdk";
@@ -35,9 +36,13 @@ import {
 import { CashOrderbook } from "@cash/orderbook-sdk";
 import {
   USD1_TESTNET_TOKEN_ADDRESS,
+  USD1_DECIMALS,
   CASH_DECIMALS,
   PRICE_SCALE,
 } from "@cash/shared";
+
+/** Default USD1 contract address on testnet (for minting) */
+const DEFAULT_USD1_CONTRACT = "0xca4d40eae9f07fb28a121862d649203fb4335ece9536ee51790e19f812ff7aea";
 
 // ============================================================
 // Types
@@ -176,6 +181,105 @@ function estimateFill(
 }
 
 // ============================================================
+// Buyer Account Setup
+// ============================================================
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Create a separate buyer account, fund it via faucet, mint USD1, and deposit
+ * into the orderbook. This avoids self-trade prevention (the seed account placed
+ * the asks, so it cannot buy against its own orders).
+ */
+async function setupBuyerAccount(
+  aptos: Aptos,
+  contractAddress: string,
+  quoteAssetAddress: string,
+  usd1Budget: number,
+): Promise<{ buyerAccount: Account; buyerSdk: CashOrderbook; baseAssetAddress: string }> {
+  const buyerKeyHex = process.env.BUYER_PRIVATE_KEY;
+  let buyerAccount: Account;
+
+  if (buyerKeyHex) {
+    const buyerKey = new Ed25519PrivateKey(buyerKeyHex);
+    buyerAccount = Account.fromPrivateKey({ privateKey: buyerKey });
+    console.log(`  Using provided buyer account: ${buyerAccount.accountAddress.toString()}`);
+  } else {
+    buyerAccount = Account.generate();
+    console.log(`  Generated new buyer account: ${buyerAccount.accountAddress.toString()}`);
+  }
+
+  // Fund buyer via faucet
+  console.log("  → Funding buyer via faucet...");
+  try {
+    await aptos.fundAccount({
+      accountAddress: buyerAccount.accountAddress,
+      amount: 200_000_000, // 2 APT for gas
+    });
+    console.log("    ✓ Buyer funded with 2 APT");
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`    ✗ Faucet funding failed: ${message}`);
+    console.log("    Continuing anyway (account may already be funded)...");
+  }
+  await sleep(2000);
+
+  // Mint USD1 for the buyer
+  const usd1Contract = process.env.USD1_CONTRACT_ADDRESS ?? DEFAULT_USD1_CONTRACT;
+  const mintBuffer = usd1Budget * 1.1; // 10% buffer
+  const onChainAmount = Math.round(mintBuffer * 10 ** USD1_DECIMALS);
+  console.log(`  → Minting ${mintBuffer.toFixed(8)} USD1 for buyer...`);
+
+  const mintData: InputEntryFunctionData = {
+    function: `${usd1Contract}::usd1::mint`,
+    functionArguments: [buyerAccount.accountAddress.toString(), onChainAmount],
+  };
+
+  const mintTxn = await aptos.transaction.build.simple({
+    sender: buyerAccount.accountAddress,
+    data: mintData,
+  });
+  const mintPending = await aptos.signAndSubmitTransaction({ signer: buyerAccount, transaction: mintTxn });
+  await aptos.waitForTransaction({ transactionHash: mintPending.hash });
+  console.log(`    ✓ USD1 minted: ${mintPending.hash.slice(0, 16)}...`);
+  await sleep(1000);
+
+  // Query base asset address
+  let baseAssetAddress = process.env.BASE_ASSET_ADDRESS ?? "";
+  if (!baseAssetAddress) {
+    try {
+      const viewPayload: InputViewFunctionData = {
+        function: `${contractAddress}::test_cash::get_metadata_address`,
+        functionArguments: [],
+      };
+      const result = await aptos.view({ payload: viewPayload });
+      baseAssetAddress = result[0] as string;
+    } catch {
+      console.error("ERROR: Could not query TestCASH address. Set BASE_ASSET_ADDRESS env var.");
+      process.exit(1);
+    }
+  }
+
+  // Create buyer SDK instance
+  const buyerSdk = new CashOrderbook({
+    network: "testnet",
+    contractAddress,
+    baseAsset: baseAssetAddress,
+    quoteAsset: quoteAssetAddress,
+  });
+
+  // Deposit USD1 into orderbook for the buyer
+  console.log(`  → Depositing ${mintBuffer.toFixed(8)} USD1 into orderbook for buyer...`);
+  const depositResult = await buyerSdk.deposit(buyerAccount, quoteAssetAddress, mintBuffer, USD1_DECIMALS);
+  console.log(`    ✓ USD1 deposited: ${depositResult.txHash.slice(0, 16)}...`);
+  await sleep(1000);
+
+  return { buyerAccount, buyerSdk, baseAssetAddress };
+}
+
+// ============================================================
 // Fill Verification
 // ============================================================
 
@@ -268,7 +372,6 @@ async function main(): Promise<void> {
 
   // Resolve asset addresses
   const quoteAssetAddress = process.env.QUOTE_ASSET_ADDRESS ?? USD1_TESTNET_TOKEN_ADDRESS;
-  let baseAssetAddress = process.env.BASE_ASSET_ADDRESS;
 
   console.log("═══════════════════════════════════════════════════");
   console.log("  CASH Orderbook — $1000 USD1 Market Buy Simulation");
@@ -283,39 +386,29 @@ async function main(): Promise<void> {
   const aptosConfig = new AptosConfig({ network: Network.TESTNET });
   const aptos = new Aptos(aptosConfig);
 
-  // Create account from private key
-  const privateKey = new Ed25519PrivateKey(privateKeyHex);
-  const account = Account.fromPrivateKey({ privateKey });
-  const traderAddress = account.accountAddress.toString();
+  // The seed account (placed the asks) — used only for reading the orderbook
+  const seedKey = new Ed25519PrivateKey(privateKeyHex);
+  const seedAccount = Account.fromPrivateKey({ privateKey: seedKey });
+  const seedAddress = seedAccount.accountAddress.toString();
+  console.log(`  Seed account:     ${seedAddress}`);
 
-  console.log(`  Trader:           ${traderAddress}`);
+  // ── Setup: Create separate buyer account ──
+  // The matching engine has self-trade prevention, so the buyer must be
+  // a different account than the one that placed the seed ask orders.
+  console.log("");
+  console.log("── Setup: Buyer Account ──");
+  const { buyerAccount, buyerSdk: sdk, baseAssetAddress } = await setupBuyerAccount(
+    aptos,
+    contractAddress,
+    quoteAssetAddress,
+    buyAmountUsd1,
+  );
+  const traderAddress = buyerAccount.accountAddress.toString();
 
-  // Query base asset if not provided
-  if (!baseAssetAddress) {
-    try {
-      const viewPayload: InputViewFunctionData = {
-        function: `${contractAddress}::test_cash::get_metadata_address`,
-        functionArguments: [],
-      };
-      const result = await aptos.view({ payload: viewPayload });
-      baseAssetAddress = result[0] as string;
-    } catch {
-      console.error("ERROR: Could not query TestCASH address. Set BASE_ASSET_ADDRESS env var.");
-      process.exit(1);
-    }
-  }
-
+  console.log(`  Buyer address:    ${traderAddress} (separate from seed)`);
   console.log(`  Base asset:       ${baseAssetAddress}`);
   console.log(`  Quote asset:      ${quoteAssetAddress}`);
   console.log("");
-
-  // Initialize SDK
-  const sdk = new CashOrderbook({
-    network: networkStr === "testnet" ? "testnet" : "mainnet",
-    contractAddress,
-    baseAsset: baseAssetAddress,
-    quoteAsset: quoteAssetAddress,
-  });
 
   // ── Step 1: Query balances ──
   console.log("── Step 1: Query Balances ──");
@@ -387,7 +480,7 @@ async function main(): Promise<void> {
   let report: ExecutionReport;
 
   try {
-    const result = await sdk.placeOrder(account, {
+    const result = await sdk.placeOrder(buyerAccount, {
       pairId,
       price: 0, // ignored for market orders
       quantity: orderQuantity,
