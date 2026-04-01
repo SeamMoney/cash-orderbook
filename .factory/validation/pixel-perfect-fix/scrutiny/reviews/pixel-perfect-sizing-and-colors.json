@@ -1,0 +1,38 @@
+{
+  "featureId": "pixel-perfect-sizing-and-colors",
+  "reviewedAt": "2026-04-01T12:14:12Z",
+  "commitId": "b2d3a88",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature successfully applies the requested Uniswap sizing/color/typography updates across the targeted UI components, but the commit also includes an out-of-scope edit to a generated Next.js file that should not be manually changed.",
+    "issues": [
+      {
+        "file": "web/next-env.d.ts",
+        "line": 3,
+        "severity": "blocking",
+        "description": "Out-of-scope change committed to generated file (`import \"./.next/dev/types/routes.d.ts\"`). This file explicitly states it should not be edited, and the feature scope required CSS/Tailwind-only changes."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "frontend-worker procedure requires running both typecheck and lint, but transcript evidence shows only typecheck was run while handoff marked followedProcedure=true.",
+      "evidence": ".factory/skills/frontend-worker/SKILL.md (Work Procedure step 6) vs transcript skeleton for session 2f88a2ba-b4b5-4c5c-8d62-67d316b2750c (only `pnpm --filter web typecheck` shown)."
+    },
+    {
+      "area": "skills",
+      "observation": "frontend-worker skill asks to use agent-browser for visual verification but does not document concrete CLI usage; worker initially used an invalid command and had to discover usage via `--help`.",
+      "evidence": "Transcript skeleton shows failed `agent-browser ... launch` (`Unknown command: launch`) followed by a separate help call before proceeding."
+    },
+    {
+      "area": "conventions",
+      "observation": "Mission guidance does not explicitly remind workers to avoid committing framework-generated files (e.g., next-env/import-path churn), which allowed a non-feature edit to slip into the commit.",
+      "evidence": "Commit b2d3a88 includes `web/next-env.d.ts` modification despite file comment: `NOTE: This file should not be edited`."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed handoff, diff, transcript skeleton, and skill guidance for feature pixel-perfect-sizing-and-colors. UI spec changes are largely complete, but the commit fails review due to an out-of-scope generated-file modification in web/next-env.d.ts."
+}

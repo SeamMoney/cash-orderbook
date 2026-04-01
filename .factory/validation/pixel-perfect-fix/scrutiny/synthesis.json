@@ -1,0 +1,60 @@
+{
+  "milestone": "pixel-perfect-fix",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "pnpm -r test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm -r typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm -r lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "failedFeatures": [
+      "pixel-perfect-sizing-and-colors"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "pixel-perfect-sizing-and-colors",
+      "severity": "blocking",
+      "description": "Out-of-scope change committed to generated file `web/next-env.d.ts` (line 3). The feature scope was CSS/Tailwind-only, and this file explicitly says it should not be edited."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "frontend-worker skill",
+      "suggestion": "Require explicit evidence of both lint and typecheck command execution in the handoff verification section whenever the skill mandates both validators.",
+      "evidence": "Feature review found `followedProcedure=true` but transcript skeleton only showed `pnpm --filter web typecheck` and no lint command.",
+      "isSystemic": true
+    },
+    {
+      "target": "frontend-worker skill",
+      "suggestion": "Add concrete `agent-browser` command examples (session naming and screenshot workflow) to reduce invalid-command churn during visual validation.",
+      "evidence": "Transcript skeleton showed an initial invalid `agent-browser ... launch` attempt before usage was discovered via help.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add explicit guidance to avoid committing framework-generated files (for example `next-env.d.ts`) unless the task specifically requires it.",
+      "evidence": "Reviewed feature commit included generated-file churn outside the requested CSS/Tailwind scope.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [],
+  "previousRound": null
+}
