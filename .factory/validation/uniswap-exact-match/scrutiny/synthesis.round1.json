@@ -1,0 +1,58 @@
+{
+  "milestone": "uniswap-exact-match",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "pnpm -r test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm -r typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm -r lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 2,
+    "passed": 1,
+    "failed": 1,
+    "failedFeatures": [
+      "uniswap-component-level-polish"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "uniswap-component-level-polish",
+      "severity": "blocking",
+      "description": "web/components/price-chart.tsx retains hardcoded #555555 crosshair line colors (lines 432, 438) instead of white/38-equivalent tokens required by feature acceptance criteria."
+    },
+    {
+      "featureId": "uniswap-component-level-polish",
+      "severity": "blocking",
+      "description": "web/components/transactions-table.tsx retains hardcoded #9B9B9B in cells (lines 92, 141) instead of white/65 required by feature acceptance criteria."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "skills",
+      "suggestion": "Update frontend-worker skill color-token guidance to match current Uniswap exact-match palette (#131313 surface, white/65 secondary, white/38 muted) to avoid stale token drift in future tasks.",
+      "evidence": "Review report for uniswap-theme-tokens-and-global-colors notes .factory/skills/frontend-worker/SKILL.md still references older color defaults (#212121 and #888888), while this milestone requires Uniswap exact values.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Mission validation-state still marks VAL-FIX-004 and VAL-FIX-005 as pending.",
+      "reason": "already-documented"
+    }
+  ],
+  "previousRound": null
+}

@@ -1,7 +1,7 @@
 {
   "milestone": "uniswap-exact-match",
-  "round": 1,
-  "status": "fail",
+  "round": 2,
+  "status": "pass",
   "validatorsRun": {
     "test": {
       "passed": true,
@@ -20,39 +20,19 @@
     }
   },
   "reviewsSummary": {
-    "total": 2,
+    "total": 1,
     "passed": 1,
-    "failed": 1,
-    "failedFeatures": [
-      "uniswap-component-level-polish"
-    ]
+    "failed": 0,
+    "failedFeatures": []
   },
-  "blockingIssues": [
-    {
-      "featureId": "uniswap-component-level-polish",
-      "severity": "blocking",
-      "description": "web/components/price-chart.tsx retains hardcoded #555555 crosshair line colors (lines 432, 438) instead of white/38-equivalent tokens required by feature acceptance criteria."
-    },
-    {
-      "featureId": "uniswap-component-level-polish",
-      "severity": "blocking",
-      "description": "web/components/transactions-table.tsx retains hardcoded #9B9B9B in cells (lines 92, 141) instead of white/65 required by feature acceptance criteria."
-    }
-  ],
+  "blockingIssues": [],
   "appliedUpdates": [],
-  "suggestedGuidanceUpdates": [
-    {
-      "target": "skills",
-      "suggestion": "Update frontend-worker skill color-token guidance to match current Uniswap exact-match palette (#131313 surface, white/65 secondary, white/38 muted) to avoid stale token drift in future tasks.",
-      "evidence": "Review report for uniswap-theme-tokens-and-global-colors notes .factory/skills/frontend-worker/SKILL.md still references older color defaults (#212121 and #888888), while this milestone requires Uniswap exact values.",
-      "isSystemic": true
-    }
-  ],
+  "suggestedGuidanceUpdates": [],
   "rejectedObservations": [
     {
-      "observation": "Mission validation-state still marks VAL-FIX-004 and VAL-FIX-005 as pending.",
-      "reason": "already-documented"
+      "observation": "The frontend-worker skill still documents '#888888' as a standard secondary text color, which is outdated for this milestone's Uniswap token mapping.",
+      "reason": "already-documented in round 1 synthesis"
     }
   ],
-  "previousRound": null
+  "previousRound": ".factory/validation/uniswap-exact-match/scrutiny/synthesis.round1.json"
 }
