@@ -1,0 +1,33 @@
+{
+  "featureId": "frontend-testnet-connection",
+  "reviewedAt": "2026-04-01T01:24:56Z",
+  "commitId": "54fc648",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature adds testnet wiring and a performance report, but the new testnet indexer fallback only polls transactions from the contract account. On Aptos this endpoint covers account-sent transactions, so user-submitted trades/orders are not reliably indexed, which can break live frontend correctness goals for testnet.",
+    "issues": [
+      {
+        "file": "api/src/indexer/event-indexer.ts",
+        "line": 268,
+        "severity": "blocking",
+        "description": "Testnet/devnet mode is forced into REST fallback (line 138) and polls `GET /accounts/{contractAddress}/transactions` (line 268). This endpoint only returns transactions for that account, so events emitted from other users' transactions are missed. Result: orderbook/trades/balances can become stale for normal frontend user activity, conflicting with integration expectations (e.g., live trade/candle updates after user swaps)."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The backend-worker skill does not document the Aptos testnet events-v1 deprecation path or safe alternatives/limitations when using REST fallback.",
+      "evidence": ".factory/skills/backend-worker/SKILL.md has no guidance on indexer deprecation or fallback strategy; handoff.skillFeedback.suggestedChanges explicitly requests adding this."
+    },
+    {
+      "area": "knowledge",
+      "observation": "Shared library note on events-v1 deprecation lacks a critical caveat that account-transaction polling by contract address does not capture all user-generated module events.",
+      "evidence": ".factory/library/aptos-events-v1-deprecation.md notes deprecation but not the account-tx scope limitation; implementation uses `/accounts/${contract}/transactions` in api/src/indexer/event-indexer.ts:268."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Fail. The main blocker is the testnet indexer fallback scope: polling only contract-account transactions can miss user-driven events, so frontend live testnet data integrity is not guaranteed."
+}

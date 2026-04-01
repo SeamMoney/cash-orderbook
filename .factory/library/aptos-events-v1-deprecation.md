@@ -12,3 +12,7 @@ The deployment/integration feature handoff reported that the current indexer pat
 ## Recommended direction
 
 Migrate event ingestion to Aptos Events v2-compatible endpoints/flows and keep transaction/event ordering guarantees when processing mixed event types.
+
+## Critical caveat for REST fallback
+
+Polling `GET /accounts/{contractAddress}/transactions` is not a safe substitute for global event ingestion. It only returns transactions submitted by that account, so module events emitted during user-submitted transactions can be missed. In this repo, using contract-account transaction polling as the sole source can produce stale orderbook/trade/candle state during normal user activity.

@@ -1,0 +1,44 @@
+{
+  "featureId": "buy-simulation-script",
+  "reviewedAt": "2026-04-01T01:24:18Z",
+  "commitId": "8426f32",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "buy-simulation.ts generally matches the requested reporting flow, but market-maker-test.ts has a blocking taker-fill flaw: it uses the same account for maker and taker while on-chain matching explicitly prevents self-trades, so the required fill simulation is not reliably achieved and success can be reported without an actual fill.",
+    "issues": [
+      {
+        "file": "scripts/src/market-maker-test.ts",
+        "line": 428,
+        "severity": "blocking",
+        "description": "The taker fill uses the same `account` that placed the ladder orders. The matching engine skips same-owner matches (`contracts/sources/matching.move:112` and `:192`), so this script cannot reliably fill against its own ladder and does not satisfy the required taker-fill simulation behavior."
+      },
+      {
+        "file": "scripts/src/market-maker-test.ts",
+        "line": 443,
+        "severity": "blocking",
+        "description": "`fillSuccess` is set from transaction success only, not from observed fills. Market orders can commit with zero trades (`contracts/sources/order_placement.move:386-387`), so the script can report success without any actual taker fill, making inventory/PnL results invalid for the feature intent."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The backend-worker skill mandates TDD for all tasks, but this feature is an integration-script task that depends on live chain credentials and state; the worker had to deviate.",
+      "evidence": ".factory/skills/backend-worker/SKILL.md:28 requires \"Write tests FIRST\"; handoff notes deviation and rationale at mission handoff file lines 41-43 and suggested skill update at line 47."
+    },
+    {
+      "area": "services",
+      "observation": "New runnable scripts were added to scripts/package.json but not mirrored in shared command registry.",
+      "evidence": "scripts/package.json:16-17 includes `buy-simulation` and `market-maker-test`; .factory/services.yaml has `integration-test` and `performance-report` commands (lines 14 and 16) but no entries for the new scripts."
+    },
+    {
+      "area": "knowledge",
+      "observation": "A critical protocol behavior (self-trade prevention) is not captured in shared library docs, which can lead to invalid simulation design choices.",
+      "evidence": "No `self-trade` mention in .factory/library (search returned no matches), while enforcement exists in contracts/sources/matching.move:112 and :192."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "FAIL — buy-simulation-script has blocking correctness issues in market-maker-test: taker-fill is implemented with the same account despite self-trade prevention, and success criteria do not verify that any fill actually occurred."
+}
