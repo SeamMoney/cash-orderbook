@@ -1,0 +1,28 @@
+{
+  "featureId": "chart-price-relocation",
+  "reviewedAt": "2026-04-01T08:44:54Z",
+  "commitId": "13c9fe3",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The feature implementation correctly relocates the price block into the chart area, simplifies the token header, adds the breadcrumb, updates chart height, and restyles the time selector while preserving existing chart interactions. No blocking correctness/regression issues were found.",
+    "issues": [
+      {
+        "file": "web/components/price-chart.tsx",
+        "line": 24,
+        "severity": "non_blocking",
+        "description": "The new 'ALL' tab is wired to the same interval ('1d') as '1Y', so it does not currently represent a distinct all-history range. This does not break required behavior for this feature, but can become misleading once data exceeds one year."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The frontend-worker skill procedure requires running both typecheck and lint, but this feature handoff recorded only typecheck while skillFeedback.followedProcedure was still marked true. The skill procedure and review signal appear misaligned.",
+      "evidence": "Skill: .factory/skills/frontend-worker/SKILL.md, step 6 ('Run typecheck and lint'). Handoff: .../handoffs/2026-04-01T08-22-00-996Z__chart-price-relocation__a3f4e710-d384-4fc0-95b3-4fad3701f23e.json -> verification.commandsRun includes only 'cd web && pnpm typecheck'."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed commit 13c9fe3 for chart-price-relocation. The feature meets expected behavior with no blocking defects; one non-blocking note is that 'ALL' currently duplicates the '1Y' interval behavior."
+}

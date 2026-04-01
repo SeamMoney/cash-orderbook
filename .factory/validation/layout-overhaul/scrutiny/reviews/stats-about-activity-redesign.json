@@ -1,0 +1,28 @@
+{
+  "featureId": "stats-about-activity-redesign",
+  "reviewedAt": "2026-04-01T08:44:46Z",
+  "commitId": "e0618d66c165715be1ee0542abb072513ca71b67",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Implementation covers the requested UI redesign for Stats/About/Transactions and preserves business logic. One minor typography regression was introduced in the transactions address column.",
+    "issues": [
+      {
+        "file": "web/components/transactions-table.tsx",
+        "line": 141,
+        "severity": "non_blocking",
+        "description": "Address text was changed from monospace to sans (`font-sans`). Mission typography guidance says code-like identifiers (addresses/hashes) should remain monospace, so this is a minor readability/style regression."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Frontend typography guidance is inconsistent between the mission AGENTS file and the frontend-worker skill, which can cause avoidable implementation drift.",
+      "evidence": "Mission AGENTS.md line 28 says to use proportional fonts for prices/amounts and monospace only for addresses/hashes, while .factory/skills/frontend-worker/SKILL.md line 29 says 'Geist Mono for prices/amounts/IDs'."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed commit e0618d66 for feature stats-about-activity-redesign. The requested redesign is functionally complete with no blocking defects; only a minor non-blocking typography regression (address column monospace removed) was found."
+}
