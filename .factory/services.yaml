@@ -13,6 +13,7 @@ commands:
   seed-orderbook: pnpm --filter @cash/scripts seed-orderbook
   integration-test: pnpm --filter @cash/scripts integration-test
   import-history: pnpm --filter @cash/scripts import-history
+  performance-report: pnpm --filter @cash/scripts performance-report
   dev-all: pnpm dev
 
 services:

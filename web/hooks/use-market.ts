@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-
-const API_BASE = "http://localhost:3100";
+import { API_BASE } from "@/lib/config";
 
 /** Market data from the /market endpoint. */
 export interface MarketData {

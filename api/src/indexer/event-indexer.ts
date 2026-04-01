@@ -9,8 +9,11 @@
  *   - DepositEvent (from accounts module)
  *   - WithdrawEvent (from accounts module)
  *
- * Uses `aptos.getModuleEventsByEventType()` with cursor-based pagination
- * (sequence_number ordering) to fetch events after the last processed version.
+ * Supports two polling strategies:
+ *   1. Indexer GraphQL (mainnet): Uses `getModuleEventsByEventType()` with cursor-based pagination.
+ *   2. REST transaction polling (testnet): Fetches account transactions from the REST API
+ *      and extracts matching events. Required because the Indexer v1 `events` table is
+ *      deprecated on testnet.
  */
 
 import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
@@ -74,18 +77,35 @@ function toAptosNetwork(network: string): Network {
 }
 
 /**
+ * Resolve fullnode URL for a network.
+ */
+function getFullnodeUrl(network: string, customUrl?: string): string {
+  if (customUrl) return customUrl;
+  switch (network) {
+    case "testnet": return "https://fullnode.testnet.aptoslabs.com/v1";
+    case "devnet": return "https://fullnode.devnet.aptoslabs.com/v1";
+    case "local": return "http://localhost:8080/v1";
+    default: return "https://fullnode.mainnet.aptoslabs.com/v1";
+  }
+}
+
+/**
  * EventIndexer polls Aptos RPC for contract events and feeds them
  * into the in-memory OrderbookState for fast API responses.
  *
- * Tracks a per-event-type sequence number cursor to avoid reprocessing events.
+ * On testnet/devnet (where Indexer GraphQL events v1 is deprecated),
+ * falls back to polling account transactions via the REST fullnode API
+ * and extracting matching contract events from them.
  */
 export class EventIndexer {
   /** Aptos client for RPC polling */
   readonly aptos: Aptos;
   private readonly contractAddress: string;
+  private readonly network: string;
   private readonly pollIntervalMs: number;
   private readonly batchSize: number;
   private readonly state: OrderbookState;
+  private readonly fullnodeUrl: string;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private isRunning: boolean = false;
   private isPolling: boolean = false;
@@ -97,14 +117,30 @@ export class EventIndexer {
    */
   private cursors: Map<string, number> = new Map();
 
+  /**
+   * For REST-based polling: tracks the offset into the account's transaction list.
+   * Incremented as we process transactions.
+   */
+  private restTxnOffset: number = 0;
+
+  /** Whether we've detected that the Indexer GraphQL events table is unavailable */
+  private useRestFallback: boolean = false;
+
   constructor(config: EventIndexerConfig, state: OrderbookState) {
     this.contractAddress = config.contractAddress;
+    this.network = config.network ?? "mainnet";
     this.pollIntervalMs = config.pollIntervalMs ?? 2000;
     this.batchSize = config.batchSize ?? 100;
     this.state = state;
+    this.fullnodeUrl = getFullnodeUrl(this.network, config.fullnodeUrl);
+
+    // Pre-enable REST fallback for testnet/devnet where Indexer events v1 is deprecated
+    if (this.network === "testnet" || this.network === "devnet") {
+      this.useRestFallback = true;
+    }
 
     const aptosConfig = new AptosConfig({
-      network: toAptosNetwork(config.network ?? "mainnet"),
+      network: toAptosNetwork(this.network),
       ...(config.fullnodeUrl ? { fullnode: config.fullnodeUrl } : {}),
     });
 
@@ -146,63 +182,21 @@ export class EventIndexer {
    * Poll for new events from the contract.
    * Skips if a previous poll is still in progress (prevents overlap).
    *
-   * Fetches all event types, merges into a single array, and sorts by
-   * (transaction_version, event_index) to ensure on-chain ordering is
-   * preserved regardless of per-type fetch order. This prevents issues
-   * like OrderFilled being processed before TradeEvent from the same tx.
+   * Uses REST transaction polling on testnet/devnet (Indexer events v1 deprecated),
+   * and Indexer GraphQL polling on mainnet.
    */
   private async poll(): Promise<void> {
     if (this.isPolling) return;
     this.isPolling = true;
 
     try {
-      // Fetch all event types in parallel
-      const fetchPromises = EVENT_TYPES.map((moduleEventType) => {
-        const fullType = `${this.contractAddress}::${moduleEventType}`;
-        const shortType = EVENT_TYPE_MAP[moduleEventType];
-        return this.fetchEvents(fullType, shortType);
-      });
-
-      const results = await Promise.all(fetchPromises);
-
-      // Merge all fetched events into a single array
-      const allEvents: IndexedEvent[] = [];
-      for (const events of results) {
-        allEvents.push(...events);
-      }
-
-      if (allEvents.length === 0) return;
-
-      // Sort by (transaction_version, event_index) to preserve on-chain order
-      allEvents.sort((a, b) => {
-        if (a.transactionVersion !== b.transactionVersion) {
-          return a.transactionVersion - b.transactionVersion;
-        }
-        return a.eventIndex - b.eventIndex;
-      });
-
-      // Process events in sorted order
-      for (const event of allEvents) {
-        this.processEvent(event.shortType, event.data);
-      }
-
-      // Update cursors for each event type based on how many we fetched
-      for (const events of results) {
-        if (events.length > 0) {
-          const fullType = events[0].fullType;
-          const cursor = this.cursors.get(fullType) ?? 0;
-          this.cursors.set(fullType, cursor + events.length);
-        }
-      }
-
-      // Update the global last indexed version from the last sorted event
-      const lastEvent = allEvents[allEvents.length - 1];
-      if (lastEvent.transactionVersion > this.state.getLastIndexedVersion()) {
-        this.state.setLastIndexedVersion(lastEvent.transactionVersion);
+      if (this.useRestFallback) {
+        await this.pollViaRest();
+      } else {
+        await this.pollViaIndexer();
       }
     } catch (error) {
       // Silently handle poll errors — the indexer is best-effort.
-      // In production, we'd log and alert.
       if (process.env.NODE_ENV !== "test") {
         console.error("[EventIndexer] Poll error:", error);
       }
@@ -212,19 +206,168 @@ export class EventIndexer {
   }
 
   /**
-   * Fetch events of a specific type from Aptos RPC using cursor-based pagination.
+   * Poll via Indexer GraphQL API (mainnet).
+   * Fetches all event types, merges into a single array, and sorts by
+   * (transaction_version, event_index) to ensure on-chain ordering.
+   */
+  private async pollViaIndexer(): Promise<void> {
+    const fetchPromises = EVENT_TYPES.map((moduleEventType) => {
+      const fullType = `${this.contractAddress}::${moduleEventType}`;
+      const shortType = EVENT_TYPE_MAP[moduleEventType];
+      return this.fetchEventsViaIndexer(fullType, shortType);
+    });
+
+    const results = await Promise.all(fetchPromises);
+
+    // Merge all fetched events into a single array
+    const allEvents: IndexedEvent[] = [];
+    for (const events of results) {
+      allEvents.push(...events);
+    }
+
+    if (allEvents.length === 0) return;
+
+    // Sort by (transaction_version, event_index) to preserve on-chain order
+    allEvents.sort((a, b) => {
+      if (a.transactionVersion !== b.transactionVersion) {
+        return a.transactionVersion - b.transactionVersion;
+      }
+      return a.eventIndex - b.eventIndex;
+    });
+
+    // Process events in sorted order
+    for (const event of allEvents) {
+      this.processEvent(event.shortType, event.data);
+    }
+
+    // Update cursors for each event type based on how many we fetched
+    for (const events of results) {
+      if (events.length > 0) {
+        const fullType = events[0].fullType;
+        const cursor = this.cursors.get(fullType) ?? 0;
+        this.cursors.set(fullType, cursor + events.length);
+      }
+    }
+
+    // Update the global last indexed version from the last sorted event
+    const lastEvent = allEvents[allEvents.length - 1];
+    if (lastEvent.transactionVersion > this.state.getLastIndexedVersion()) {
+      this.state.setLastIndexedVersion(lastEvent.transactionVersion);
+    }
+  }
+
+  /**
+   * Poll via REST fullnode API (testnet/devnet fallback).
+   *
+   * Fetches recent transactions from the contract account and extracts
+   * matching events from their `events` arrays. This works on testnet
+   * where the Indexer GraphQL events v1 table is deprecated.
+   */
+  private async pollViaRest(): Promise<void> {
+    try {
+      const url = `${this.fullnodeUrl}/accounts/${this.contractAddress}/transactions?start=${this.restTxnOffset}&limit=${this.batchSize}`;
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!response.ok) {
+        if (process.env.NODE_ENV !== "test") {
+          console.error(`[EventIndexer] REST poll failed: HTTP ${response.status}`);
+        }
+        return;
+      }
+
+      const transactions = (await response.json()) as Array<{
+        type: string;
+        version: string;
+        success: boolean;
+        events: Array<{
+          type: string;
+          data: Record<string, unknown>;
+          sequence_number: string;
+          guid: { creation_number: string; account_address: string };
+        }>;
+      }>;
+
+      if (!transactions || transactions.length === 0) return;
+
+      // Build the set of fully-qualified event types we care about
+      const fullTypeToShort = new Map<string, string>();
+      for (const moduleEventType of EVENT_TYPES) {
+        const fullType = `${this.contractAddress}::${moduleEventType}`;
+        fullTypeToShort.set(fullType, EVENT_TYPE_MAP[moduleEventType]);
+      }
+
+      const allEvents: IndexedEvent[] = [];
+
+      for (const txn of transactions) {
+        if (txn.type !== "user_transaction" || !txn.success) continue;
+
+        const txVersion = Number(txn.version);
+
+        for (let i = 0; i < txn.events.length; i++) {
+          const event = txn.events[i];
+          const shortType = fullTypeToShort.get(event.type);
+          if (shortType) {
+            allEvents.push({
+              fullType: event.type,
+              shortType,
+              data: event.data,
+              transactionVersion: txVersion,
+              eventIndex: i,
+            });
+          }
+        }
+      }
+
+      // Update offset for next poll (skip past processed transactions)
+      this.restTxnOffset += transactions.length;
+
+      if (allEvents.length === 0) return;
+
+      // Sort by (transaction_version, event_index)
+      allEvents.sort((a, b) => {
+        if (a.transactionVersion !== b.transactionVersion) {
+          return a.transactionVersion - b.transactionVersion;
+        }
+        return a.eventIndex - b.eventIndex;
+      });
+
+      // Process events in order
+      for (const event of allEvents) {
+        this.processEvent(event.shortType, event.data);
+      }
+
+      // Update last indexed version
+      const lastEvent = allEvents[allEvents.length - 1];
+      if (lastEvent.transactionVersion > this.state.getLastIndexedVersion()) {
+        this.state.setLastIndexedVersion(lastEvent.transactionVersion);
+      }
+
+      if (process.env.NODE_ENV !== "test") {
+        console.log(
+          `[EventIndexer] REST poll: processed ${allEvents.length} events from ${transactions.length} transactions`,
+        );
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV !== "test") {
+        console.error("[EventIndexer] REST poll error:", error);
+      }
+    }
+  }
+
+  /**
+   * Fetch events of a specific type from Aptos Indexer GraphQL API.
    * Returns raw events with transaction ordering metadata for cross-type sorting.
    */
-  private async fetchEvents(
+  private async fetchEventsViaIndexer(
     fullEventType: string,
     shortType: string,
   ): Promise<IndexedEvent[]> {
     try {
       const cursor = this.cursors.get(fullEventType) ?? 0;
 
-      // Use the Aptos SDK to fetch events after our cursor.
-      // The SDK's getModuleEventsByEventType uses the indexer GraphQL API
-      // which supports filtering and ordering.
       const events = await this.aptos.getModuleEventsByEventType({
         eventType: fullEventType as `${string}::${string}::${string}`,
         options: {
@@ -248,8 +391,17 @@ export class EventIndexer {
           : Number((event as Record<string, unknown>).event_index ?? 0),
       }));
     } catch (error) {
-      // Individual event type fetch errors are non-fatal — other event types
-      // will still be processed. Log for debugging.
+      // If Indexer GraphQL fails, switch to REST fallback
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      if (errorMsg.includes("Deprecated Resource") || errorMsg.includes("events")) {
+        if (!this.useRestFallback) {
+          if (process.env.NODE_ENV !== "test") {
+            console.warn("[EventIndexer] Indexer events v1 deprecated — switching to REST fallback");
+          }
+          this.useRestFallback = true;
+        }
+      }
+
       if (process.env.NODE_ENV !== "test") {
         console.error(`[EventIndexer] Error fetching ${fullEventType}:`, error);
       }

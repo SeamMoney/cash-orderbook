@@ -5,6 +5,7 @@ import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { API_BASE } from "@/lib/config";
 
 export interface OpenOrder {
   orderId: number;
@@ -19,8 +20,6 @@ interface MyOrdersProps {
   /** Trigger refetch after new order placed */
   refreshTrigger?: number;
 }
-
-const API_BASE = "http://localhost:3100";
 
 function formatPrice(price: number): string {
   return price.toFixed(6);

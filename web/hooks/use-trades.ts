@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { TradeEntry } from "@/components/orderbook/trade-ticker";
-
-const API_BASE = "http://localhost:3100";
+import { API_BASE } from "@/lib/config";
 
 /**
  * Hook to fetch recent trades from the REST API.

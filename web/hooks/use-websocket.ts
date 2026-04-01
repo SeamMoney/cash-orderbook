@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { WS_URL as DEFAULT_WS_URL } from "@/lib/config";
 
 /** WebSocket connection status */
 export type WsStatus = "connecting" | "connected" | "disconnected" | "reconnecting";
@@ -14,7 +15,7 @@ export interface WsMessage<T = unknown> {
 
 /** Configuration for the WebSocket hook */
 interface UseWebSocketOptions {
-  /** WebSocket server URL (default: ws://localhost:3101) */
+  /** WebSocket server URL (default: from env or ws://localhost:3101) */
   url?: string;
   /** Channels to subscribe to */
   channels: string[];
@@ -24,7 +25,7 @@ interface UseWebSocketOptions {
   onMessage?: (message: WsMessage) => void;
 }
 
-const WS_URL = "ws://localhost:3101";
+const WS_URL = DEFAULT_WS_URL;
 const MIN_RECONNECT_DELAY = 1000;
 const MAX_RECONNECT_DELAY = 30000;
 

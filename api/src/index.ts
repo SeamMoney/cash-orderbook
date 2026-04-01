@@ -26,12 +26,37 @@ export type { RateLimitOptions } from "./middleware/rate-limit.js";
 /**
  * Start the API server with event indexer.
  */
+/** Testnet contract address deployed by cash-testnet profile */
+const TESTNET_CONTRACT_ADDRESS =
+  "0xe66fef668077ab8dc5ea65539b6250d8ca3fc024ea4f16555fca9eaeb73b41d1";
+
+/**
+ * Resolve the contract address based on environment variables.
+ * When APTOS_NETWORK=testnet and no explicit CONTRACT_ADDRESS is set,
+ * defaults to the known testnet deployment.
+ */
+function resolveContractAddress(): string {
+  if (process.env.CONTRACT_ADDRESS) return process.env.CONTRACT_ADDRESS;
+  const network = process.env.APTOS_NETWORK ?? "mainnet";
+  if (network === "testnet") return TESTNET_CONTRACT_ADDRESS;
+  return "0xCAFE";
+}
+
 function main(): void {
   const port = parseInt(process.env.PORT ?? "3100", 10);
-  const contractAddress = process.env.CONTRACT_ADDRESS ?? "0xCAFE";
+  const network = (process.env.APTOS_NETWORK as "mainnet" | "testnet" | "devnet" | "local") ?? "mainnet";
+  const contractAddress = resolveContractAddress();
 
   // Create shared state
   const state = new OrderbookState();
+
+  // Update market info for testnet CASH/USD1 market
+  if (network === "testnet") {
+    state.updateMarketInfo({
+      pair: "CASH/USD1",
+      quoteAsset: "USD1",
+    });
+  }
 
   // Create the Hono app
   const { app } = createApp({ state });
@@ -40,7 +65,7 @@ function main(): void {
   const indexer = new EventIndexer(
     {
       contractAddress,
-      network: (process.env.APTOS_NETWORK as "mainnet" | "testnet" | "devnet" | "local") ?? "mainnet",
+      network,
       pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS ?? "2000", 10),
     },
     state,
@@ -51,6 +76,7 @@ function main(): void {
   // Start HTTP server
   serve({ fetch: app.fetch, port }, (info) => {
     console.log(`[API] CASH Orderbook REST API v${API_VERSION} listening on port ${info.port}`);
+    console.log(`[API] Network: ${network}`);
     console.log(`[API] Contract address: ${contractAddress}`);
     console.log(`[API] Indexer polling every ${process.env.POLL_INTERVAL_MS ?? "2000"}ms`);
   });

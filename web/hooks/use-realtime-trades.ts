@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import type { TradeEntry } from "@/components/orderbook/trade-ticker";
 import { useWebSocket, type WsMessage, type WsStatus } from "@/hooks/use-websocket";
-
-const API_BASE = "http://localhost:3100";
+import { API_BASE } from "@/lib/config";
 const MAX_TRADES = 100;
 
 /**

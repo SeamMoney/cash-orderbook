@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { API_BASE } from "@/lib/config";
 
 /** Depth level from the REST API */
 export interface DepthLevel {
@@ -14,8 +15,6 @@ export interface OrderbookDepth {
   bids: DepthLevel[];
   asks: DepthLevel[];
 }
-
-const API_BASE = "http://localhost:3100";
 
 /**
  * Hook to fetch orderbook depth from the REST API.

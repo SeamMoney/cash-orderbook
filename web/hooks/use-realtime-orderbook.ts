@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { toast } from "sonner";
 import type { DepthLevel, OrderbookDepth } from "@/hooks/use-depth";
 import { useWebSocket, type WsMessage, type WsStatus } from "@/hooks/use-websocket";
+import { API_BASE } from "@/lib/config";
 
 /** Delta update from WebSocket */
 interface OrderbookDelta {
@@ -11,8 +12,6 @@ interface OrderbookDelta {
   bids: DepthLevel[];
   asks: DepthLevel[];
 }
-
-const API_BASE = "http://localhost:3100";
 
 /**
  * Hook for real-time orderbook data via WebSocket with REST fallback.

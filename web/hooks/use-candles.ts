@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { generateMockCandles } from "@/lib/mock-candles";
 import historicalCandlesJson from "@/data/historical-candles.json";
-
-const API_BASE = "http://localhost:3100";
+import { API_BASE } from "@/lib/config";
 
 /** A single OHLCV candle from the /candles endpoint. */
 export interface CandleData {

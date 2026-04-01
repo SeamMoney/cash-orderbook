@@ -15,12 +15,14 @@ import {
   CASH_TOKEN_ADDRESS,
   USDC_TOKEN_ADDRESS,
 } from "@cash/orderbook-sdk";
+import {
+  CONTRACT_ADDRESS as ENV_CONTRACT_ADDRESS,
+  APTOS_NETWORK,
+} from "@/lib/config";
 
-const CONTRACT_ADDRESS =
-  process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? "0xCAFE";
+const CONTRACT_ADDRESS = ENV_CONTRACT_ADDRESS;
 
-const NETWORK =
-  (process.env.NEXT_PUBLIC_APTOS_NETWORK as CashOrderbookConfig["network"]) ?? "mainnet";
+const NETWORK = APTOS_NETWORK as CashOrderbookConfig["network"];
 
 /**
  * Build the entry function data for a placeOrder call.

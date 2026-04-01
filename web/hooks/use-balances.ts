@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { UserBalances } from "@cash/shared";
-
-const API_BASE = "http://localhost:3100";
+import { API_BASE } from "@/lib/config";
 
 /**
  * Hook to fetch CASH and USDC balances for a connected wallet address.
