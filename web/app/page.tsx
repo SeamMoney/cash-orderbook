@@ -16,6 +16,17 @@ import { useMinDuration } from "@/hooks/use-min-duration";
 import { useRealtimeTrades } from "@/hooks/use-realtime-trades";
 import { useRealtimePrice } from "@/hooks/use-realtime-price";
 
+/** Breadcrumb displayed above the token header. */
+function Breadcrumb(): React.ReactElement {
+  return (
+    <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-3">
+      <span className="hover:text-white cursor-pointer transition-colors">Tokens</span>
+      <span className="text-text-muted">&gt;</span>
+      <span className="text-white">CASH</span>
+    </nav>
+  );
+}
+
 export default function Home(): React.ReactElement {
   const [activeTab, setActiveTab] = useState<NavTab>("trade");
   const { market, loading: rawMarketLoading } = useMarket();
@@ -85,18 +96,22 @@ export default function Home(): React.ReactElement {
         <div className="flex flex-col xl:flex-row gap-20">
           {/* Left Column (~65%) — Token Info + Chart + Stats + Transactions */}
           <div className="flex-1 min-w-0 space-y-4 md:space-y-6">
-            {/* Token Header */}
-            <TokenHeader
+            {/* Breadcrumb */}
+            <Breadcrumb />
+
+            {/* Token Header — logo, name, symbol only */}
+            <TokenHeader />
+
+            {/* Price Chart — includes price display above the chart canvas */}
+            <PriceChart
+              onCrosshairMove={handleCrosshairMove}
               price={displayPrice}
               change24h={change24h}
-              loading={marketLoading}
+              priceLoading={marketLoading}
               hoverTimestamp={hoverTimestamp}
               flashDirection={flashDirection}
               hoverOhlc={hoverOhlc}
             />
-
-            {/* Price Chart */}
-            <PriceChart onCrosshairMove={handleCrosshairMove} />
 
             {/* Token Stats Grid */}
             <TokenStatsGrid market={market} loading={marketLoading} />

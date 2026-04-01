@@ -11,6 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCandles, type CandleInterval } from "@/hooks/use-candles";
 import { useMinDuration } from "@/hooks/use-min-duration";
 import { useRealtimeTrades } from "@/hooks/use-realtime-trades";
+import { formatBalance } from "@/lib/utils";
+import type { PriceFlashDirection } from "@/hooks/use-realtime-price";
 
 /** Time range tab options shown below the chart. */
 const TIME_RANGES: { label: string; interval: CandleInterval }[] = [
@@ -19,6 +21,7 @@ const TIME_RANGES: { label: string; interval: CandleInterval }[] = [
   { label: "1W", interval: "15m" },
   { label: "1M", interval: "1h" },
   { label: "1Y", interval: "1d" },
+  { label: "ALL", interval: "1d" },
 ];
 
 /** Chart display mode: candlestick bars or area/line chart. */
@@ -37,19 +40,46 @@ export interface CrosshairData {
   chartMode?: ChartMode;
 }
 
+/** OHLC hover values from candlestick crosshair. */
+interface OhlcValues {
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
+
 interface PriceChartProps {
   /** Callback when user hovers the chart crosshair. */
   onCrosshairMove?: (data: CrosshairData) => void;
+  /** Current price to display above the chart (from API or chart hover). */
+  price: number | null;
+  /** 24h price change percentage. Positive = green, negative = red. */
+  change24h: number | null;
+  /** Whether market data is still loading. */
+  priceLoading: boolean;
+  /** Optional: the date/time label shown when hovering the chart. */
+  hoverTimestamp?: string | null;
+  /** Optional: flash direction for price change animation ("up" = green, "down" = red). */
+  flashDirection?: PriceFlashDirection;
+  /** Optional: OHLC values when hovering candlestick chart. */
+  hoverOhlc?: OhlcValues | null;
 }
 
 /**
  * PriceChart — TradingView lightweight-charts with candlestick/line toggle and time range tabs.
+ * Includes the price display above the chart canvas (relocated from token header).
  * Default: CandlestickSeries with green up / red down bars.
  * Toggle to AreaSeries (line + gradient) via Candle | Line buttons.
  * Shows empty state when no data, loading skeleton while fetching.
  */
 export function PriceChart({
   onCrosshairMove,
+  price,
+  change24h,
+  priceLoading,
+  hoverTimestamp,
+  flashDirection,
+  hoverOhlc,
 }: PriceChartProps): React.ReactElement {
   const [activeRange, setActiveRange] = useState(1); // default "1D"
   const [chartMode, setChartMode] = useState<ChartMode>("candle");
@@ -76,8 +106,94 @@ export function PriceChart({
     ? "rgba(0, 213, 75, 0.0)"
     : "rgba(255, 59, 48, 0.0)";
 
+  // Price display helpers
+  const isPricePositive = change24h !== null && change24h >= 0;
+  const changeColor = isPricePositive ? "text-cash-green" : "text-cash-red";
+  const changePrefix = isPricePositive ? "+" : "";
+
+  // Flash animation state
+  const [flashClass, setFlashClass] = useState("");
+
+  const applyFlash = useCallback((direction: PriceFlashDirection): void => {
+    if (!direction) {
+      setFlashClass("");
+      return;
+    }
+    setFlashClass("");
+    requestAnimationFrame(() => {
+      setFlashClass(direction === "up" ? "animate-flash-green" : "animate-flash-red");
+    });
+  }, []);
+
+  useEffect(() => {
+    applyFlash(flashDirection ?? null);
+  }, [flashDirection, applyFlash]);
+
   return (
     <div>
+      {/* Price display — above the chart canvas */}
+      <div className="mb-3">
+        <div className="flex items-baseline gap-3">
+          {priceLoading ? (
+            <>
+              <Skeleton className="h-9 w-32 rounded-md" />
+              <Skeleton className="h-5 w-20 rounded-md" />
+            </>
+          ) : (
+            <>
+              <span
+                className={`font-sans text-2xl sm:text-3xl font-bold tracking-tight text-white rounded-md px-1 -mx-1 ${flashClass}`}
+              >
+                {price !== null
+                  ? `$${formatBalance(price, price < 1 ? 6 : 2)}`
+                  : "$--"}
+              </span>
+              {change24h !== null && !hoverTimestamp ? (
+                <span className={`text-sm font-medium ${changeColor}`}>
+                  {changePrefix}
+                  {change24h.toFixed(2)}%
+                </span>
+              ) : null}
+              {hoverTimestamp ? (
+                <span className="text-sm text-muted-foreground">
+                  {hoverTimestamp}
+                </span>
+              ) : null}
+            </>
+          )}
+        </div>
+
+        {/* OHLC values when hovering candlestick chart */}
+        {hoverOhlc ? (
+          <div className="mt-1 flex items-center gap-3 font-mono text-xs">
+            <span className="text-muted-foreground">
+              O{" "}
+              <span className="text-white">
+                {formatBalance(hoverOhlc.open, hoverOhlc.open < 1 ? 6 : 2)}
+              </span>
+            </span>
+            <span className="text-muted-foreground">
+              H{" "}
+              <span className="text-white">
+                {formatBalance(hoverOhlc.high, hoverOhlc.high < 1 ? 6 : 2)}
+              </span>
+            </span>
+            <span className="text-muted-foreground">
+              L{" "}
+              <span className="text-white">
+                {formatBalance(hoverOhlc.low, hoverOhlc.low < 1 ? 6 : 2)}
+              </span>
+            </span>
+            <span className="text-muted-foreground">
+              C{" "}
+              <span className="text-white">
+                {formatBalance(hoverOhlc.close, hoverOhlc.close < 1 ? 6 : 2)}
+              </span>
+            </span>
+          </div>
+        ) : null}
+      </div>
+
       {/* Chart type toggle + Time range tabs */}
       <div className="mb-4 flex items-center justify-between">
         {/* Chart mode toggle */}
@@ -108,15 +224,15 @@ export function PriceChart({
           </button>
         </div>
 
-        {/* Time range tabs */}
+        {/* Time range tabs — clean text style */}
         <div className="flex items-center gap-1 sm:gap-2">
           {TIME_RANGES.map((range, idx) => (
             <button
               key={range.label}
               onClick={() => setActiveRange(idx)}
-              className={`rounded-full px-3 py-1.5 min-h-[44px] min-w-[44px] text-xs font-medium transition-colors ${
+              className={`px-2.5 py-1.5 text-xs font-medium transition-colors ${
                 idx === activeRange
-                  ? "bg-secondary text-white"
+                  ? "text-white font-semibold"
                   : "text-text-muted hover:text-muted-foreground cursor-pointer"
               }`}
               aria-label={`Show ${range.label} chart range`}
@@ -129,7 +245,7 @@ export function PriceChart({
       </div>
 
       {/* Chart area */}
-      <div className="relative h-[220px] sm:h-[300px] w-full overflow-hidden rounded-lg">
+      <div className="relative h-[356px] w-full overflow-hidden rounded-lg">
         {loading ? (
           <ChartSkeleton />
         ) : isEmpty ? (
