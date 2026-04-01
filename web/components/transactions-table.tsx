@@ -162,12 +162,12 @@ export function TransactionsTable({
     <div>
       {/* Header */}
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-white">Transactions</h3>
+        <h3 className="text-[25px] leading-[30px] font-medium text-white">Transactions</h3>
       </div>
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[400px] text-xs">
+        <table className="w-full min-w-[400px] text-[13px]">
           {/* Column Headers */}
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (

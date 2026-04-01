@@ -23,15 +23,15 @@ interface StatItemProps {
   loading: boolean;
 }
 
-/** A single stat item with label and value. */
+/** A single stat item with label on left, value on right (row layout). */
 function StatItem({ label, value, loading }: StatItemProps): React.ReactElement {
   return (
-    <div>
-      <p className="text-xs text-[#9B9B9B] mb-1">{label}</p>
+    <div className="flex flex-row items-center justify-between w-[calc(50%-10px)] border-b border-white/10 pb-4">
+      <p className="text-[17px] font-medium text-[#9B9B9B]">{label}</p>
       {loading ? (
-        <Skeleton className="h-5 w-20 rounded-md" />
+        <Skeleton className="h-7 w-24 rounded-md" />
       ) : (
-        <p className="font-sans text-sm font-medium text-white">
+        <p className="font-sans text-[25px] leading-[30px] font-medium text-white">
           {value ?? "--"}
         </p>
       )}
@@ -73,7 +73,7 @@ export function TokenStatsGrid({
 
   return (
     <div>
-      <h3 className="text-lg font-semibold text-white mb-4">Stats</h3>
+      <h3 className="text-[25px] leading-[30px] font-medium text-white mb-4">Stats</h3>
       <div className="flex flex-wrap gap-5">
         <StatItem label="Market cap" value={marketCap} loading={loading} />
         <StatItem label="24H volume" value={volume24h} loading={loading} />

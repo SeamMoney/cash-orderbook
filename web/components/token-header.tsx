@@ -8,15 +8,15 @@ export function TokenHeader(): React.ReactElement {
   return (
     <div className="flex items-center gap-3">
       {/* Token Icon */}
-      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary">
-        <span className="text-sm font-bold text-black">C</span>
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary">
+        <span className="text-lg font-bold text-black">C</span>
       </div>
 
-      <div className="flex items-center gap-2">
-        <h1 className="text-xl font-bold tracking-tight text-white">
+      <div className="flex items-center gap-3">
+        <h1 className="text-[25px] leading-[30px] font-medium tracking-tight text-white">
           CASH
         </h1>
-        <span className="text-sm font-medium text-muted-foreground">$CASH</span>
+        <span className="text-[17px] font-medium text-muted-foreground">$CASH</span>
       </div>
     </div>
   );

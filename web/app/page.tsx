@@ -19,7 +19,7 @@ import { useRealtimePrice } from "@/hooks/use-realtime-price";
 /** Breadcrumb displayed above the token header. */
 function Breadcrumb(): React.ReactElement {
   return (
-    <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-3">
+    <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-5">
       <span className="hover:text-white cursor-pointer transition-colors">Tokens</span>
       <span className="text-text-muted">&gt;</span>
       <span className="text-white">CASH</span>
@@ -93,7 +93,7 @@ export default function Home(): React.ReactElement {
         transition={{ duration: 0.3, ease: "easeOut" }}
         className="mx-auto w-full max-w-[1200px] flex-1 px-5 xl:px-10 mt-8 pb-12"
       >
-        <div className="flex flex-col xl:flex-row gap-20">
+        <div className="flex flex-col lg:flex-row gap-20">
           {/* Left Column (~65%) — Token Info + Chart + Stats + Transactions */}
           <div className="flex-1 min-w-0 space-y-4 md:space-y-6">
             {/* Breadcrumb */}
@@ -117,7 +117,7 @@ export default function Home(): React.ReactElement {
             <TokenStatsGrid market={market} loading={marketLoading} />
 
             {/* Swap Widget — shown inline on mobile, hidden on desktop (shown in right column) */}
-            <div className="xl:hidden">
+            <div className="lg:hidden">
               <SwapWidget />
             </div>
 
@@ -129,7 +129,7 @@ export default function Home(): React.ReactElement {
           </div>
 
           {/* Right Column (~35%) — Sticky Swap Widget (desktop only) */}
-          <div className="hidden xl:block w-[360px] flex-shrink-0">
+          <div className="hidden lg:block w-[360px] flex-shrink-0">
             <div className="sticky top-[72px]">
               <SwapWidget />
             </div>

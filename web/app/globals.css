@@ -6,13 +6,13 @@
 @theme inline {
   --color-background: #000000;
   --color-foreground: #FFFFFF;
-  --color-card: #111111;
+  --color-card: #131313;
   --color-card-foreground: #FFFFFF;
   --color-popover: #111111;
   --color-popover-foreground: #FFFFFF;
   --color-primary: #00D54B;
   --color-primary-foreground: #000000;
-  --color-secondary: #1A1A1A;
+  --color-secondary: #1F1F1F;
   --color-secondary-foreground: #FFFFFF;
   --color-muted: #1A1A1A;
   --color-muted-foreground: #888888;
@@ -47,6 +47,7 @@
   --color-text-primary: #FFFFFF;
   --color-text-secondary: #888888;
   --color-text-muted: #555555;
+  --color-surface2-hovered: #242424;
 
   --radius: 0.625rem;
   --radius-sm: calc(var(--radius) - 4px);

@@ -142,14 +142,14 @@ export function PriceChart({
           ) : (
             <>
               <span
-                className={`font-sans text-2xl sm:text-3xl font-bold tracking-tight text-white rounded-md px-1 -mx-1 ${flashClass}`}
+                className={`font-sans text-[36px] leading-[40px] font-medium tracking-tight text-white rounded-md px-1 -mx-1 ${flashClass}`}
               >
                 {price !== null
                   ? `$${formatBalance(price, price < 1 ? 6 : 2)}`
                   : "$--"}
               </span>
               {change24h !== null && !hoverTimestamp ? (
-                <span className={`text-sm font-medium ${changeColor}`}>
+                <span className={`text-[17px] font-medium ${changeColor}`}>
                   {changePrefix}
                   {change24h.toFixed(2)}%
                 </span>

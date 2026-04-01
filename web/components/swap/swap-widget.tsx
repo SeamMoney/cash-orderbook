@@ -516,7 +516,7 @@ export function SwapWidget(): React.ReactElement {
   const limitCta = getLimitCtaState();
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
+    <div className="rounded-2xl border border-border bg-card p-2">
       {/* Swap / Limit Tabs */}
       <div className="mb-5 flex items-center gap-1 rounded-full bg-background p-1">
         {(["swap", "limit"] as const).map((tab) => (
@@ -554,7 +554,7 @@ export function SwapWidget(): React.ReactElement {
             transition={{ duration: 0.15 }}
           >
             {/* You Pay */}
-            <div className="rounded-xl bg-background border border-border p-4 mb-1">
+            <div className="rounded-2xl bg-[#1F1F1F] border border-[#1F1F1F] hover:border-white/10 focus-within:border-white/15 p-4 mb-1 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-text-muted">You pay</span>
                 {connected && fromBalance !== null && (
@@ -589,21 +589,21 @@ export function SwapWidget(): React.ReactElement {
             </div>
 
             {/* Direction Toggle */}
-            <div className="flex justify-center -my-3 relative z-10">
+            <div className="flex justify-center -my-[18px] relative z-10">
               <motion.button
                 animate={{ rotate: directionRotation }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={handleDirectionToggle}
-                className="rounded-xl border border-border bg-card p-2 text-text-muted hover:text-white hover:border-surface-hover transition-colors"
+                className="flex items-center justify-center rounded-xl h-10 w-10 border-4 border-[#131313] bg-[#1F1F1F] text-text-muted hover:text-white transition-colors"
               >
                 <ArrowDownUp className="h-4 w-4" />
               </motion.button>
             </div>
 
             {/* You Receive */}
-            <div className="rounded-xl bg-background border border-border p-4 mt-1">
+            <div className="rounded-2xl bg-[#1F1F1F] border border-[#1F1F1F] hover:border-white/10 focus-within:border-white/15 p-4 mt-1 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-text-muted">You receive</span>
                 {connected && toBalance !== null && (
@@ -656,7 +656,7 @@ export function SwapWidget(): React.ReactElement {
             <button
               onClick={swapCta.connectWallet ? () => setWalletSelectorOpen(true) : handleSwap}
               disabled={swapCta.disabled}
-              className="mt-4 w-full rounded-2xl py-3.5 min-h-[44px] text-base font-semibold transition-all
+              className="mt-4 w-full rounded-[20px] py-3.5 min-h-[44px] text-base font-semibold transition-all
                 bg-primary text-primary-foreground hover:brightness-110
                 disabled:bg-secondary disabled:text-text-muted disabled:cursor-not-allowed"
             >
@@ -725,7 +725,7 @@ export function SwapWidget(): React.ReactElement {
             </div>
 
             {/* Price Input */}
-            <div className="rounded-xl bg-background border border-border p-4 mb-3">
+            <div className="rounded-2xl bg-[#1F1F1F] border border-[#1F1F1F] hover:border-white/10 focus-within:border-white/15 p-4 mb-3 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-text-muted">Price (USD1)</span>
               </div>
@@ -740,7 +740,7 @@ export function SwapWidget(): React.ReactElement {
             </div>
 
             {/* Amount Input */}
-            <div className="rounded-xl bg-background border border-border p-4 mb-3">
+            <div className="rounded-2xl bg-[#1F1F1F] border border-[#1F1F1F] hover:border-white/10 focus-within:border-white/15 p-4 mb-3 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-text-muted">Amount (CASH)</span>
                 {connected && balances && (
@@ -766,7 +766,7 @@ export function SwapWidget(): React.ReactElement {
 
             {/* Order Total */}
             {limitPrice && limitAmount && parseFloat(limitPrice) > 0 && parseFloat(limitAmount) > 0 && (
-              <div className="rounded-xl bg-background border border-border p-3 mb-3">
+              <div className="rounded-2xl bg-[#1F1F1F] border border-[#1F1F1F] p-3 mb-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-text-muted">Total</span>
                   <span className="font-sans text-white">
@@ -784,7 +784,7 @@ export function SwapWidget(): React.ReactElement {
             <button
               onClick={limitCta.connectWallet ? () => setWalletSelectorOpen(true) : handlePlaceLimitOrder}
               disabled={limitCta.disabled}
-              className={`mt-1 w-full rounded-2xl py-3.5 min-h-[44px] text-base font-semibold transition-all
+              className={`mt-1 w-full rounded-[20px] py-3.5 min-h-[44px] text-base font-semibold transition-all
                 disabled:bg-secondary disabled:text-text-muted disabled:cursor-not-allowed
                 ${
                   !limitCta.disabled

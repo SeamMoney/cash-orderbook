@@ -11,12 +11,15 @@ const WEBSITE_URL = "https://github.com/nicholasgasior/cash-orderbook";
 const TOKEN_DESCRIPTION =
   "CASH is a token on the Aptos blockchain powering the CASH Orderbook, a high-performance Central Limit Order Book (CLOB) for zero-slippage trading.";
 
+const TRUNCATE_CHARACTER_COUNT = 300;
+
 /**
  * TokenInfo — About section with token description, contract address pill,
  * and link pills for Explorer and Website.
  */
 export function TokenInfo(): React.ReactElement {
   const [copied, setCopied] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const handleCopy = useCallback(async (): Promise<void> => {
     try {
@@ -45,11 +48,25 @@ export function TokenInfo(): React.ReactElement {
 
   const explorerUrl = `${EXPLORER_BASE}/${CONTRACT_ADDRESS}${NETWORK_PARAM}`;
 
+  const shouldTruncate = TOKEN_DESCRIPTION.length > TRUNCATE_CHARACTER_COUNT;
+  const displayDescription =
+    shouldTruncate && !expanded
+      ? TOKEN_DESCRIPTION.slice(0, TRUNCATE_CHARACTER_COUNT) + "..."
+      : TOKEN_DESCRIPTION;
+
   return (
     <div>
-      <h3 className="text-lg font-semibold text-white mb-3">About</h3>
-      <p className="text-sm text-[#9B9B9B] mb-4 leading-relaxed">
-        {TOKEN_DESCRIPTION}
+      <h3 className="text-[25px] leading-[30px] font-medium text-white mb-3">About</h3>
+      <p className="text-[17px] leading-6 text-white mb-4">
+        {displayDescription}
+        {shouldTruncate && (
+          <button
+            onClick={() => setExpanded((prev) => !prev)}
+            className="ml-1 text-[#9B9B9B] hover:text-white transition-colors"
+          >
+            {expanded ? "Show less" : "Show more"}
+          </button>
+        )}
       </p>
 
       {/* Link pills */}
@@ -57,17 +74,17 @@ export function TokenInfo(): React.ReactElement {
         {/* Contract pill with copy */}
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-[#1A1A1A] text-sm text-[#9B9B9B] transition-colors hover:bg-[#252525] hover:text-white"
+          className="flex items-center gap-2 rounded-[20px] px-3 py-2 bg-[#1F1F1F] text-[15px] text-[#9B9B9B] transition-colors hover:bg-[#242424] hover:text-white"
           title="Copy contract address"
         >
           {copied ? (
             <>
-              <Check className="h-3.5 w-3.5 text-cash-green" />
+              <Check className="h-4 w-4 text-cash-green" />
               <span className="text-cash-green">Copied!</span>
             </>
           ) : (
             <>
-              <Copy className="h-3.5 w-3.5" />
+              <Copy className="h-4 w-4" />
               <span>{truncated}</span>
             </>
           )}
@@ -78,10 +95,10 @@ export function TokenInfo(): React.ReactElement {
           href={explorerUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-[#1A1A1A] text-sm text-[#9B9B9B] transition-colors hover:bg-[#252525] hover:text-white"
+          className="flex items-center gap-2 rounded-[20px] px-3 py-2 bg-[#1F1F1F] text-[15px] text-[#9B9B9B] transition-colors hover:bg-[#242424] hover:text-white"
           title="View on Aptos Explorer"
         >
-          <ExternalLink className="h-3.5 w-3.5" />
+          <ExternalLink className="h-4 w-4" />
           <span>Explorer</span>
         </a>
 
@@ -90,10 +107,10 @@ export function TokenInfo(): React.ReactElement {
           href={WEBSITE_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-[#1A1A1A] text-sm text-[#9B9B9B] transition-colors hover:bg-[#252525] hover:text-white"
+          className="flex items-center gap-2 rounded-[20px] px-3 py-2 bg-[#1F1F1F] text-[15px] text-[#9B9B9B] transition-colors hover:bg-[#242424] hover:text-white"
           title="Visit website"
         >
-          <Globe className="h-3.5 w-3.5" />
+          <Globe className="h-4 w-4" />
           <span>Website</span>
         </a>
       </div>

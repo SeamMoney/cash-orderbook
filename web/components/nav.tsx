@@ -45,7 +45,7 @@ export function Nav({
   return (
     <>
       <header className="sticky top-0 z-50 w-full bg-background">
-        <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between px-4 sm:px-6">
+        <div className="mx-auto flex h-[72px] max-w-[1400px] items-center justify-between px-3">
           {/* Left: Logo */}
           <div className="flex items-center gap-6">
             <span className="text-xl font-bold tracking-tight text-white">
@@ -54,7 +54,7 @@ export function Nav({
           </div>
 
           {/* Center: Navigation Tabs (hidden on mobile) */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden md:flex items-center gap-3">
             {NAV_TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -73,7 +73,7 @@ export function Nav({
           {/* Right: Search + Wallet (desktop) + Hamburger (mobile) */}
           <div className="flex items-center gap-3">
             {/* Search placeholder — hidden on mobile and tablet */}
-            <div className="hidden lg:flex items-center gap-2 rounded-full bg-card border border-border px-3 py-1.5 text-sm text-text-muted w-[200px] cursor-pointer hover:border-surface-hover transition-colors">
+            <div className="hidden lg:flex items-center gap-2 rounded-full bg-[#1F1F1F] border border-border px-3 py-1.5 text-sm text-text-muted w-[200px] cursor-pointer hover:border-surface-hover transition-colors">
               <Search className="h-3.5 w-3.5" />
               <span>Search tokens</span>
             </div>
