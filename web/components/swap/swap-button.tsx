@@ -67,7 +67,7 @@ export function SwapButton({
       disabled={disabled}
       className="mt-4 w-full h-12 rounded-xl text-base font-semibold transition-all
         bg-white text-black hover:bg-gray-200
-        disabled:bg-[#2A2A2A] disabled:text-[#555555] disabled:cursor-not-allowed"
+        disabled:bg-[#2A2A2A] disabled:text-white/38 disabled:cursor-not-allowed"
     >
       {isSwapping ? (
         <span className="flex items-center gap-2">

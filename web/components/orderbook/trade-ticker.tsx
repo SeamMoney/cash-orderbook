@@ -83,7 +83,7 @@ export function TradeTicker({
                 <span className="text-[#999999]">
                   {formatQty(trade.quantity)}
                 </span>
-                <span className="text-[#555555] text-[10px]">
+                <span className="text-white/38 text-[10px]">
                   {timeAgo(trade.timestamp)}
                 </span>
               </motion.div>
@@ -91,7 +91,7 @@ export function TradeTicker({
           </AnimatePresence>
         ) : (
           <div className="flex flex-col items-center justify-center py-8 gap-1">
-            <span className="text-xs text-[#555555]">
+            <span className="text-xs text-white/38">
               No trades yet
             </span>
             <span className="text-[10px] text-[#444444]">

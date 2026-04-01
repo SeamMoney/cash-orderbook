@@ -113,7 +113,7 @@ export function ConnectButton(): React.ReactElement {
         <span className="font-mono">
           {truncateAddress(account.address.toString())}
         </span>
-        <ChevronDown className="h-3 w-3 text-[#888888]" />
+        <ChevronDown className="h-3 w-3 text-white/65" />
       </Button>
 
       {/* Dropdown */}
@@ -127,7 +127,7 @@ export function ConnectButton(): React.ReactElement {
           <div className="absolute right-0 top-full mt-2 z-50 w-56 rounded-lg border border-[#2A2A2A] bg-[#1A1A1A] shadow-lg py-1">
             {/* Address */}
             <div className="px-3 py-2 border-b border-[#2A2A2A]">
-              <p className="text-xs text-[#888888] mb-1">Connected Address</p>
+              <p className="text-xs text-white/65 mb-1">Connected Address</p>
               <p className="font-mono text-xs text-white">
                 {truncateAddress(account.address.toString(), 8)}
               </p>
@@ -135,15 +135,15 @@ export function ConnectButton(): React.ReactElement {
 
             {/* Balances */}
             <div className="px-3 py-2 border-b border-[#2A2A2A] space-y-1">
-              <p className="text-xs text-[#888888] mb-1">Balances</p>
+              <p className="text-xs text-white/65 mb-1">Balances</p>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-[#888888]">CASH</span>
+                <span className="text-xs text-white/65">CASH</span>
                 <span className="font-mono text-xs text-white">
                   {balances ? formatBalance(balances.cash.available, 2) : "—"}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-[#888888]">USD1</span>
+                <span className="text-xs text-white/65">USD1</span>
                 <span className="font-mono text-xs text-white">
                   {balances ? formatBalance(balances.usdc.available, 2) : "—"}
                 </span>
@@ -153,7 +153,7 @@ export function ConnectButton(): React.ReactElement {
             {/* Actions */}
             <button
               onClick={handleCopyAddress}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#888888] hover:text-white hover:bg-[#2A2A2A] transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/65 hover:text-white hover:bg-[#2A2A2A] transition-colors"
             >
               {copied ? (
                 <Check className="h-4 w-4 text-emerald-500" />

@@ -86,7 +86,7 @@ export function Nav({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setSelectorOpen(true)}
-                    className="text-[#888888] hover:text-white text-sm font-medium transition-colors px-3 py-1.5"
+                    className="text-white/65 hover:text-white text-sm font-medium transition-colors px-3 py-1.5"
                   >
                     Log In
                   </button>
@@ -158,7 +158,7 @@ export function Nav({
                           setSelectorOpen(true);
                           setMobileMenuOpen(false);
                         }}
-                        className="text-[#888888] hover:text-white text-sm font-medium transition-colors px-3 py-2"
+                        className="text-white/65 hover:text-white text-sm font-medium transition-colors px-3 py-2"
                       >
                         Log In
                       </button>

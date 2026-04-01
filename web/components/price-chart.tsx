@@ -418,7 +418,7 @@ function LightweightChart({
         height: chartContainerRef.current.clientHeight || 300,
         layout: {
           background: { color: "transparent" },
-          textColor: "#888888",
+          textColor: "rgba(255,255,255,0.38)",
           fontFamily: "var(--font-geist-mono), monospace",
           fontSize: 11,
         },
@@ -429,13 +429,13 @@ function LightweightChart({
         crosshair: {
           mode: CrosshairMode.Normal,
           vertLine: {
-            color: "#555555",
+            color: "rgba(255,255,255,0.38)",
             width: 1,
             style: 2,
             labelBackgroundColor: "#1F1F1F",
           },
           horzLine: {
-            color: "#555555",
+            color: "rgba(255,255,255,0.38)",
             width: 1,
             style: 2,
             labelBackgroundColor: "#1F1F1F",
@@ -624,7 +624,7 @@ function LightweightChart({
               {
                 time: transitionTimeSec,
                 position: "aboveBar" as const,
-                color: "#888888",
+                color: "rgba(255,255,255,0.38)",
                 shape: "arrowDown" as const,
                 text: "New Venue",
               },

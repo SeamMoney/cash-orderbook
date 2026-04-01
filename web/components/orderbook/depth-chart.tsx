@@ -148,7 +148,7 @@ export function DepthChart({ bids, asks }: DepthChartProps): React.ReactElement 
     }
 
     // Draw axis labels
-    ctx.fillStyle = "#555555";
+    ctx.fillStyle = "rgba(255,255,255,0.38)";
     ctx.font = "10px var(--font-geist-mono), monospace";
     ctx.textAlign = "left";
     ctx.fillText("Bids", padding.left + 4, padding.top + 12);
@@ -193,7 +193,7 @@ export function DepthChart({ bids, asks }: DepthChartProps): React.ReactElement 
     <div ref={containerRef} className="relative w-full h-full min-h-[160px]">
       <canvas ref={canvasRef} className="absolute inset-0" />
       {bids.length === 0 && asks.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center text-xs text-[#555555]">
+        <div className="absolute inset-0 flex items-center justify-center text-xs text-white/38">
           No depth data
         </div>
       )}

@@ -58,7 +58,7 @@ export function OrderbookView(): React.ReactElement {
                 </h3>
                 <ConnectionStatus status={wsStatus} />
               </div>
-              <span className="font-mono text-[10px] text-[#555555]">
+              <span className="font-mono text-[10px] text-white/38">
                 CASH / USDC
               </span>
             </div>

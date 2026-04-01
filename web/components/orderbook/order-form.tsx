@@ -205,7 +205,7 @@ export function OrderForm({
             className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors ${
               orderType === t
                 ? "bg-[#2A2A2A] text-white"
-                : "text-[#666666] hover:text-[#888888]"
+                : "text-[#666666] hover:text-white/65"
             }`}
           >
             {t === "limit" ? "Limit" : "Market"}
@@ -225,7 +225,7 @@ export function OrderForm({
             placeholder="0.000000"
             value={price}
             onChange={handlePriceChange}
-            className="mt-1 w-full bg-transparent text-lg font-mono text-white placeholder:text-[#555555] outline-none"
+            className="mt-1 w-full bg-transparent text-lg font-mono text-white placeholder:text-white/38 outline-none"
           />
         </div>
       )}
@@ -241,7 +241,7 @@ export function OrderForm({
           placeholder="0.00"
           value={amount}
           onChange={handleAmountChange}
-          className="mt-1 w-full bg-transparent text-lg font-mono text-white placeholder:text-[#555555] outline-none"
+          className="mt-1 w-full bg-transparent text-lg font-mono text-white placeholder:text-white/38 outline-none"
         />
       </div>
 
@@ -249,7 +249,7 @@ export function OrderForm({
       {estimatedTotal && (
         <div className="flex items-center justify-between px-1 text-xs">
           <span className="text-[#666666]">Est. Total</span>
-          <span className="font-mono text-[#888888]">
+          <span className="font-mono text-white/65">
             {estimatedTotal} USDC
           </span>
         </div>
@@ -261,7 +261,7 @@ export function OrderForm({
         disabled={isDisabled}
         className={`w-full rounded-lg py-3 text-sm font-semibold transition-all ${
           isDisabled
-            ? "bg-[#2A2A2A] text-[#555555] cursor-not-allowed"
+            ? "bg-[#2A2A2A] text-white/38 cursor-not-allowed"
             : side === "buy"
               ? "bg-emerald-500 text-white hover:bg-emerald-600 active:bg-emerald-700"
               : "bg-rose-500 text-white hover:bg-rose-600 active:bg-rose-700"

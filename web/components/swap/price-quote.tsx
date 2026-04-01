@@ -66,7 +66,7 @@ export function PriceQuote({
               ? "text-rose-400"
               : showPriceImpactWarning
                 ? "text-amber-400"
-                : "text-[#888888]"
+                : "text-white/65"
           }
         />
 
@@ -108,7 +108,7 @@ function QuoteRow({
       <span
         className={
           valueClassName ??
-          `text-[#888888] ${mono ? "font-sans" : ""}`
+          `text-white/65 ${mono ? "font-sans" : ""}`
         }
       >
         {value}

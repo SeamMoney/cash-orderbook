@@ -94,7 +94,7 @@ export function OrderbookLadder({
       <div className="flex-1 overflow-hidden">
         {displayBids.length === 0 && displayAsks.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-12 gap-1">
-            <span className="text-sm text-[#555555]">No orders yet</span>
+            <span className="text-sm text-white/38">No orders yet</span>
             <span className="text-[10px] text-[#444444]">
               Place an order or wait for the book to fill
             </span>
@@ -131,7 +131,7 @@ export function OrderbookLadder({
                   </motion.div>
                 ))
               ) : (
-                <div className="flex items-center justify-center py-8 text-xs text-[#555555]">
+                <div className="flex items-center justify-center py-8 text-xs text-white/38">
                   No bids
                 </div>
               )}
@@ -168,7 +168,7 @@ export function OrderbookLadder({
                   </motion.div>
                 ))
               ) : (
-                <div className="flex items-center justify-center py-8 text-xs text-[#555555]">
+                <div className="flex items-center justify-center py-8 text-xs text-white/38">
                   No asks
                 </div>
               )}
@@ -182,8 +182,8 @@ export function OrderbookLadder({
       {spread && (
         <div className="flex items-center justify-center gap-2 px-3 py-1.5 border-t border-[#2A2A2A] text-[10px] text-[#666666]">
           <span>Spread:</span>
-          <span className="font-mono text-[#888888]">{spread.value}</span>
-          <span className="text-[#555555]">({spread.pct}%)</span>
+          <span className="font-mono text-white/65">{spread.value}</span>
+          <span className="text-white/38">({spread.pct}%)</span>
         </div>
       )}
     </div>

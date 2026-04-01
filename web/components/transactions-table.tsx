@@ -89,7 +89,7 @@ export function TransactionsTable({
         accessorKey: "timestamp",
         header: "Time",
         cell: ({ getValue }) => (
-          <span className="text-[#9B9B9B]">{timeAgo(getValue<number>())}</span>
+          <span className="text-white/65">{timeAgo(getValue<number>())}</span>
         ),
         sortingFn: "basic",
       },
@@ -138,7 +138,7 @@ export function TransactionsTable({
         cell: ({ getValue }) => {
           const addr = getValue<string | null>();
           return (
-            <span className="font-sans text-[#9B9B9B]">
+            <span className="font-sans text-white/65">
               {addr ? truncateAddr(addr) : "—"}
             </span>
           );

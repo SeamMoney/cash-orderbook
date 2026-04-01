@@ -121,7 +121,7 @@ export function MyOrders({
 
   if (!connected) {
     return (
-      <div className="text-center py-6 text-xs text-[#555555]">
+      <div className="text-center py-6 text-xs text-white/38">
         Connect wallet to view orders
       </div>
     );
@@ -131,8 +131,8 @@ export function MyOrders({
     <div className="flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-[#2A2A2A]">
-        <span className="text-xs font-medium text-[#888888]">My Orders</span>
-        <span className="text-[10px] text-[#555555]">
+        <span className="text-xs font-medium text-white/65">My Orders</span>
+        <span className="text-[10px] text-white/38">
           {orders.length} open
         </span>
       </div>
@@ -152,7 +152,7 @@ export function MyOrders({
       <div className="max-h-48 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center py-6">
-            <Loader2 className="h-4 w-4 animate-spin text-[#555555]" />
+            <Loader2 className="h-4 w-4 animate-spin text-white/38" />
           </div>
         ) : orders.length > 0 ? (
           <AnimatePresence initial={false}>
@@ -200,7 +200,7 @@ export function MyOrders({
             ))}
           </AnimatePresence>
         ) : (
-          <div className="text-center py-6 text-xs text-[#555555]">
+          <div className="text-center py-6 text-xs text-white/38">
             No open orders
           </div>
         )}
