@@ -63,6 +63,19 @@ interface IndexedEvent {
   eventIndex: number;
 }
 
+/** Shape of a transaction returned by the REST fullnode API */
+interface RestTransaction {
+  type: string;
+  version: string;
+  success: boolean;
+  events: Array<{
+    type: string;
+    data: Record<string, unknown>;
+    sequence_number: string;
+    guid: { creation_number: string; account_address: string };
+  }>;
+}
+
 /**
  * Map SDK network type to Aptos SDK Network enum.
  */
@@ -123,6 +136,13 @@ export class EventIndexer {
    */
   private restTxnOffset: number = 0;
 
+  /**
+   * For broader REST polling: tracks the latest ledger version we've seen so we
+   * can poll global transactions and capture user-submitted transactions that emit
+   * contract events (not just contract-submitted transactions).
+   */
+  private lastGlobalVersion: number = 0;
+
   /** Whether we've detected that the Indexer GraphQL events table is unavailable */
   private useRestFallback: boolean = false;
 
@@ -176,6 +196,13 @@ export class EventIndexer {
    */
   getCursor(eventType: string): number | undefined {
     return this.cursors.get(eventType);
+  }
+
+  /**
+   * Get the current global version cursor (for testing/debugging).
+   */
+  getLastGlobalVersion(): number {
+    return this.lastGlobalVersion;
   }
 
   /**
@@ -259,11 +286,25 @@ export class EventIndexer {
   /**
    * Poll via REST fullnode API (testnet/devnet fallback).
    *
-   * Fetches recent transactions from the contract account and extracts
-   * matching events from their `events` arrays. This works on testnet
-   * where the Indexer GraphQL events v1 table is deprecated.
+   * Two-pronged approach:
+   *   1. Polls contract-account transactions (captures admin-submitted txns like seeding).
+   *   2. Polls global transactions starting from the last known version, filtering for
+   *      events matching the contract module. This captures user-submitted transactions
+   *      (e.g. taker orders, deposits) that emit contract events but are submitted by
+   *      user accounts rather than the contract account.
    */
   private async pollViaRest(): Promise<void> {
+    // Build the set of fully-qualified event types we care about
+    const fullTypeToShort = new Map<string, string>();
+    for (const moduleEventType of EVENT_TYPES) {
+      const fullType = `${this.contractAddress}::${moduleEventType}`;
+      fullTypeToShort.set(fullType, EVENT_TYPE_MAP[moduleEventType]);
+    }
+
+    const allEvents: IndexedEvent[] = [];
+    const seenVersions = new Set<number>();
+
+    // ── Prong 1: Contract-account transactions ──
     try {
       const url = `${this.fullnodeUrl}/accounts/${this.contractAddress}/transactions?start=${this.restTxnOffset}&limit=${this.batchSize}`;
       const response = await fetch(url, {
@@ -271,89 +312,137 @@ export class EventIndexer {
         signal: AbortSignal.timeout(10000),
       });
 
-      if (!response.ok) {
-        if (process.env.NODE_ENV !== "test") {
-          console.error(`[EventIndexer] REST poll failed: HTTP ${response.status}`);
-        }
-        return;
-      }
+      if (response.ok) {
+        const transactions = (await response.json()) as RestTransaction[];
 
-      const transactions = (await response.json()) as Array<{
-        type: string;
-        version: string;
-        success: boolean;
-        events: Array<{
-          type: string;
-          data: Record<string, unknown>;
-          sequence_number: string;
-          guid: { creation_number: string; account_address: string };
-        }>;
-      }>;
+        if (transactions && transactions.length > 0) {
+          for (const txn of transactions) {
+            if (txn.type !== "user_transaction" || !txn.success) continue;
 
-      if (!transactions || transactions.length === 0) return;
+            const txVersion = Number(txn.version);
+            seenVersions.add(txVersion);
 
-      // Build the set of fully-qualified event types we care about
-      const fullTypeToShort = new Map<string, string>();
-      for (const moduleEventType of EVENT_TYPES) {
-        const fullType = `${this.contractAddress}::${moduleEventType}`;
-        fullTypeToShort.set(fullType, EVENT_TYPE_MAP[moduleEventType]);
-      }
-
-      const allEvents: IndexedEvent[] = [];
-
-      for (const txn of transactions) {
-        if (txn.type !== "user_transaction" || !txn.success) continue;
-
-        const txVersion = Number(txn.version);
-
-        for (let i = 0; i < txn.events.length; i++) {
-          const event = txn.events[i];
-          const shortType = fullTypeToShort.get(event.type);
-          if (shortType) {
-            allEvents.push({
-              fullType: event.type,
-              shortType,
-              data: event.data,
-              transactionVersion: txVersion,
-              eventIndex: i,
-            });
+            for (let i = 0; i < txn.events.length; i++) {
+              const event = txn.events[i];
+              const shortType = fullTypeToShort.get(event.type);
+              if (shortType) {
+                allEvents.push({
+                  fullType: event.type,
+                  shortType,
+                  data: event.data,
+                  transactionVersion: txVersion,
+                  eventIndex: i,
+                });
+              }
+            }
           }
+
+          // Update offset for next poll
+          this.restTxnOffset += transactions.length;
         }
-      }
-
-      // Update offset for next poll (skip past processed transactions)
-      this.restTxnOffset += transactions.length;
-
-      if (allEvents.length === 0) return;
-
-      // Sort by (transaction_version, event_index)
-      allEvents.sort((a, b) => {
-        if (a.transactionVersion !== b.transactionVersion) {
-          return a.transactionVersion - b.transactionVersion;
-        }
-        return a.eventIndex - b.eventIndex;
-      });
-
-      // Process events in order
-      for (const event of allEvents) {
-        this.processEvent(event.shortType, event.data);
-      }
-
-      // Update last indexed version
-      const lastEvent = allEvents[allEvents.length - 1];
-      if (lastEvent.transactionVersion > this.state.getLastIndexedVersion()) {
-        this.state.setLastIndexedVersion(lastEvent.transactionVersion);
-      }
-
-      if (process.env.NODE_ENV !== "test") {
-        console.log(
-          `[EventIndexer] REST poll: processed ${allEvents.length} events from ${transactions.length} transactions`,
-        );
+      } else if (process.env.NODE_ENV !== "test") {
+        console.error(`[EventIndexer] REST contract-account poll failed: HTTP ${response.status}`);
       }
     } catch (error) {
       if (process.env.NODE_ENV !== "test") {
-        console.error("[EventIndexer] REST poll error:", error);
+        console.error("[EventIndexer] REST contract-account poll error:", error);
       }
+    }
+
+    // ── Prong 2: Global transactions (captures user-submitted txns) ──
+    try {
+      // If we haven't initialized lastGlobalVersion, fetch the current ledger info first
+      if (this.lastGlobalVersion === 0) {
+        const ledgerResp = await fetch(this.fullnodeUrl, {
+          headers: { Accept: "application/json" },
+          signal: AbortSignal.timeout(10000),
+        });
+        if (ledgerResp.ok) {
+          const ledgerInfo = (await ledgerResp.json()) as { ledger_version: string };
+          // Start from a recent window (current - batchSize) to avoid replaying too much history
+          this.lastGlobalVersion = Math.max(
+            0,
+            Number(ledgerInfo.ledger_version) - this.batchSize,
+          );
+        }
+      }
+
+      const url = `${this.fullnodeUrl}/transactions?start=${this.lastGlobalVersion}&limit=${this.batchSize}`;
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (response.ok) {
+        const transactions = (await response.json()) as RestTransaction[];
+
+        if (transactions && transactions.length > 0) {
+          let maxVersion = this.lastGlobalVersion;
+
+          for (const txn of transactions) {
+            const txVersion = Number(txn.version);
+            maxVersion = Math.max(maxVersion, txVersion);
+
+            // Skip non-user transactions and failed transactions
+            if (txn.type !== "user_transaction" || !txn.success) continue;
+
+            // Skip transactions we already saw from the contract-account poll
+            if (seenVersions.has(txVersion)) continue;
+
+            // Check if any events match our contract module
+            for (let i = 0; i < txn.events.length; i++) {
+              const event = txn.events[i];
+              const shortType = fullTypeToShort.get(event.type);
+              if (shortType) {
+                allEvents.push({
+                  fullType: event.type,
+                  shortType,
+                  data: event.data,
+                  transactionVersion: txVersion,
+                  eventIndex: i,
+                });
+              }
+            }
+          }
+
+          // Advance the global version cursor past all transactions we've examined
+          this.lastGlobalVersion = maxVersion + 1;
+        }
+      } else if (process.env.NODE_ENV !== "test") {
+        console.error(`[EventIndexer] REST global poll failed: HTTP ${response.status}`);
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV !== "test") {
+        console.error("[EventIndexer] REST global poll error:", error);
+      }
+    }
+
+    // ── Process merged events ──
+    if (allEvents.length === 0) return;
+
+    // Sort by (transaction_version, event_index) to preserve on-chain order
+    allEvents.sort((a, b) => {
+      if (a.transactionVersion !== b.transactionVersion) {
+        return a.transactionVersion - b.transactionVersion;
+      }
+      return a.eventIndex - b.eventIndex;
+    });
+
+    // Process events in order
+    for (const event of allEvents) {
+      this.processEvent(event.shortType, event.data);
+    }
+
+    // Update last indexed version
+    const lastEvent = allEvents[allEvents.length - 1];
+    if (lastEvent.transactionVersion > this.state.getLastIndexedVersion()) {
+      this.state.setLastIndexedVersion(lastEvent.transactionVersion);
+    }
+
+    if (process.env.NODE_ENV !== "test") {
+      console.log(
+        `[EventIndexer] REST poll: processed ${allEvents.length} events (contract-account + global)`,
+      );
     }
   }
 

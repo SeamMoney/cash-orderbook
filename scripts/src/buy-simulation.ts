@@ -35,6 +35,8 @@ import {
 import { CashOrderbook } from "@cash/orderbook-sdk";
 import {
   USD1_TESTNET_TOKEN_ADDRESS,
+  CASH_DECIMALS,
+  PRICE_SCALE,
 } from "@cash/shared";
 
 // ============================================================
@@ -58,6 +60,17 @@ interface FillEstimate {
   fullFill: boolean;
 }
 
+interface FillVerification {
+  /** Whether the fill was verified (trade events or balance delta confirm quantity > 0) */
+  verified: boolean;
+  /** Actual filled CASH quantity */
+  filledQuantity: number;
+  /** Actual fill price (weighted average) */
+  fillPrice: number;
+  /** Method used: "trade_events" or "balance_delta" */
+  method: "trade_events" | "balance_delta";
+}
+
 interface ExecutionReport {
   /** Fill estimate (pre-trade) */
   estimate: FillEstimate;
@@ -73,6 +86,8 @@ interface ExecutionReport {
   gasCostApt: number;
   /** Whether the transaction succeeded */
   success: boolean;
+  /** Fill verification details (trade events / balance comparison) */
+  fillVerification: FillVerification;
 }
 
 // ============================================================
@@ -161,6 +176,86 @@ function estimateFill(
 }
 
 // ============================================================
+// Fill Verification
+// ============================================================
+
+/**
+ * Verify that a fill actually occurred by checking trade events in the transaction
+ * and comparing pre/post balances. Reports actual filled amount instead of just
+ * inferring success from transaction status.
+ */
+async function verifyBuyFill(
+  aptos: Aptos,
+  contractAddress: string,
+  txHash: string,
+  preCashAvailable: number,
+  preQuoteAvailable: number,
+  postCashAvailable: number,
+  postQuoteAvailable: number,
+): Promise<FillVerification> {
+  // Method 1: Check trade events in the transaction
+  try {
+    const txnDetails = (await aptos.getTransactionByHash({
+      transactionHash: txHash,
+    })) as UserTransactionResponse;
+
+    if (txnDetails.events) {
+      const tradeEventType = `${contractAddress}::settlement::TradeEvent`;
+      const tradeEvents = txnDetails.events.filter(
+        (e: { type: string }) => e.type === tradeEventType,
+      );
+
+      if (tradeEvents.length > 0) {
+        let totalFilledQuantity = 0;
+        let weightedPriceSum = 0;
+
+        for (const event of tradeEvents) {
+          const data = event.data as Record<string, string>;
+          const quantity = Number(data.quantity) / 10 ** CASH_DECIMALS;
+          const price = Number(data.price) / PRICE_SCALE;
+          totalFilledQuantity += quantity;
+          weightedPriceSum += price * quantity;
+        }
+
+        const avgFillPrice = totalFilledQuantity > 0
+          ? weightedPriceSum / totalFilledQuantity
+          : 0;
+
+        return {
+          verified: totalFilledQuantity > 0,
+          filledQuantity: totalFilledQuantity,
+          fillPrice: avgFillPrice,
+          method: "trade_events",
+        };
+      }
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.log(`    (Could not check trade events: ${message})`);
+  }
+
+  // Method 2: Compare balances before and after
+  const cashDelta = postCashAvailable - preCashAvailable;
+  const quoteDelta = preQuoteAvailable - postQuoteAvailable;
+
+  if (cashDelta > 0) {
+    return {
+      verified: true,
+      filledQuantity: cashDelta,
+      fillPrice: quoteDelta > 0 ? quoteDelta / cashDelta : 0,
+      method: "balance_delta",
+    };
+  }
+
+  return {
+    verified: false,
+    filledQuantity: 0,
+    fillPrice: 0,
+    method: "trade_events",
+  };
+}
+
+// ============================================================
 // Main
 // ============================================================
 
@@ -224,8 +319,12 @@ async function main(): Promise<void> {
 
   // ── Step 1: Query balances ──
   console.log("── Step 1: Query Balances ──");
+  let preCashAvailable = 0;
+  let preQuoteAvailable = 0;
   try {
     const balances = await sdk.getBalances(traderAddress);
+    preCashAvailable = balances.cash.available;
+    preQuoteAvailable = balances.usdc.available;
     console.log(`  CASH available: ${balances.cash.available}`);
     console.log(`  CASH locked:    ${balances.cash.locked}`);
     console.log(`  Quote available: ${balances.usdc.available}`);
@@ -321,6 +420,7 @@ async function main(): Promise<void> {
       gasUnitPrice,
       gasCostApt,
       success: txSuccess,
+      fillVerification: { verified: false, filledQuantity: 0, fillPrice: 0, method: "trade_events" },
     };
 
     console.log(`  Gas used:      ${gasUsed} units`);
@@ -342,14 +442,19 @@ async function main(): Promise<void> {
       gasUnitPrice: 0,
       gasCostApt: 0,
       success: false,
+      fillVerification: { verified: false, filledQuantity: 0, fillPrice: 0, method: "trade_events" },
     };
   }
   console.log("");
 
-  // ── Step 5: Post-trade balances ──
-  console.log("── Step 5: Post-Trade Balances ──");
+  // ── Step 5: Post-trade balances & fill verification ──
+  console.log("── Step 5: Post-Trade Balances & Fill Verification ──");
+  let postCashAvailable = preCashAvailable;
+  let postQuoteAvailable = preQuoteAvailable;
   try {
     const postBalances = await sdk.getBalances(traderAddress);
+    postCashAvailable = postBalances.cash.available;
+    postQuoteAvailable = postBalances.usdc.available;
     console.log(`  CASH available: ${postBalances.cash.available}`);
     console.log(`  CASH locked:    ${postBalances.cash.locked}`);
     console.log(`  Quote available: ${postBalances.usdc.available}`);
@@ -358,6 +463,26 @@ async function main(): Promise<void> {
     console.log(`  (Could not fetch post-trade balances: ${err instanceof Error ? err.message : String(err)})`);
   }
   console.log("");
+
+  // Verify actual fill via trade events or balance delta
+  if (report.txHash !== "FAILED" && report.success) {
+    console.log("  → Verifying fill via trade events / balance delta...");
+    const verification = await verifyBuyFill(
+      aptos, contractAddress, report.txHash,
+      preCashAvailable, preQuoteAvailable,
+      postCashAvailable, postQuoteAvailable,
+    );
+    report.fillVerification = verification;
+
+    if (verification.verified) {
+      console.log(`    ✓ Fill VERIFIED (method: ${verification.method})`);
+      console.log(`      Actual filled quantity: ${verification.filledQuantity.toFixed(6)} CASH`);
+      console.log(`      Actual fill price:      ${verification.fillPrice.toFixed(8)} USD1/CASH`);
+    } else {
+      console.log("    ⚠ Fill NOT verified — no trade events found and no balance change detected");
+    }
+    console.log("");
+  }
 
   // ── Step 6: Final Report ──
   console.log("═══════════════════════════════════════════════════");
@@ -378,9 +503,19 @@ async function main(): Promise<void> {
   console.log(`  Gas cost:            ${report.gasCostApt.toFixed(8)} APT`);
   console.log(`  Gas used:            ${report.gasUsed} units @ ${report.gasUnitPrice} octas/unit`);
   console.log("");
+  console.log("  Fill Verification:");
+  console.log(`    Verified:          ${report.fillVerification.verified}`);
+  console.log(`    Method:            ${report.fillVerification.method}`);
+  console.log(`    Actual filled qty: ${report.fillVerification.filledQuantity.toFixed(6)} CASH`);
+  console.log(`    Actual fill price: ${report.fillVerification.fillPrice.toFixed(8)} USD1/CASH`);
+  console.log("");
 
   if (report.success) {
+    const actualCash = report.fillVerification.verified
+      ? report.fillVerification.filledQuantity.toFixed(6)
+      : report.estimate.cashAmount.toFixed(6) + " (estimated)";
     console.log(`  Total cost: ${buyAmountUsd1} USD1 + ${report.gasCostApt.toFixed(8)} APT gas`);
+    console.log(`  CASH received: ${actualCash}`);
   } else {
     console.log("  ⚠ Transaction failed — no on-chain cost (gas may still have been charged).");
   }

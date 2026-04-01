@@ -12,7 +12,9 @@
  *
  * Environment variables:
  *   APTOS_PRIVATE_KEY     — Hex-encoded ed25519 private key of the market maker
+ *   TAKER_PRIVATE_KEY     — Hex-encoded ed25519 private key of the taker (optional; auto-generated if not set)
  *   CONTRACT_ADDRESS       — Address where cash_orderbook is deployed
+ *   USD1_CONTRACT_ADDRESS  — Address where USD1 module is deployed (default: testnet USD1)
  *   APTOS_NETWORK          — Network: testnet (default: testnet)
  *   BASE_ASSET_ADDRESS     — TestCASH metadata address (optional, queried if not set)
  *   QUOTE_ASSET_ADDRESS    — USD1 metadata address (default: testnet USD1)
@@ -34,6 +36,7 @@ import {
   Network,
   Ed25519PrivateKey,
   Account,
+  type InputEntryFunctionData,
   type InputViewFunctionData,
   type UserTransactionResponse,
 } from "@aptos-labs/ts-sdk";
@@ -41,8 +44,13 @@ import {
 import { CashOrderbook } from "@cash/orderbook-sdk";
 import {
   USD1_TESTNET_TOKEN_ADDRESS,
+  USD1_DECIMALS,
+  CASH_DECIMALS,
   PRICE_SCALE,
 } from "@cash/shared";
+
+/** Default USD1 contract address on testnet (for minting) */
+const DEFAULT_USD1_CONTRACT = "0xca4d40eae9f07fb28a121862d649203fb4335ece9536ee51790e19f812ff7aea";
 
 // ============================================================
 // Types
@@ -75,6 +83,17 @@ interface LadderResult {
   latencyMs: number;
 }
 
+interface FillVerification {
+  /** Whether the fill was verified (trade events or balance delta confirm quantity > 0) */
+  verified: boolean;
+  /** Actual filled CASH quantity from trade events (0 if no trade events found) */
+  filledQuantity: number;
+  /** Actual fill price from trade events */
+  fillPrice: number;
+  /** Method used: "trade_events" or "balance_delta" */
+  method: "trade_events" | "balance_delta";
+}
+
 interface RebalanceReport {
   /** Inventory before market making started */
   inventoryBefore: InventoryState;
@@ -96,6 +115,8 @@ interface RebalanceReport {
   fillTxHash: string;
   /** Whether the fill succeeded */
   fillSuccess: boolean;
+  /** Fill verification details */
+  fillVerification: FillVerification;
 }
 
 // ============================================================
@@ -208,6 +229,204 @@ function printInventory(label: string, inv: InventoryState): void {
   console.log(`    Quote locked:    ${inv.quoteLocked.toFixed(8)}`);
   console.log(`    Quote total:     ${inv.totalQuote.toFixed(8)}`);
   console.log(`    Notional value:  ${inv.notionalValue.toFixed(8)} USD1`);
+}
+
+// ============================================================
+// Taker Account Setup
+// ============================================================
+
+/**
+ * Create (or load) a taker account, fund it via faucet, mint tokens, and deposit into the orderbook.
+ * Returns the ready-to-trade taker Account.
+ */
+async function setupTakerAccount(
+  aptos: Aptos,
+  contractAddress: string,
+  baseAssetAddress: string,
+  quoteAssetAddress: string,
+  takerSide: "buy" | "sell",
+  takerQuantity: number,
+  referencePrice: number,
+): Promise<{ takerAccount: Account; takerSdk: CashOrderbook }> {
+  const takerKeyHex = process.env.TAKER_PRIVATE_KEY;
+  let takerAccount: Account;
+
+  if (takerKeyHex) {
+    const takerKey = new Ed25519PrivateKey(takerKeyHex);
+    takerAccount = Account.fromPrivateKey({ privateKey: takerKey });
+    console.log(`  Using provided taker account: ${takerAccount.accountAddress.toString()}`);
+  } else {
+    takerAccount = Account.generate();
+    console.log(`  Generated new taker account: ${takerAccount.accountAddress.toString()}`);
+  }
+
+  // Fund taker via faucet
+  console.log("  → Funding taker via faucet...");
+  try {
+    await aptos.fundAccount({
+      accountAddress: takerAccount.accountAddress,
+      amount: 200_000_000, // 2 APT for gas
+    });
+    console.log("    ✓ Taker funded with 2 APT");
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`    ✗ Faucet funding failed: ${message}`);
+    console.log("    Continuing anyway (account may already be funded)...");
+  }
+  await sleep(2000);
+
+  const usd1Contract = process.env.USD1_CONTRACT_ADDRESS ?? DEFAULT_USD1_CONTRACT;
+
+  // Mint tokens the taker needs for the trade
+  if (takerSide === "buy") {
+    // Taker buys CASH → needs quote (USD1)
+    const quoteNeeded = takerQuantity * referencePrice * 2; // 2x buffer for price levels
+    const onChainAmount = Math.round(quoteNeeded * 10 ** USD1_DECIMALS);
+    console.log(`  → Minting ${quoteNeeded.toFixed(8)} USD1 for taker...`);
+
+    const mintData: InputEntryFunctionData = {
+      function: `${usd1Contract}::usd1::mint`,
+      functionArguments: [takerAccount.accountAddress.toString(), onChainAmount],
+    };
+
+    const txn = await aptos.transaction.build.simple({
+      sender: takerAccount.accountAddress,
+      data: mintData,
+    });
+    const pending = await aptos.signAndSubmitTransaction({ signer: takerAccount, transaction: txn });
+    await aptos.waitForTransaction({ transactionHash: pending.hash });
+    console.log(`    ✓ USD1 minted: ${pending.hash.slice(0, 16)}...`);
+  } else {
+    // Taker sells CASH → needs base (TestCASH)
+    const cashNeeded = takerQuantity * 2; // buffer
+    const onChainAmount = Math.round(cashNeeded * 10 ** CASH_DECIMALS);
+    console.log(`  → Minting ${cashNeeded.toFixed(6)} TestCASH for taker...`);
+
+    const mintData: InputEntryFunctionData = {
+      function: `${contractAddress}::test_cash::mint_test_cash`,
+      functionArguments: [takerAccount.accountAddress.toString(), onChainAmount],
+    };
+
+    const txn = await aptos.transaction.build.simple({
+      sender: takerAccount.accountAddress,
+      data: mintData,
+    });
+    const pending = await aptos.signAndSubmitTransaction({ signer: takerAccount, transaction: txn });
+    await aptos.waitForTransaction({ transactionHash: pending.hash });
+    console.log(`    ✓ TestCASH minted: ${pending.hash.slice(0, 16)}...`);
+  }
+  await sleep(1000);
+
+  // Create taker SDK instance
+  const takerSdk = new CashOrderbook({
+    network: "testnet",
+    contractAddress,
+    baseAsset: baseAssetAddress,
+    quoteAsset: quoteAssetAddress,
+  });
+
+  // Deposit tokens into the orderbook for the taker
+  if (takerSide === "buy") {
+    const quoteNeeded = takerQuantity * referencePrice * 2;
+    console.log(`  → Depositing ${quoteNeeded.toFixed(8)} USD1 into orderbook for taker...`);
+    const depositResult = await takerSdk.deposit(takerAccount, quoteAssetAddress, quoteNeeded, USD1_DECIMALS);
+    console.log(`    ✓ USD1 deposited: ${depositResult.txHash.slice(0, 16)}...`);
+  } else {
+    const cashNeeded = takerQuantity * 2;
+    console.log(`  → Depositing ${cashNeeded.toFixed(6)} TestCASH into orderbook for taker...`);
+    const depositResult = await takerSdk.deposit(takerAccount, baseAssetAddress, cashNeeded, CASH_DECIMALS);
+    console.log(`    ✓ TestCASH deposited: ${depositResult.txHash.slice(0, 16)}...`);
+  }
+  await sleep(1000);
+
+  return { takerAccount, takerSdk };
+}
+
+// ============================================================
+// Fill Verification
+// ============================================================
+
+/**
+ * Verify that a fill actually occurred by checking trade events in the transaction
+ * and comparing pre/post balances.
+ */
+async function verifyFill(
+  aptos: Aptos,
+  contractAddress: string,
+  txHash: string,
+  preBalances: InventoryState | null,
+  postBalances: InventoryState | null,
+  takerSide: "buy" | "sell",
+): Promise<FillVerification> {
+  // Method 1: Check trade events in the transaction
+  try {
+    const txnDetails = (await aptos.getTransactionByHash({
+      transactionHash: txHash,
+    })) as UserTransactionResponse;
+
+    if (txnDetails.events) {
+      const tradeEventType = `${contractAddress}::settlement::TradeEvent`;
+      const tradeEvents = txnDetails.events.filter(
+        (e: { type: string }) => e.type === tradeEventType,
+      );
+
+      if (tradeEvents.length > 0) {
+        let totalFilledQuantity = 0;
+        let weightedPriceSum = 0;
+
+        for (const event of tradeEvents) {
+          const data = event.data as Record<string, string>;
+          const quantity = Number(data.quantity) / 10 ** CASH_DECIMALS;
+          const price = Number(data.price) / PRICE_SCALE;
+          totalFilledQuantity += quantity;
+          weightedPriceSum += price * quantity;
+        }
+
+        const avgFillPrice = totalFilledQuantity > 0
+          ? weightedPriceSum / totalFilledQuantity
+          : 0;
+
+        return {
+          verified: totalFilledQuantity > 0,
+          filledQuantity: totalFilledQuantity,
+          fillPrice: avgFillPrice,
+          method: "trade_events",
+        };
+      }
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.log(`    (Could not check trade events: ${message})`);
+  }
+
+  // Method 2: Compare balances before and after
+  if (preBalances && postBalances) {
+    const cashDelta = Math.abs(postBalances.totalCash - preBalances.totalCash);
+    const quoteDelta = Math.abs(postBalances.totalQuote - preBalances.totalQuote);
+
+    if (takerSide === "buy" && cashDelta > 0) {
+      return {
+        verified: true,
+        filledQuantity: cashDelta,
+        fillPrice: quoteDelta > 0 ? quoteDelta / cashDelta : 0,
+        method: "balance_delta",
+      };
+    } else if (takerSide === "sell" && cashDelta > 0) {
+      return {
+        verified: true,
+        filledQuantity: cashDelta,
+        fillPrice: quoteDelta > 0 ? quoteDelta / cashDelta : 0,
+        method: "balance_delta",
+      };
+    }
+  }
+
+  return {
+    verified: false,
+    filledQuantity: 0,
+    fillPrice: 0,
+    method: "trade_events",
+  };
 }
 
 // ============================================================
@@ -348,7 +567,7 @@ async function main(): Promise<void> {
   const aptosConfig = new AptosConfig({ network: Network.TESTNET });
   const aptos = new Aptos(aptosConfig);
 
-  // Create account from private key
+  // Create maker account from private key
   const privateKey = new Ed25519PrivateKey(privateKeyHex);
   const account = Account.fromPrivateKey({ privateKey });
   const makerAddress = account.accountAddress.toString();
@@ -374,13 +593,28 @@ async function main(): Promise<void> {
   console.log(`  Quote asset:     ${quoteAssetAddress}`);
   console.log("");
 
-  // Initialize SDK
+  // Initialize maker SDK
   const sdk = new CashOrderbook({
     network: networkStr === "testnet" ? "testnet" : "mainnet",
     contractAddress,
     baseAsset: baseAssetAddress,
     quoteAsset: quoteAssetAddress,
   });
+
+  // ── Setup: Create separate taker account ──
+  // The matching engine has self-trade prevention, so the taker must be a different account.
+  console.log("── Setup: Taker Account ──");
+  const { takerAccount, takerSdk } = await setupTakerAccount(
+    aptos,
+    contractAddress,
+    baseAssetAddress,
+    quoteAssetAddress,
+    config.takerSide,
+    config.takerQuantity,
+    config.referencePrice,
+  );
+  console.log(`  Taker address:   ${takerAccount.accountAddress.toString()}`);
+  console.log("");
 
   // ── Step 1: Capture initial inventory ──
   console.log("── Step 1: Initial Inventory ──");
@@ -416,16 +650,23 @@ async function main(): Promise<void> {
 
   await sleep(2000); // Wait for on-chain settlement
 
-  // ── Step 3: Simulate taker fill ──
+  // ── Step 3: Simulate taker fill (using separate taker account) ──
   console.log("── Step 3: Simulate Taker Fill ──");
   console.log(`  Placing ${config.takerSide} market order for ${config.takerQuantity} CASH...`);
+  console.log(`  Taker account: ${takerAccount.accountAddress.toString()} (separate from maker)`);
+
+  // Capture taker pre-trade balances for fill verification via balance delta
+  let takerPreBalances: InventoryState | null = null;
+  try {
+    takerPreBalances = await getInventory(takerSdk, takerAccount.accountAddress.toString(), config.referencePrice);
+  } catch { /* ignore */ }
 
   const fillStartTime = performance.now();
   let fillTxHash = "FAILED";
   let fillSuccess = false;
 
   try {
-    const fillResult = await sdk.placeOrder(account, {
+    const fillResult = await takerSdk.placeOrder(takerAccount, {
       pairId: config.pairId,
       price: 0,
       quantity: config.takerQuantity,
@@ -456,6 +697,35 @@ async function main(): Promise<void> {
   const fillEndTime = performance.now();
   const fillLatencyMs = fillEndTime - fillStartTime;
   console.log(`  Fill latency:     ${fillLatencyMs.toFixed(0)} ms`);
+
+  // Verify actual fill (trade events or balance delta)
+  let fillVerification: FillVerification = {
+    verified: false, filledQuantity: 0, fillPrice: 0, method: "trade_events",
+  };
+  if (fillTxHash !== "FAILED") {
+    console.log("");
+    console.log("  → Verifying fill via trade events / balance delta...");
+    await sleep(2000); // wait for on-chain settlement
+
+    let takerPostBalances: InventoryState | null = null;
+    try {
+      takerPostBalances = await getInventory(takerSdk, takerAccount.accountAddress.toString(), config.referencePrice);
+    } catch { /* ignore */ }
+
+    fillVerification = await verifyFill(
+      aptos, contractAddress, fillTxHash,
+      takerPreBalances, takerPostBalances,
+      config.takerSide,
+    );
+
+    if (fillVerification.verified) {
+      console.log(`    ✓ Fill VERIFIED (method: ${fillVerification.method})`);
+      console.log(`      Actual filled quantity: ${fillVerification.filledQuantity.toFixed(6)} CASH`);
+      console.log(`      Actual fill price:      ${fillVerification.fillPrice.toFixed(8)} USD1/CASH`);
+    } else {
+      console.log("    ⚠ Fill NOT verified — no trade events found and no balance change detected");
+    }
+  }
   console.log("");
 
   await sleep(2000); // Wait for settlement
@@ -554,6 +824,7 @@ async function main(): Promise<void> {
     rebalanceLatencyMs,
     fillTxHash,
     fillSuccess,
+    fillVerification,
   };
 
   console.log("═══════════════════════════════════════════════════");
@@ -582,6 +853,10 @@ async function main(): Promise<void> {
   console.log("  ├─────────────────────────────────────────────┤");
   console.log(`  │ Tx hash:    ${report.fillTxHash.slice(0, 30).padEnd(30)}  │`);
   console.log(`  │ Success:    ${String(report.fillSuccess).padEnd(30)}  │`);
+  console.log(`  │ Verified:   ${String(report.fillVerification.verified).padEnd(30)}  │`);
+  console.log(`  │ Method:     ${report.fillVerification.method.padEnd(30)}  │`);
+  console.log(`  │ Filled qty: ${report.fillVerification.filledQuantity.toFixed(6).padStart(18).padEnd(30)}  │`);
+  console.log(`  │ Fill price: ${report.fillVerification.fillPrice.toFixed(8).padStart(18).padEnd(30)}  │`);
   console.log("  └─────────────────────────────────────────────┘");
   console.log("");
 
@@ -603,7 +878,14 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  console.log("  ✓ Market maker test complete.");
+  if (!report.fillVerification.verified) {
+    console.log("  ⚠ Fill transaction succeeded but actual fill could not be verified.");
+    console.log("    No trade events found and no balance delta detected.");
+    console.log("    The order may not have matched (e.g. prices didn't cross).");
+    process.exit(1);
+  }
+
+  console.log("  ✓ Market maker test complete (fill verified).");
   console.log("");
 }
 

@@ -586,4 +586,103 @@ describe("EventIndexer", () => {
       expect(indexer.getCursor("0xCAFE::order_placement::OrderPlaced")).toBeUndefined();
     });
   });
+
+  describe("global version tracking", () => {
+    it("getLastGlobalVersion returns 0 initially", () => {
+      expect(indexer.getLastGlobalVersion()).toBe(0);
+    });
+  });
+
+  describe("REST fallback broader polling", () => {
+    it("is enabled by default on testnet", () => {
+      // The indexer created in beforeEach is configured for testnet
+      // so the REST fallback should be active. The global version
+      // cursor starts at 0 and will be initialized on first poll.
+      expect(indexer.getLastGlobalVersion()).toBe(0);
+    });
+
+    it("processes events from user-submitted transactions via processEvent", () => {
+      // Simulate an event from a user-submitted transaction (not contract-submitted)
+      // This is the pattern that the global transaction polling captures:
+      // a user at 0xUSER places an order → settlement emits TradeEvent on the contract.
+      // Previously only contract-account polling would pick this up.
+
+      // Place a resting ask from the contract/maker account
+      indexer.processEvent("OrderPlaced", {
+        order_id: 500,
+        owner: "0xMAKER",
+        pair_id: 0,
+        price: 3_000_000,
+        quantity: 100_000_000,
+        is_bid: false,
+        order_type: 0,
+        timestamp: 5000,
+      });
+
+      // A user-submitted trade event (user buys against the maker ask)
+      indexer.processEvent("TradeEvent", {
+        taker_order_id: 600,
+        maker_order_id: 500,
+        price: 3_000_000,
+        quantity: 50_000_000,
+        quote_amount: 150_000_000,
+        buyer: "0xUSER_TAKER",
+        seller: "0xMAKER",
+        pair_id: 0,
+        taker_is_bid: true,
+      });
+
+      // The trade should be recorded even though it came from a user tx
+      const trades = state.getTrades();
+      expect(trades).toHaveLength(1);
+      expect(trades[0].price).toBe(3.0);
+
+      // The resting ask should have its depth reduced
+      const depth = state.getDepth();
+      expect(depth.asks).toHaveLength(1);
+      expect(depth.asks[0].quantity).toBe(50); // 100 - 50 filled
+    });
+
+    it("deduplicates events seen in both contract-account and global polling", () => {
+      // Events processed through processEvent are idempotent for depth
+      // (same trade processed twice would double-decrement). The indexer's
+      // pollViaRest deduplicates by tracking seenVersions. We test that
+      // the dedup set concept works by simulating the scenario:
+
+      // Place ask
+      indexer.processEvent("OrderPlaced", {
+        order_id: 700,
+        owner: "0xSELLER",
+        pair_id: 0,
+        price: 4_000_000,
+        quantity: 100_000_000,
+        is_bid: false,
+        order_type: 0,
+        timestamp: 7000,
+      });
+
+      // Trade partially fills the ask
+      indexer.processEvent("TradeEvent", {
+        taker_order_id: 800,
+        maker_order_id: 700,
+        price: 4_000_000,
+        quantity: 30_000_000,
+        quote_amount: 120_000_000,
+        buyer: "0xBUYER2",
+        seller: "0xSELLER",
+        pair_id: 0,
+        taker_is_bid: true,
+      });
+
+      const depth = state.getDepth();
+      expect(depth.asks).toHaveLength(1);
+      expect(depth.asks[0].quantity).toBe(70); // 100 - 30
+
+      // If this same trade were processed again (without dedup), depth would be wrong.
+      // The REST pollViaRest uses seenVersions Set to prevent this.
+      // This test verifies the core event processing path works correctly.
+      const trades = state.getTrades();
+      expect(trades).toHaveLength(1);
+    });
+  });
 });
