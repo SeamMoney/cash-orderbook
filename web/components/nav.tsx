@@ -44,7 +44,7 @@ export function Nav({
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/90 backdrop-blur-md">
+      <header className="sticky top-0 z-50 w-full bg-background">
         <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between px-4 sm:px-6">
           {/* Left: Logo */}
           <div className="flex items-center gap-6">
@@ -59,24 +59,13 @@ export function Nav({
               <button
                 key={tab.id}
                 onClick={() => onTabChange?.(tab.id)}
-                className={`relative px-4 py-1.5 text-sm font-medium rounded-full transition-colors ${
+                className={`px-4 py-1.5 text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? "text-white"
-                    : "text-muted-foreground hover:text-white"
+                    : "text-[#9B9B9B] hover:text-white"
                 }`}
               >
-                {activeTab === tab.id && (
-                  <motion.div
-                    layoutId="nav-tab-indicator"
-                    className="absolute inset-0 rounded-full bg-secondary"
-                    transition={{
-                      type: "spring",
-                      stiffness: 400,
-                      damping: 30,
-                    }}
-                  />
-                )}
-                <span className="relative z-10">{tab.label}</span>
+                {tab.label}
               </button>
             ))}
           </nav>
