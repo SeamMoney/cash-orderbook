@@ -1,0 +1,193 @@
+{
+  "groupId": "browser-rerun",
+  "testedAt": "2026-04-01T02:31:04.052704+00:00",
+  "isolation": {
+    "repoRoot": "/Users/maxmohammadi/cash-orderbook",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "frontendUrl": "http://localhost:3102",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "evidenceDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/evidence/integration-test/browser-rerun"
+  },
+  "toolsUsed": [
+    "agent-browser",
+    "curl"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-INTEG-003",
+      "title": "Frontend shows testnet data",
+      "status": "blocked",
+      "reason": "Frontend connectivity to testnet API/WS endpoints is evident and /market + /depth were populated on retry, but required proof of chart using live testnet trade data could not be confirmed because /trades and /candles were empty when 200 and frequently 429-rate-limited.",
+      "steps": [
+        {
+          "action": "Open frontend at http://localhost:3102 and capture UI state",
+          "expected": "Chart, token header, and swap widget are visible and aligned to CASH/USD1",
+          "observed": "Candle chart rendered, token header showed CASH price panel, and swap widget showed USD1 -> CASH."
+        },
+        {
+          "action": "Verify API /market and /depth data",
+          "expected": "Endpoints respond with populated market and depth data",
+          "observed": "After retry/backoff due 429, /market returned CASH/USD1 active market metadata and /depth returned non-empty bids/asks."
+        },
+        {
+          "action": "Verify live trade/candle backing data",
+          "expected": "Trades/candles provide live testnet data to support chart evidence",
+          "observed": "Repeated /trades and /candles checks were mostly 429; one 200 response each returned empty arrays ([])."
+        }
+      ],
+      "commands": [
+        "agent-browser --session browser-rerun open http://localhost:3102 && agent-browser --session browser-rerun wait --load networkidle",
+        "curl -sS -D <evidence>/market-attempt-5-20260401T022702Z.headers.txt http://localhost:3100/market -o <evidence>/market-attempt-5-20260401T022702Z.json",
+        "curl -sS -D <evidence>/depth-attempt-5-20260401T022702Z.headers.txt http://localhost:3100/depth -o <evidence>/depth-attempt-5-20260401T022702Z.json",
+        "curl -sS -D <evidence>/trades-attempt-1-20260401T022758Z.headers.txt 'http://localhost:3100/trades?marketId=CASH_USD1&limit=50' -o <evidence>/trades-attempt-1-20260401T022758Z.json",
+        "curl -sS -D <evidence>/candles-attempt-1-20260401T022758Z.headers.txt 'http://localhost:3100/candles?marketId=CASH_USD1&interval=1m&limit=200' -o <evidence>/candles-attempt-1-20260401T022758Z.json"
+      ],
+      "evidence": {
+        "screenshots": [
+          "integration-test/browser-rerun/VAL-INTEG-003-frontend-overview.png",
+          "integration-test/browser-rerun/VAL-INTEG-003-annotated.png"
+        ],
+        "consoleErrors": "integration-test/browser-rerun/browser-console-after-reload.txt (many 429 Too Many Requests)",
+        "network": "integration-test/browser-rerun/browser-network-requests-after-reload.txt (contains frontend calls to /market, /depth, /trades, /candles)",
+        "apiChecks": [
+          "integration-test/browser-rerun/market-attempt-5-20260401T022702Z.headers.txt",
+          "integration-test/browser-rerun/market-attempt-5-20260401T022702Z.json",
+          "integration-test/browser-rerun/depth-attempt-5-20260401T022702Z.headers.txt",
+          "integration-test/browser-rerun/depth-attempt-5-20260401T022702Z.json",
+          "integration-test/browser-rerun/trades-attempt-1-20260401T022758Z.headers.txt",
+          "integration-test/browser-rerun/trades-attempt-1-20260401T022758Z.json",
+          "integration-test/browser-rerun/candles-attempt-1-20260401T022758Z.headers.txt",
+          "integration-test/browser-rerun/candles-attempt-1-20260401T022758Z.json"
+        ]
+      },
+      "issues": "Live testnet trade/candle data prerequisite missing during run (empty arrays and intermittent rate limiting), preventing pass-level evidence for this assertion."
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "title": "Full testnet swap lifecycle",
+      "status": "blocked",
+      "reason": "Swap execution from UI could not be completed due missing provisioned sign-capable wallet session in browser; assertion requires wallet signing and trade execution.",
+      "steps": [
+        {
+          "action": "Open wallet connect flow from frontend",
+          "expected": "A connectable wallet is available to sign swap transaction",
+          "observed": "Wallet modal displayed provider/install options (Petra/Nightly/Backpack Install links) but no connected funded wallet session was available."
+        },
+        {
+          "action": "Attempt full lifecycle verification (swap -> transactions -> chart update)",
+          "expected": "Swap executes and appears in transactions + chart",
+          "observed": "Could not execute swap; transactions table remained 'No recent transactions' and no new trade evidence observed."
+        }
+      ],
+      "commands": [
+        "agent-browser --session browser-rerun click @e3 (Connect Wallet) && agent-browser --session browser-rerun screenshot <evidence>/VAL-CROSS-001-wallet-modal.png",
+        "agent-browser --session browser-rerun click @e9 (Close) && agent-browser --session browser-rerun screenshot <evidence>/VAL-CROSS-001-post-modal.png"
+      ],
+      "evidence": {
+        "screenshots": [
+          "integration-test/browser-rerun/VAL-CROSS-001-wallet-modal.png",
+          "integration-test/browser-rerun/VAL-CROSS-001-post-modal.png"
+        ],
+        "consoleErrors": "integration-test/browser-rerun/browser-console-after-reload.txt",
+        "network": "integration-test/browser-rerun/browser-network-requests-after-reload.txt"
+      },
+      "issues": "Prerequisite gap: no funded wallet extension/session available for signing live frontend swap transactions."
+    },
+    {
+      "id": "VAL-CROSS-002",
+      "title": "Chart historical + live continuity",
+      "status": "blocked",
+      "reason": "Historical chart and transition marker were visible, but live post-marker continuity could not be validated because live trades/candles were unavailable during test window.",
+      "steps": [
+        {
+          "action": "Switch chart to 1Y timeframe and inspect continuity",
+          "expected": "Historical candles + transition marker + live continuation appear without gap",
+          "observed": "Historical series and 'New Ve\u2026' transition marker were visible on chart; no observable live continuation segment was produced."
+        },
+        {
+          "action": "Cross-check live feed prerequisites via API",
+          "expected": "Trades/candles endpoints contain live data",
+          "observed": "Endpoints were frequently 429 and returned [] when successful."
+        }
+      ],
+      "commands": [
+        "agent-browser --session browser-rerun click @e10 && agent-browser --session browser-rerun screenshot --full <evidence>/VAL-CROSS-002-chart-1Y.png",
+        "curl -sS -D <evidence>/trades-attempt-1-20260401T022758Z.headers.txt 'http://localhost:3100/trades?marketId=CASH_USD1&limit=50' -o <evidence>/trades-attempt-1-20260401T022758Z.json",
+        "curl -sS -D <evidence>/candles-attempt-1-20260401T022758Z.headers.txt 'http://localhost:3100/candles?marketId=CASH_USD1&interval=1m&limit=200' -o <evidence>/candles-attempt-1-20260401T022758Z.json"
+      ],
+      "evidence": {
+        "screenshots": [
+          "integration-test/browser-rerun/VAL-CROSS-002-chart-1Y.png",
+          "integration-test/browser-rerun/VAL-CROSS-002-chart-state-annotated.png"
+        ],
+        "consoleErrors": "integration-test/browser-rerun/browser-console-after-reload.txt",
+        "network": "integration-test/browser-rerun/browser-network-requests-after-reload.txt"
+      },
+      "issues": "Live continuity prerequisite unmet (no live trade/candle stream observable during validation)."
+    },
+    {
+      "id": "VAL-CANDLE-006",
+      "title": "Real-time candle update",
+      "status": "blocked",
+      "reason": "Real-time OHLC mutation could not be exercised because no new trade events were observable in UI/API during the run.",
+      "steps": [
+        {
+          "action": "Capture candlestick chart state, wait 15s, capture again",
+          "expected": "Rightmost candle updates OHLC/wick in-place when new trades arrive",
+          "observed": "Before/after screenshots show effectively unchanged candle state (only time-axis progression), with no observable live OHLC mutation."
+        },
+        {
+          "action": "Check trade/candle endpoints for incoming data",
+          "expected": "Non-empty live feed data available",
+          "observed": "Endpoints were rate-limited frequently and returned empty arrays when 200."
+        }
+      ],
+      "commands": [
+        "agent-browser --session browser-rerun screenshot --full <evidence>/VAL-CANDLE-006-before-wait.png && agent-browser --session browser-rerun wait 15000 && agent-browser --session browser-rerun screenshot --full <evidence>/VAL-CANDLE-006-after-wait.png",
+        "curl -sS -D <evidence>/trades-attempt-1-20260401T022758Z.headers.txt 'http://localhost:3100/trades?marketId=CASH_USD1&limit=50' -o <evidence>/trades-attempt-1-20260401T022758Z.json",
+        "curl -sS -D <evidence>/candles-attempt-1-20260401T022758Z.headers.txt 'http://localhost:3100/candles?marketId=CASH_USD1&interval=1m&limit=200' -o <evidence>/candles-attempt-1-20260401T022758Z.json"
+      ],
+      "evidence": {
+        "screenshots": [
+          "integration-test/browser-rerun/VAL-CANDLE-006-before-wait.png",
+          "integration-test/browser-rerun/VAL-CANDLE-006-after-wait.png"
+        ],
+        "consoleErrors": "integration-test/browser-rerun/browser-console-after-reload.txt",
+        "network": "integration-test/browser-rerun/browser-network-requests-after-reload.txt"
+      },
+      "issues": "Missing live trade events prevented deterministic real-time candle-update validation."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "API endpoint rate limiting (429) repeatedly interrupted browser and curl checks, requiring timed retries/backoff loops.",
+      "resolved": true,
+      "resolution": "Used multiple delayed retries and captured first successful 200 responses for /market and /depth.",
+      "affectedAssertions": [
+        "VAL-INTEG-003",
+        "VAL-CROSS-002",
+        "VAL-CANDLE-006"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "No provisioned/funded sign-capable wallet session available in browser validator isolation.",
+      "affectedAssertions": [
+        "VAL-CROSS-001"
+      ],
+      "quickFixAttempted": "Opened wallet modal and checked available providers/extensions; only install/connect options were available."
+    },
+    {
+      "description": "Live trade/candle prerequisite unavailable during run: /trades and /candles mostly 429 and empty when 200.",
+      "affectedAssertions": [
+        "VAL-INTEG-003",
+        "VAL-CROSS-002",
+        "VAL-CANDLE-006"
+      ],
+      "quickFixAttempted": "Retried endpoints five times with sleeps and captured both 429 and 200 responses."
+    }
+  ],
+  "summary": "Revalidated 4 assertions: 0 passed, 0 failed, 4 blocked. Frontend connectivity and populated /market + /depth evidence were confirmed, but wallet-signing and live trade/candle prerequisites were not met in this run."
+}

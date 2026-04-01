@@ -1,0 +1,138 @@
+{
+  "groupId": "curl-rerun",
+  "testedAt": "2026-04-01T02:31:23Z",
+  "isolation": {
+    "repoRoot": "/Users/maxmohammadi/cash-orderbook",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "apiBaseUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "network": "testnet",
+    "aptosProfile": "cash-testnet",
+    "makerAccount": "0xe66fef668077ab8dc5ea65539b6250d8ca3fc024ea4f16555fca9eaeb73b41d1",
+    "surface": "curl/script"
+  },
+  "toolsUsed": [
+    "curl",
+    "pnpm",
+    "aptos",
+    "python3"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-INTEG-001",
+      "title": "$1000 buy simulation",
+      "status": "pass",
+      "reason": "buy-simulation completed on testnet and reported verified fill details (trade_events), slippage, execution latency, and gas cost.",
+      "steps": [
+        {
+          "action": "Derive maker credentials from cash-testnet profile and provision a separate buyer account with fallback APT transfer",
+          "expected": "Buyer account is distinct from maker and has enough APT despite faucet unavailability",
+          "observed": "Buyer account 0x947b9f8e...d9df was funded via maker transfer after faucet returned unavailable"
+        },
+        {
+          "action": "Run buy-simulation for $1000 USD1 market buy",
+          "expected": "Script executes market buy and reports fill metrics",
+          "observed": "Transaction 0xb49b9b49...7df1 succeeded; slippage 0.4975%; latency 821 ms; gas 0.00102500 APT"
+        },
+        {
+          "action": "Verify fill details from script output",
+          "expected": "Output includes real fill verification, not just tx success",
+          "observed": "Fill VERIFIED=true via trade_events, filled qty 1000.000000 CASH at 0.00010100 USD1/CASH"
+        }
+      ],
+      "commands": [
+        "APTOS_PRIVATE_KEY=<redacted from cash-testnet> CONTRACT_ADDRESS=0xe66fef... APTOS_NETWORK=testnet BUYER_PRIVATE_KEY=<redacted generated buyer key> pnpm --filter @cash/scripts buy-simulation"
+      ],
+      "evidence": [
+        "integration-test/curl-rerun/VAL-INTEG-001-buy-simulation-rerun.log",
+        "integration-test/curl-rerun/VAL-INTEG-001-buy-simulation.log",
+        "integration-test/curl-rerun/VAL-INTEG-001-buy-simulation-fallback.log"
+      ],
+      "issues": null
+    },
+    {
+      "id": "VAL-INTEG-002",
+      "title": "Market maker bot test",
+      "status": "pass",
+      "reason": "market-maker-test completed with maker=cash-testnet and separate funded taker; ladder placement, verified taker fill, cancel/rebalance, and inventory tracking all succeeded.",
+      "steps": [
+        {
+          "action": "Provision separate taker account and fund via fallback transfer from cash-testnet maker",
+          "expected": "Taker can transact even when faucet is unavailable",
+          "observed": "Taker account 0xecdcd187...5b7e funded 0.3 APT via maker transfer; faucet failed but flow continued"
+        },
+        {
+          "action": "Run market-maker-test",
+          "expected": "Place 10 bid + 10 ask levels, execute taker fill, and rebalance",
+          "observed": "Placed 10/10 bids and asks; taker fill tx 0xfb31916f...ee49 success=true"
+        },
+        {
+          "action": "Check fill verification and rebalance behavior",
+          "expected": "Script verifies actual fill and performs inventory-aware rebalance",
+          "observed": "Fill VERIFIED=true via trade_events (25 CASH @ 0.00010100), cancelled 30 open orders, re-placed 10/10 ladder, report finished successfully"
+        }
+      ],
+      "commands": [
+        "APTOS_PRIVATE_KEY=<redacted from cash-testnet> CONTRACT_ADDRESS=0xe66fef... APTOS_NETWORK=testnet TAKER_PRIVATE_KEY=<redacted generated taker key> pnpm --filter @cash/scripts market-maker-test"
+      ],
+      "evidence": [
+        "integration-test/curl-rerun/VAL-INTEG-002-market-maker-test.log"
+      ],
+      "issues": null
+    },
+    {
+      "id": "VAL-INTEG-004",
+      "title": "Performance report",
+      "status": "pass",
+      "reason": "performance-report output includes slippage comparison, execution time, and gas-inclusive total cost for $100/$500/$1000 buy scenarios.",
+      "steps": [
+        {
+          "action": "Run performance-report against testnet contract",
+          "expected": "Generate comparison report for $100/$500/$1000",
+          "observed": "Report generated for all three sizes with CLOB vs AMM comparison"
+        },
+        {
+          "action": "Validate required metrics",
+          "expected": "Each size includes slippage, execution time, gas estimate, total cost",
+          "observed": "For $100/$500/$1000 sections, output includes CLOB slippage, execution time, gas estimate, and total cost (buy amount + gas)"
+        }
+      ],
+      "commands": [
+        "CONTRACT_ADDRESS=0xe66fef... APTOS_NETWORK=testnet pnpm --filter @cash/scripts performance-report"
+      ],
+      "evidence": [
+        "integration-test/curl-rerun/VAL-INTEG-004-performance-report.log"
+      ],
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Aptos testnet faucet is unavailable for programmatic funding in this environment.",
+      "resolved": true,
+      "resolution": "Pre-funded separate buyer/taker accounts by transferring APT from cash-testnet maker and passed BUYER_PRIVATE_KEY/TAKER_PRIVATE_KEY.",
+      "affectedAssertions": [
+        "VAL-INTEG-001",
+        "VAL-INTEG-002"
+      ]
+    },
+    {
+      "description": "Initial buyer top-up of 0.2 APT was insufficient for subsequent script transaction fee validation.",
+      "resolved": true,
+      "resolution": "Reran VAL-INTEG-001 with 0.5 APT fallback transfer to buyer account before executing buy-simulation.",
+      "affectedAssertions": [
+        "VAL-INTEG-001"
+      ]
+    },
+    {
+      "description": "Initial attempt to transfer 3 APT from maker failed because maker balance was below transfer amount.",
+      "resolved": true,
+      "resolution": "Reduced fallback transfer amounts to fit available maker balance and reran successfully.",
+      "affectedAssertions": [
+        "VAL-INTEG-001"
+      ]
+    }
+  ],
+  "blockers": [],
+  "summary": "Revalidated 3 integration assertions via curl/script surface: VAL-INTEG-001 PASS, VAL-INTEG-002 PASS, VAL-INTEG-004 PASS."
+}
