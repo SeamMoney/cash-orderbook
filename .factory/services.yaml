@@ -18,6 +18,7 @@ commands:
   reseed-testnet: pnpm --filter @cash/scripts reseed-testnet
   performance-report: pnpm --filter @cash/scripts performance-report
   setup-demo-wallet: pnpm --filter @cash/scripts setup-demo-wallet
+  cleanup-stale-orders: pnpm --filter @cash/scripts cleanup-stale-orders
   dev-all: pnpm dev
 
 services:
