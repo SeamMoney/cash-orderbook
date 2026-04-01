@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { WalletProvider } from "@/components/wallet/wallet-provider";
+import { TamaguiProvider } from "@/components/providers/tamagui-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,7 +21,9 @@ export default function RootLayout({
       <body
         className={`${GeistSans.variable} ${GeistMono.variable} antialiased bg-[#131313] text-foreground min-h-screen`}
       >
-        <WalletProvider>{children}</WalletProvider>
+        <WalletProvider>
+          <TamaguiProvider>{children}</TamaguiProvider>
+        </WalletProvider>
       </body>
     </html>
   );
