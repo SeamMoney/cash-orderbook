@@ -38,6 +38,8 @@ import {
   CASH_DECIMALS,
   USDC_DECIMALS,
   PRICE_SCALE,
+  STABLECOINS,
+  quoteDecimalsFor,
 } from "@cash/shared";
 
 // ============================================================
@@ -108,11 +110,34 @@ function generatePriceLevels(
 // Main
 // ============================================================
 
+/**
+ * Resolve the quote asset metadata address for the given symbol and network.
+ * Uses the STABLECOINS registry from @cash/shared for address lookup.
+ */
+function resolveQuoteAsset(symbol: string, network: string): { address: string; decimals: number } {
+  const quoteAssetOverride = process.env.QUOTE_ASSET_ADDRESS;
+  if (quoteAssetOverride) {
+    return { address: quoteAssetOverride, decimals: quoteDecimalsFor(symbol) };
+  }
+
+  const coin = STABLECOINS.find((s) => s.symbol.toUpperCase() === symbol.toUpperCase());
+  if (!coin) {
+    return { address: USDC_TOKEN_ADDRESS, decimals: USDC_DECIMALS };
+  }
+
+  const isTest = network === "testnet";
+  // Use the network-specific address from the stablecoin registry
+  const altAddr = coin["testnetAddress" as keyof typeof coin] as string | undefined;
+  const addr = isTest && altAddr ? altAddr : coin.address;
+  return { address: addr, decimals: coin.decimals };
+}
+
 async function main(): Promise<void> {
   // Read env vars
   const privateKeyHex = process.env.APTOS_PRIVATE_KEY;
   const contractAddress = process.env.CONTRACT_ADDRESS;
   const networkStr = process.env.APTOS_NETWORK ?? "mainnet";
+  const quoteSymbol = process.env.QUOTE_ASSET ?? "USD1";
 
   if (!privateKeyHex) {
     console.error("ERROR: APTOS_PRIVATE_KEY environment variable is required.");
@@ -127,6 +152,10 @@ async function main(): Promise<void> {
   const config = loadConfig();
   const { bidPrices, askPrices } = generatePriceLevels(config);
 
+  // Resolve quote asset
+  const baseAssetAddress = process.env.BASE_ASSET_ADDRESS ?? CASH_TOKEN_ADDRESS;
+  const { address: quoteAssetAddress, decimals: quoteDecimals } = resolveQuoteAsset(quoteSymbol, networkStr);
+
   // Calculate capital requirements
   const totalAskQuantity = config.depthPerLevel * config.numLevels;
   const totalBidCost = bidPrices.reduce(
@@ -140,27 +169,30 @@ async function main(): Promise<void> {
   console.log("");
   console.log(`Network:          ${networkStr}`);
   console.log(`Contract:         ${contractAddress}`);
+  console.log(`Quote asset:      ${quoteSymbol} (${quoteDecimals} decimals)`);
+  console.log(`Base address:     ${baseAssetAddress}`);
+  console.log(`Quote address:    ${quoteAssetAddress}`);
   console.log(`Pair ID:          ${config.pairId}`);
-  console.log(`Reference price:  ${config.referencePrice} USDC/CASH`);
+  console.log(`Reference price:  ${config.referencePrice} ${quoteSymbol}/CASH`);
   console.log(`Spread:           ${config.spreadBps} bps (${config.spreadBps / 100}%)`);
   console.log(`Levels per side:  ${config.numLevels}`);
   console.log(`Depth per level:  ${config.depthPerLevel} CASH`);
   console.log("");
   console.log(`Capital required:`);
   console.log(`  CASH (for asks): ${totalAskQuantity.toFixed(CASH_DECIMALS)} CASH`);
-  console.log(`  USDC (for bids): ${totalBidCost.toFixed(USDC_DECIMALS)} USDC`);
+  console.log(`  ${quoteSymbol} (for bids): ${totalBidCost.toFixed(quoteDecimals)} ${quoteSymbol}`);
   console.log("");
 
   // Print price ladder
   console.log("Price Ladder:");
   console.log("  Asks (sell levels):");
   for (let i = askPrices.length - 1; i >= 0; i--) {
-    console.log(`    ${askPrices[i].toFixed(6)} USDC  ×  ${config.depthPerLevel} CASH`);
+    console.log(`    ${askPrices[i].toFixed(6)} ${quoteSymbol}  ×  ${config.depthPerLevel} CASH`);
   }
   console.log("  ── spread ──");
   console.log("  Bids (buy levels):");
   for (const price of bidPrices) {
-    console.log(`    ${price.toFixed(6)} USDC  ×  ${config.depthPerLevel} CASH`);
+    console.log(`    ${price.toFixed(6)} ${quoteSymbol}  ×  ${config.depthPerLevel} CASH`);
   }
   console.log("");
 
@@ -168,8 +200,8 @@ async function main(): Promise<void> {
   const sdk = new CashOrderbook({
     network: getNetworkType(networkStr),
     contractAddress,
-    baseAsset: CASH_TOKEN_ADDRESS,
-    quoteAsset: USDC_TOKEN_ADDRESS,
+    baseAsset: baseAssetAddress,
+    quoteAsset: quoteAssetAddress,
   });
 
   // Create account from private key

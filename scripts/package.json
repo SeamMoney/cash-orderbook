@@ -10,6 +10,7 @@
     "lint": "echo 'lint: ok'",
     "register-market": "tsx src/register-market.ts",
     "seed-orderbook": "tsx src/seed-orderbook.ts",
+    "deploy-testnet-full": "tsx src/deploy-testnet-full.ts",
     "integration-test": "tsx src/integration-test.ts",
     "import-history": "tsx src/import-history.ts",
     "clean": "rm -rf dist"
