@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import { ChevronRight } from "lucide-react";
+import { useMedia } from "@tamagui/core";
 import { Nav, type NavTab } from "@/components/nav";
 import { Toaster } from "sonner";
 import { TokenHeader } from "@/components/token-header";
@@ -16,17 +16,13 @@ import { usePriceChange } from "@/hooks/use-price-change";
 import { useMinDuration } from "@/hooks/use-min-duration";
 import { useRealtimeTrades } from "@/hooks/use-realtime-trades";
 import { useRealtimePrice } from "@/hooks/use-realtime-price";
-
-/** Breadcrumb displayed above the token header. */
-function Breadcrumb(): React.ReactElement {
-  return (
-    <nav className="flex items-center gap-1 text-[15px] text-white/65 mb-5">
-      <span className="hover:text-white/85 cursor-pointer transition-colors">Tokens</span>
-      <ChevronRight className="h-4 w-4 text-white/38" />
-      <span className="text-white">CASH</span>
-    </nav>
-  );
-}
+import { Flex } from "@/components/ui/Flex";
+import {
+  TokenDetailsLayout,
+  LeftPanel,
+  RightPanel,
+} from "@/components/layout/TokenDetailsLayout";
+import { Breadcrumb } from "@/components/layout/Breadcrumb";
 
 export default function Home(): React.ReactElement {
   const [activeTab, setActiveTab] = useState<NavTab>("trade");
@@ -34,6 +30,10 @@ export default function Home(): React.ReactElement {
   const { change24h } = usePriceChange();
   const { trades, loading: tradesLoading } = useRealtimeTrades(50);
   const { realtimePrice, flashDirection } = useRealtimePrice();
+
+  // Responsive breakpoint: xl = maxWidth: 1024px → stacked layout
+  const media = useMedia();
+  const isMobile = media.xl;
 
   // Ensure stats skeleton is visible for at least 300ms on initial page load
   const marketLoading = useMinDuration(rawMarketLoading, 300);
@@ -73,7 +73,7 @@ export default function Home(): React.ReactElement {
   const displayPrice = hoverPrice ?? realtimePrice ?? market?.lastPrice ?? null;
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <Flex minHeight="100vh" backgroundColor="$surface1">
       <Nav activeTab={activeTab} onTabChange={setActiveTab} />
       <Toaster
         theme="dark"
@@ -92,11 +92,11 @@ export default function Home(): React.ReactElement {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
-        className="mx-auto w-full max-w-[1200px] flex-1 px-5 md:px-10 mt-8 pb-12"
+        style={{ flex: 1, width: "100%", maxWidth: 1200, marginInline: "auto" }}
       >
-        <div className="flex flex-col lg:flex-row gap-20">
-          {/* Left Column (~65%) — Token Info + Chart + Stats + Transactions */}
-          <div className="flex-1 min-w-0 space-y-6 md:space-y-10">
+        <TokenDetailsLayout>
+          {/* Left Panel — Token Info + Chart + Stats + Transactions */}
+          <LeftPanel>
             {/* Breadcrumb */}
             <Breadcrumb />
 
@@ -117,26 +117,26 @@ export default function Home(): React.ReactElement {
             {/* Token Stats Grid */}
             <TokenStatsGrid market={market} loading={marketLoading} />
 
-            {/* Swap Widget — shown inline on mobile, hidden on desktop (shown in right column) */}
-            <div className="lg:hidden">
-              <SwapWidget />
-            </div>
+            {/* Swap Widget — shown inline on mobile only */}
+            {isMobile && <SwapWidget />}
 
             {/* Transactions Table */}
             <TransactionsTable trades={trades} loading={tradesLoading} />
 
             {/* Token Info */}
             <TokenInfo />
-          </div>
+          </LeftPanel>
 
-          {/* Right Column (~35%) — Sticky Swap Widget (desktop only) */}
-          <div className="hidden lg:block w-[360px] flex-shrink-0">
-            <div className="sticky top-[72px]">
-              <SwapWidget />
-            </div>
-          </div>
-        </div>
+          {/* Right Panel — Sticky Swap Widget (desktop only) */}
+          {!isMobile && (
+            <RightPanel>
+              <div style={{ position: "sticky", top: 72 }}>
+                <SwapWidget />
+              </div>
+            </RightPanel>
+          )}
+        </TokenDetailsLayout>
       </motion.main>
-    </div>
+    </Flex>
   );
 }
