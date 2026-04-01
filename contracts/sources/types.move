@@ -17,6 +17,7 @@ module cash_orderbook::types {
     const E_POST_ONLY_WOULD_MATCH: u64 = 10;
     const E_ALREADY_EXISTS: u64 = 11;
     const E_INVALID_ORDER_TYPE: u64 = 12;
+    const E_INVALID_DECIMALS: u64 = 13;
 
     // ========== Constants ==========
     /// Price scale factor: all prices are expressed as fixed-point with 6 decimal places.
@@ -91,6 +92,8 @@ module cash_orderbook::types {
         min_size: u64,
         /// Market status: 0 = active, 1 = paused
         status: u8,
+        /// Quote asset decimal precision (e.g., 6 for USDC, 8 for USD1)
+        quote_decimals: u8,
     }
 
     /// The global protocol state resource, stored at the resource account address.
@@ -223,6 +226,7 @@ module cash_orderbook::types {
         lot_size: u64,
         tick_size: u64,
         min_size: u64,
+        quote_decimals: u8,
     ): Market {
         Market {
             pair_id,
@@ -232,6 +236,7 @@ module cash_orderbook::types {
             tick_size,
             min_size,
             status: MARKET_STATUS_ACTIVE,
+            quote_decimals,
         }
     }
 
@@ -273,6 +278,7 @@ module cash_orderbook::types {
     public fun market_tick_size(market: &Market): u64 { market.tick_size }
     public fun market_min_size(market: &Market): u64 { market.min_size }
     public fun market_status(market: &Market): u8 { market.status }
+    public fun market_quote_decimals(market: &Market): u8 { market.quote_decimals }
     public fun market_is_active(market: &Market): bool { market.status == MARKET_STATUS_ACTIVE }
 
     /// Set market status (friend access for admin module)
@@ -302,6 +308,7 @@ module cash_orderbook::types {
     public fun e_post_only_would_match(): u64 { E_POST_ONLY_WOULD_MATCH }
     public fun e_already_exists(): u64 { E_ALREADY_EXISTS }
     public fun e_invalid_order_type(): u64 { E_INVALID_ORDER_TYPE }
+    public fun e_invalid_decimals(): u64 { E_INVALID_DECIMALS }
 
     // ========== Friend Declarations ==========
     friend cash_orderbook::accounts;
@@ -388,6 +395,7 @@ module cash_orderbook::types {
             1_000,   // lot_size
             1_000,   // tick_size
             10_000,  // min_size
+            6,       // quote_decimals
         );
 
         assert!(market_pair_id(&market) == 0, 400);
@@ -398,11 +406,12 @@ module cash_orderbook::types {
         assert!(market_min_size(&market) == 10_000, 405);
         assert!(market_status(&market) == MARKET_STATUS_ACTIVE, 406);
         assert!(market_is_active(&market) == true, 407);
+        assert!(market_quote_decimals(&market) == 6, 408);
     }
 
     #[test]
     fun test_market_status_change() {
-        let market = new_market(0, @0xBA5E, @0x0C07E, 1_000, 1_000, 10_000);
+        let market = new_market(0, @0xBA5E, @0x0C07E, 1_000, 1_000, 10_000, 6);
 
         // Initially active
         assert!(market_is_active(&market), 500);
@@ -442,6 +451,7 @@ module cash_orderbook::types {
         assert!(e_post_only_would_match() == 10, 709);
         assert!(e_already_exists() == 11, 710);
         assert!(e_invalid_order_type() == 12, 711);
+        assert!(e_invalid_decimals() == 13, 712);
     }
 
     #[test(deployer = @cash_orderbook)]

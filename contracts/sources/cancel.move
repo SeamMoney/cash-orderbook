@@ -258,7 +258,7 @@ module cash_orderbook::cancel {
         accounts::deposit(user, quote_metadata, 5_000_000_000);
 
         // Register market
-        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
 
         (base_metadata, quote_metadata, 0)
     }
@@ -465,7 +465,7 @@ module cash_orderbook::cancel {
         accounts::deposit(owner, quote_metadata, 5_000_000_000);
 
         // Register market
-        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
 
         // Owner sets up subaccount and delegates
         test_subaccounts::create_subaccount(owner);
@@ -975,7 +975,7 @@ module cash_orderbook::cancel {
         accounts::deposit(taker, quote_metadata, 5_000_000_000);
 
         // Register market
-        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
 
         (base_metadata, quote_metadata, 0)
     }

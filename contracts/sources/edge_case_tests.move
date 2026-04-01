@@ -73,7 +73,7 @@ module cash_orderbook::edge_case_tests {
         accounts::deposit(user, quote_metadata, 50_000_000_000);
 
         // Register market
-        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
 
         (base_metadata, quote_metadata, 0)
     }
@@ -143,7 +143,7 @@ module cash_orderbook::edge_case_tests {
         accounts::deposit(user2, quote_metadata, 50_000_000_000);
 
         // Register market
-        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
 
         (base_metadata, quote_metadata, 0)
     }
@@ -695,9 +695,9 @@ module cash_orderbook::edge_case_tests {
         accounts::deposit(user2, quote_b, 50_000_000_000);
 
         // Register Market A (pair_id = 0)
-        market::register_market(deployer, base_a, quote_a, 1_000, 1_000, 10_000);
+        market::register_market(deployer, base_a, quote_a, 1_000, 1_000, 10_000, 6);
         // Register Market B (pair_id = 1)
-        market::register_market(deployer, base_b, quote_b, 2_000, 2_000, 20_000);
+        market::register_market(deployer, base_b, quote_b, 2_000, 2_000, 20_000, 6);
 
         (base_a, quote_a, 0, base_b, quote_b, 1)
     }

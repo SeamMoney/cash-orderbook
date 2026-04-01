@@ -132,7 +132,7 @@ module cash_orderbook::order_placement {
         market::assert_market_active(pair_id);
 
         // 3. Get market info for asset addresses
-        let (base_asset, quote_asset, _lot_size, _tick_size, _min_size, _status) = market::get_market_info(pair_id);
+        let (base_asset, quote_asset, _lot_size, _tick_size, _min_size, _status, _quote_decimals) = market::get_market_info(pair_id);
 
         let now = timestamp::now_microseconds();
 
@@ -337,7 +337,7 @@ module cash_orderbook::order_placement {
         market::assert_market_active(pair_id);
 
         // 3. Get market info for asset addresses
-        let (base_asset, quote_asset, _lot_size, _tick_size, _min_size, _status) = market::get_market_info(pair_id);
+        let (base_asset, quote_asset, _lot_size, _tick_size, _min_size, _status, _quote_decimals) = market::get_market_info(pair_id);
 
         let now = timestamp::now_microseconds();
 
@@ -585,6 +585,7 @@ module cash_orderbook::order_placement {
             1_000,    // lot_size
             1_000,    // tick_size
             10_000,   // min_size
+            6,        // quote_decimals
         );
 
         (base_metadata, quote_metadata, 0)
@@ -1073,6 +1074,7 @@ module cash_orderbook::order_placement {
             1_000,    // lot_size
             1_000,    // tick_size
             10_000,   // min_size
+            6,        // quote_decimals
         );
 
         (base_metadata, quote_metadata, 0)
@@ -1830,6 +1832,7 @@ module cash_orderbook::order_placement {
             1_000,
             1_000,
             10_000,
+            6, // quote_decimals
         );
 
         // Owner sets up subaccount and delegates to delegate
@@ -2029,6 +2032,7 @@ module cash_orderbook::order_placement {
             1_000,
             1_000,
             10_000,
+            6, // quote_decimals
         );
 
         (base_metadata, quote_metadata, 0)
@@ -2319,5 +2323,364 @@ module cash_orderbook::order_placement {
 
         let available = accounts::get_available_balance(taker_addr, quote_addr);
         assert!(available == 50_000_000, 7502); // 200 - 150 = 50
+    }
+
+    // ========== 8-DECIMAL QUOTE ASSET TESTS (USD1) ==========
+    // These tests verify that markets with 8-decimal quote assets work correctly
+    // for order placement, matching, and settlement.
+
+    #[test_only]
+    /// Setup two-user test env with 8-decimal quote asset (USD1).
+    /// Returns (base_meta, quote_meta, pair_id).
+    fun setup_8_decimal_two_user_env(
+        deployer: &signer,
+        maker: &signer,
+        taker: &signer,
+    ): (Object<Metadata>, Object<Metadata>, u64) {
+        let deployer_addr = signer::address_of(deployer);
+        let maker_addr = signer::address_of(maker);
+        let taker_addr = signer::address_of(taker);
+        test_account::create_account_for_test(deployer_addr);
+        test_account::create_account_for_test(maker_addr);
+        test_account::create_account_for_test(taker_addr);
+
+        // Initialize protocol
+        types::init_module_for_test(deployer);
+        let resource_signer = types::get_resource_signer();
+        let resource_addr = signer::address_of(&resource_signer);
+        test_account::create_account_for_test(resource_addr);
+
+        // Set timestamp
+        let aptos_framework = test_account::create_signer_for_test(@0x1);
+        timestamp::set_time_has_started_for_testing(&aptos_framework);
+
+        // Create base asset (CASH) — 6 decimals
+        let base_constructor_ref = object::create_named_object(deployer, b"TEST_CASH");
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            &base_constructor_ref,
+            std::option::none(),
+            string::utf8(b"Test CASH"),
+            string::utf8(b"CASH"),
+            6,
+            string::utf8(b""),
+            string::utf8(b""),
+        );
+        let base_metadata = object::object_from_constructor_ref<Metadata>(&base_constructor_ref);
+        let base_mint_ref = fungible_asset::generate_mint_ref(&base_constructor_ref);
+
+        // Create quote asset (USD1) — 8 decimals
+        let quote_constructor_ref = object::create_named_object(deployer, b"TEST_USD1");
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            &quote_constructor_ref,
+            std::option::none(),
+            string::utf8(b"Test USD1"),
+            string::utf8(b"USD1"),
+            8, // 8 decimals
+            string::utf8(b""),
+            string::utf8(b""),
+        );
+        let quote_metadata = object::object_from_constructor_ref<Metadata>(&quote_constructor_ref);
+        let quote_mint_ref = fungible_asset::generate_mint_ref(&quote_constructor_ref);
+
+        // Mint and deposit for maker: 10,000 CASH (6 dec), 10,000 USD1 (8 dec)
+        let base_fa = fungible_asset::mint(&base_mint_ref, 10_000_000_000); // 10K CASH
+        primary_fungible_store::deposit(maker_addr, base_fa);
+        let quote_fa = fungible_asset::mint(&quote_mint_ref, 1_000_000_000_000); // 10K USD1 (8 dec)
+        primary_fungible_store::deposit(maker_addr, quote_fa);
+        accounts::deposit(maker, base_metadata, 5_000_000_000); // 5K CASH
+        accounts::deposit(maker, quote_metadata, 500_000_000_000); // 5K USD1
+
+        // Mint and deposit for taker
+        let base_fa2 = fungible_asset::mint(&base_mint_ref, 10_000_000_000);
+        primary_fungible_store::deposit(taker_addr, base_fa2);
+        let quote_fa2 = fungible_asset::mint(&quote_mint_ref, 1_000_000_000_000);
+        primary_fungible_store::deposit(taker_addr, quote_fa2);
+        accounts::deposit(taker, base_metadata, 5_000_000_000);
+        accounts::deposit(taker, quote_metadata, 500_000_000_000);
+
+        // Register market with 8-decimal quote (pair_id = 0)
+        // PRICE_SCALE is 1_000_000. For an 8-decimal quote, 1.0 USD1 = 100_000_000 subunits.
+        // Price of 1.0 USD1 per CASH = 1_000_000 in PRICE_SCALE.
+        // quote_amount = (price * quantity) / PRICE_SCALE
+        //              = (1_000_000 * 100_000_000) / 1_000_000
+        //              = 100_000_000 (= 1.0 USD1 in 8-decimal subunits)
+        market::register_market(
+            deployer,
+            base_metadata,
+            quote_metadata,
+            100_000,     // lot_size
+            100_000,     // tick_size
+            1_000_000,   // min_size
+            8,           // quote_decimals (USD1)
+        );
+
+        (base_metadata, quote_metadata, 0)
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// VAL-DECIMAL-001: Register and trade on 8-decimal quote market.
+    /// GTC limit buy order rests correctly on 8-decimal market.
+    fun test_8dec_gtc_limit_buy(deployer: &signer, maker: &signer, taker: &signer) {
+        let (_base_metadata, quote_metadata, pair_id) = setup_8_decimal_two_user_env(deployer, maker, taker);
+        let maker_addr = signer::address_of(maker);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Place GTC limit buy: price = 2.0 USD1, quantity = 100 CASH
+        // price = 2_000_000 (2.0 in PRICE_SCALE)
+        // quantity = 100_000_000 (100 CASH, 6 decimals)
+        // quote_amount = (2_000_000 * 100_000_000) / 1_000_000 = 200_000_000 (2.0 USD1 * 100)
+        let price = 2_000_000;
+        let quantity = 100_000_000;
+        place_limit_order(maker, pair_id, price, quantity, true, types::order_type_gtc());
+
+        // Verify: quote locked = 200_000_000 (200 USD1 in 8-decimal subunits)
+        let locked = accounts::get_locked_balance(maker_addr, quote_addr);
+        assert!(locked == 200_000_000, 8000);
+
+        // Verify: order is on the bids side
+        assert!(!market::bids_is_empty(pair_id), 8001);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// VAL-DECIMAL-003: Full fill on 8-decimal quote market.
+    /// Maker sell + taker buy, both fully filled, balances correct.
+    ///
+    /// Price encoding for 8-decimal quote (USD1) with 6-decimal base (CASH):
+    ///   price_encoded = price_per_token * (10^quote_dec / 10^base_dec) * PRICE_SCALE
+    /// For 2.0 USD1/CASH: price = 2.0 * (10^8 / 10^6) * 1M = 200_000_000
+    /// quote_amount = (price * quantity) / PRICE_SCALE
+    ///             = (200_000_000 * 100_000_000) / 1_000_000 = 20_000_000_000 = 200 USD1 ✓
+    fun test_8dec_full_fill(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_8_decimal_two_user_env(deployer, maker, taker);
+        let maker_addr = signer::address_of(maker);
+        let taker_addr = signer::address_of(taker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Price 2.0 USD1/CASH = 200_000_000 encoded
+        let price = 200_000_000;
+
+        // Maker: sell 100 CASH at 2.0 USD1
+        place_limit_order(maker, pair_id, price, 100_000_000, false, types::order_type_gtc());
+
+        // Taker: buy 100 CASH at 2.0 USD1 — should fully match
+        place_limit_order(taker, pair_id, price, 100_000_000, true, types::order_type_gtc());
+
+        // Book empty
+        assert!(market::bids_is_empty(pair_id), 8100);
+        assert!(market::asks_is_empty(pair_id), 8101);
+
+        // quote_amount = (200_000_000 * 100_000_000) / 1_000_000 = 20_000_000_000 = 200 USD1
+
+        // Taker: started 5K CASH + 5K USD1, gets 100 CASH, pays 200 USD1
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_100_000_000, 8102);
+        // 500_000_000_000 - 20_000_000_000 = 480_000_000_000
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 480_000_000_000, 8103);
+
+        // Maker: sells 100 CASH, gets 200 USD1
+        assert!(accounts::get_available_balance(maker_addr, base_addr) == 4_900_000_000, 8104);
+        assert!(accounts::get_available_balance(maker_addr, quote_addr) == 520_000_000_000, 8105);
+
+        // No locked balances
+        assert!(accounts::get_locked_balance(maker_addr, base_addr) == 0, 8106);
+        assert!(accounts::get_locked_balance(taker_addr, quote_addr) == 0, 8107);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// 8-decimal partial fill: taker buy larger than maker sell.
+    fun test_8dec_partial_fill(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_8_decimal_two_user_env(deployer, maker, taker);
+        let maker_addr = signer::address_of(maker);
+        let taker_addr = signer::address_of(taker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Price 1.5 USD1/CASH = 1.5 * 100 * 1M = 150_000_000 encoded
+        let price = 150_000_000;
+
+        // Maker: sell 50 CASH at 1.5 USD1
+        place_limit_order(maker, pair_id, price, 50_000_000, false, types::order_type_gtc());
+
+        // Taker: buy 100 CASH at 1.5 USD1 — only 50 available
+        place_limit_order(taker, pair_id, price, 100_000_000, true, types::order_type_gtc());
+
+        // Asks empty (maker fully filled), bids has 50 remaining
+        assert!(market::asks_is_empty(pair_id), 8200);
+        assert!(!market::bids_is_empty(pair_id), 8201);
+
+        // Settlement: 50 CASH at 1.5 USD1
+        // quote_amount = (150_000_000 * 50_000_000) / 1_000_000 = 7_500_000_000 = 75 USD1
+        let expected_quote = 7_500_000_000u64;
+
+        // Taker: got 50 CASH
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_050_000_000, 8202);
+        // Taker: remaining locked for resting 50 CASH at 1.5 USD1 = 75 USD1 = 7_500_000_000
+        assert!(accounts::get_locked_balance(taker_addr, quote_addr) == expected_quote, 8203);
+
+        // Maker: fully filled, got 75 USD1
+        assert!(accounts::get_available_balance(maker_addr, quote_addr) == 500_000_000_000 + expected_quote, 8204);
+        assert!(accounts::get_locked_balance(maker_addr, base_addr) == 0, 8205);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// 8-decimal market order buy fills correctly.
+    fun test_8dec_market_buy(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_8_decimal_two_user_env(deployer, maker, taker);
+        let taker_addr = signer::address_of(taker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Price 1.0 USD1/CASH = 1.0 * 100 * 1M = 100_000_000 encoded
+        let price = 100_000_000;
+
+        // Maker: sell 100 CASH at 1.0 USD1
+        place_limit_order(maker, pair_id, price, 100_000_000, false, types::order_type_gtc());
+
+        // Taker: market buy 50 CASH
+        place_market_order(taker, pair_id, 50_000_000, true);
+
+        // quote_amount = (100_000_000 * 50_000_000) / 1_000_000 = 5_000_000_000 = 50 USD1
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_050_000_000, 8300);
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 500_000_000_000 - 5_000_000_000, 8301);
+        assert!(accounts::get_locked_balance(taker_addr, quote_addr) == 0, 8302);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// 8-decimal market with non-zero fees works correctly.
+    fun test_8dec_with_fees(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_8_decimal_two_user_env(deployer, maker, taker);
+        let maker_addr = signer::address_of(maker);
+        let taker_addr = signer::address_of(taker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Set fees: 10 bps maker, 30 bps taker
+        fees::update_fee_config(deployer, 10, 30);
+
+        // Price 2.0 USD1/CASH = 200_000_000 encoded
+        let price = 200_000_000;
+
+        // Maker: sell 100 CASH at 2.0 USD1
+        place_limit_order(maker, pair_id, price, 100_000_000, false, types::order_type_gtc());
+
+        // Taker: buy 100 CASH at 2.0 USD1
+        place_limit_order(taker, pair_id, price, 100_000_000, true, types::order_type_gtc());
+
+        // quote_amount = (200_000_000 * 100_000_000) / 1_000_000 = 20_000_000_000 = 200 USD1
+        let quote_amount = 20_000_000_000u64;
+        // taker_fee = 20_000_000_000 * 30 / 10_000 = 60_000_000
+        let taker_fee = 60_000_000u64;
+        // maker_fee = 20_000_000_000 * 10 / 10_000 = 20_000_000
+        let maker_fee = 20_000_000u64;
+
+        // Taker: 5K CASH + 100 CASH = 5100 CASH
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_100_000_000, 8400);
+        // Taker: 5K USD1 - 200 USD1 - 0.6 USD1 taker fee
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 500_000_000_000 - quote_amount - taker_fee, 8401);
+
+        // Maker: 5K CASH - 100 CASH = 4900 CASH
+        assert!(accounts::get_available_balance(maker_addr, base_addr) == 4_900_000_000, 8402);
+        // Maker: 5K USD1 + 200 USD1 - 0.2 USD1 maker fee
+        assert!(accounts::get_available_balance(maker_addr, quote_addr) == 500_000_000_000 + quote_amount - maker_fee, 8403);
+
+        // Fee vault: taker_fee + maker_fee
+        assert!(fees::get_collected_fees(quote_addr) == taker_fee + maker_fee, 8404);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// 8-decimal: price improvement works correctly.
+    fun test_8dec_price_improvement(deployer: &signer, maker: &signer, taker: &signer) {
+        let (_base_metadata, quote_metadata, pair_id) = setup_8_decimal_two_user_env(deployer, maker, taker);
+        let taker_addr = signer::address_of(taker);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        // Price 1.0 USD1/CASH = 100_000_000 encoded
+        let maker_price = 100_000_000;
+
+        // Maker: sell 50 CASH at 1.0 USD1
+        place_limit_order(maker, pair_id, maker_price, 50_000_000, false, types::order_type_gtc());
+
+        // Taker: buy 50 CASH at 3.0 USD1 (300_000_000 encoded) — fills at 1.0
+        place_limit_order(taker, pair_id, 300_000_000, 50_000_000, true, types::order_type_gtc());
+
+        // Taker paid only 50 USD1 (50 * 1.0), not 150 USD1 (50 * 3.0)
+        // quote_amount = (100_000_000 * 50_000_000) / 1_000_000 = 5_000_000_000 = 50 USD1
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 500_000_000_000 - 5_000_000_000, 8500);
+        assert!(accounts::get_locked_balance(taker_addr, quote_addr) == 0, 8501);
+    }
+
+    #[test(deployer = @cash_orderbook, maker = @0xBEEF, taker = @0xCAFE1)]
+    /// 8-decimal: FOK order fully fills.
+    fun test_8dec_fok_full_fill(deployer: &signer, maker: &signer, taker: &signer) {
+        let (base_metadata, quote_metadata, pair_id) = setup_8_decimal_two_user_env(deployer, maker, taker);
+        let taker_addr = signer::address_of(taker);
+        let base_addr = object::object_address(&base_metadata);
+        let quote_addr = object::object_address(&quote_metadata);
+
+        let price = 200_000_000; // 2.0 USD1/CASH
+
+        // Maker: sell 100 CASH
+        place_limit_order(maker, pair_id, price, 100_000_000, false, types::order_type_gtc());
+
+        // Taker: FOK buy 100 CASH — exactly enough
+        place_limit_order(taker, pair_id, price, 100_000_000, true, types::order_type_fok());
+
+        // Book empty
+        assert!(market::bids_is_empty(pair_id), 8600);
+        assert!(market::asks_is_empty(pair_id), 8601);
+
+        // quote_amount = (200_000_000 * 100_000_000) / 1_000_000 = 20_000_000_000
+        assert!(accounts::get_available_balance(taker_addr, base_addr) == 5_100_000_000, 8602);
+        assert!(accounts::get_available_balance(taker_addr, quote_addr) == 500_000_000_000 - 20_000_000_000, 8603);
+    }
+
+    #[test(deployer = @cash_orderbook, user = @0xBEEF)]
+    /// 8-decimal: view function returns correct quote_decimals.
+    fun test_8dec_view_quote_decimals(deployer: &signer, user: &signer) {
+        let deployer_addr = signer::address_of(deployer);
+        let user_addr = signer::address_of(user);
+        test_account::create_account_for_test(deployer_addr);
+        test_account::create_account_for_test(user_addr);
+
+        types::init_module_for_test(deployer);
+        let resource_signer = types::get_resource_signer();
+        let resource_addr = signer::address_of(&resource_signer);
+        test_account::create_account_for_test(resource_addr);
+
+        let aptos_framework = test_account::create_signer_for_test(@0x1);
+        timestamp::set_time_has_started_for_testing(&aptos_framework);
+
+        // Create base asset
+        let base_constructor_ref = object::create_named_object(deployer, b"TEST_CASH");
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            &base_constructor_ref,
+            std::option::none(),
+            string::utf8(b"Test CASH"),
+            string::utf8(b"CASH"),
+            6,
+            string::utf8(b""),
+            string::utf8(b""),
+        );
+        let base_metadata = object::object_from_constructor_ref<Metadata>(&base_constructor_ref);
+
+        // Create 8-decimal quote
+        let quote_constructor_ref = object::create_named_object(deployer, b"TEST_USD1");
+        primary_fungible_store::create_primary_store_enabled_fungible_asset(
+            &quote_constructor_ref,
+            std::option::none(),
+            string::utf8(b"Test USD1"),
+            string::utf8(b"USD1"),
+            8,
+            string::utf8(b""),
+            string::utf8(b""),
+        );
+        let quote_metadata = object::object_from_constructor_ref<Metadata>(&quote_constructor_ref);
+
+        // Register market with 8 decimals
+        market::register_market(deployer, base_metadata, quote_metadata, 100_000, 100_000, 1_000_000, 8);
+
+        // Verify via get_market_info
+        let (_b, _q, _l, _t, _m, _s, qd) = market::get_market_info(0);
+        assert!(qd == 8, 8700);
     }
 }

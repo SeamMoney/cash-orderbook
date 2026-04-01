@@ -16,6 +16,7 @@ module cash_orderbook::market {
     const E_INVALID_AMOUNT: u64 = 4;
     const E_MARKET_NOT_LISTED: u64 = 6;
     const E_ALREADY_EXISTS: u64 = 11;
+    const E_INVALID_DECIMALS: u64 = 13;
 
     // ========== Resources ==========
 
@@ -64,6 +65,8 @@ module cash_orderbook::market {
         tick_size: u64,
         /// Minimum order size
         min_size: u64,
+        /// Quote asset decimal precision
+        quote_decimals: u8,
     }
 
     // ========== Entry Functions ==========
@@ -82,6 +85,7 @@ module cash_orderbook::market {
         lot_size: u64,
         tick_size: u64,
         min_size: u64,
+        quote_decimals: u8,
     ) acquires MarketRegistry, OrderBookRegistry {
         // Verify admin
         types::assert_admin(admin);
@@ -90,6 +94,8 @@ module cash_orderbook::market {
         assert!(lot_size > 0, E_INVALID_AMOUNT);
         assert!(tick_size > 0, E_INVALID_AMOUNT);
         assert!(min_size > 0, E_INVALID_AMOUNT);
+        // quote_decimals must be between 1 and 18 (inclusive)
+        assert!(quote_decimals >= 1 && quote_decimals <= 18, E_INVALID_DECIMALS);
 
         let base_asset_addr = object::object_address(&base_asset);
         let quote_asset_addr = object::object_address(&quote_asset);
@@ -105,6 +111,7 @@ module cash_orderbook::market {
             lot_size,
             tick_size,
             min_size,
+            quote_decimals,
         );
 
         // Get or initialize the MarketRegistry and OrderBookRegistry
@@ -142,6 +149,7 @@ module cash_orderbook::market {
             lot_size,
             tick_size,
             min_size,
+            quote_decimals,
         });
     }
 
@@ -158,8 +166,8 @@ module cash_orderbook::market {
 
     #[view]
     /// Get market info for a given pair_id.
-    /// Returns (base_asset, quote_asset, lot_size, tick_size, min_size, status)
-    public fun get_market_info(pair_id: u64): (address, address, u64, u64, u64, u8) acquires MarketRegistry {
+    /// Returns (base_asset, quote_asset, lot_size, tick_size, min_size, status, quote_decimals)
+    public fun get_market_info(pair_id: u64): (address, address, u64, u64, u64, u8, u8) acquires MarketRegistry {
         let resource_addr = types::get_resource_account_address();
         assert!(exists<MarketRegistry>(resource_addr), E_MARKET_NOT_LISTED);
         let registry = borrow_global<MarketRegistry>(resource_addr);
@@ -172,6 +180,7 @@ module cash_orderbook::market {
             types::market_tick_size(market),
             types::market_min_size(market),
             types::market_status(market),
+            types::market_quote_decimals(market),
         )
     }
 
@@ -559,19 +568,21 @@ module cash_orderbook::market {
             1_000,    // lot_size
             1_000,    // tick_size
             10_000,   // min_size
+            6,        // quote_decimals
         );
 
         // Verify market exists
         assert!(market_exists(0), 100);
 
         // Verify market info
-        let (base, quote, lot, tick, min, status) = get_market_info(0);
+        let (base, quote, lot, tick, min, status, qd) = get_market_info(0);
         assert!(base == object::object_address(&base_metadata), 101);
         assert!(quote == object::object_address(&quote_metadata), 102);
         assert!(lot == 1_000, 103);
         assert!(tick == 1_000, 104);
         assert!(min == 10_000, 105);
         assert!(status == types::market_status_active(), 106);
+        assert!(qd == 6, 109);
 
         // Verify market is active
         assert!(is_market_active(0), 107);
@@ -587,21 +598,21 @@ module cash_orderbook::market {
         let (base_metadata, quote_metadata) = setup_market_test_env(deployer);
 
         // Register first market
-        register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+        register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
 
         // Register second market (same assets for simplicity — real scenario would be different pairs)
-        register_market(deployer, base_metadata, quote_metadata, 2_000, 2_000, 20_000);
+        register_market(deployer, base_metadata, quote_metadata, 2_000, 2_000, 20_000, 6);
 
         // Verify both markets exist with correct pair_ids
         assert!(market_exists(0), 200);
         assert!(market_exists(1), 201);
 
         // Verify first market params
-        let (_base, _quote, lot1, _tick1, _min1, _status1) = get_market_info(0);
+        let (_base, _quote, lot1, _tick1, _min1, _status1, _qd1) = get_market_info(0);
         assert!(lot1 == 1_000, 202);
 
         // Verify second market params
-        let (_base2, _quote2, lot2, _tick2, _min2, _status2) = get_market_info(1);
+        let (_base2, _quote2, lot2, _tick2, _min2, _status2, _qd2) = get_market_info(1);
         assert!(lot2 == 2_000, 203);
     }
 
@@ -615,7 +626,7 @@ module cash_orderbook::market {
         let (base_metadata, quote_metadata) = setup_market_test_env(deployer);
 
         // Non-admin tries to register — should fail
-        register_market(non_admin, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+        register_market(non_admin, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
     }
 
     #[test(deployer = @cash_orderbook)]
@@ -623,7 +634,7 @@ module cash_orderbook::market {
     /// Test that zero lot_size is rejected
     fun test_register_market_zero_lot_size(deployer: &signer) acquires MarketRegistry, OrderBookRegistry {
         let (base_metadata, quote_metadata) = setup_market_test_env(deployer);
-        register_market(deployer, base_metadata, quote_metadata, 0, 1_000, 10_000);
+        register_market(deployer, base_metadata, quote_metadata, 0, 1_000, 10_000, 6);
     }
 
     #[test(deployer = @cash_orderbook)]
@@ -631,7 +642,7 @@ module cash_orderbook::market {
     /// Test that zero tick_size is rejected
     fun test_register_market_zero_tick_size(deployer: &signer) acquires MarketRegistry, OrderBookRegistry {
         let (base_metadata, quote_metadata) = setup_market_test_env(deployer);
-        register_market(deployer, base_metadata, quote_metadata, 1_000, 0, 10_000);
+        register_market(deployer, base_metadata, quote_metadata, 1_000, 0, 10_000, 6);
     }
 
     #[test(deployer = @cash_orderbook)]
@@ -639,7 +650,7 @@ module cash_orderbook::market {
     /// Test that zero min_size is rejected
     fun test_register_market_zero_min_size(deployer: &signer) acquires MarketRegistry, OrderBookRegistry {
         let (base_metadata, quote_metadata) = setup_market_test_env(deployer);
-        register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 0);
+        register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 0, 6);
     }
 
     #[test(deployer = @cash_orderbook)]
@@ -665,7 +676,7 @@ module cash_orderbook::market {
     /// Test assert_market_active with an active market
     fun test_assert_market_active_success(deployer: &signer) acquires MarketRegistry, OrderBookRegistry {
         let (base_metadata, quote_metadata) = setup_market_test_env(deployer);
-        register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+        register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
 
         // Should not abort
         assert_market_active(0);
@@ -677,6 +688,81 @@ module cash_orderbook::market {
     fun test_assert_market_active_not_listed(deployer: &signer) acquires MarketRegistry {
         let (_base_metadata, _quote_metadata) = setup_market_test_env(deployer);
         assert_market_active(99);
+    }
+
+    #[test(deployer = @cash_orderbook)]
+    /// Test registering a market with 8-decimal quote asset (USD1)
+    fun test_register_market_8_decimals(deployer: &signer) acquires MarketRegistry, OrderBookRegistry {
+        let (base_metadata, quote_metadata) = setup_market_test_env(deployer);
+
+        register_market(
+            deployer,
+            base_metadata,
+            quote_metadata,
+            100_000,    // lot_size (larger for 8 decimals)
+            100_000,    // tick_size
+            1_000_000,  // min_size
+            8,          // quote_decimals (USD1)
+        );
+
+        assert!(market_exists(0), 800);
+        let (_base, _quote, _lot, _tick, _min, _status, qd) = get_market_info(0);
+        assert!(qd == 8, 801);
+    }
+
+    #[test(deployer = @cash_orderbook)]
+    /// Test registering markets with different quote decimals
+    fun test_register_markets_different_decimals(deployer: &signer) acquires MarketRegistry, OrderBookRegistry {
+        let (base_metadata, quote_metadata) = setup_market_test_env(deployer);
+
+        // 6-decimal market (USDC)
+        register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
+        // 8-decimal market (USD1)
+        register_market(deployer, base_metadata, quote_metadata, 100_000, 100_000, 1_000_000, 8);
+        // 18-decimal market (edge case)
+        register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 18);
+
+        let (_b0, _q0, _l0, _t0, _m0, _s0, qd0) = get_market_info(0);
+        let (_b1, _q1, _l1, _t1, _m1, _s1, qd1) = get_market_info(1);
+        let (_b2, _q2, _l2, _t2, _m2, _s2, qd2) = get_market_info(2);
+
+        assert!(qd0 == 6, 810);
+        assert!(qd1 == 8, 811);
+        assert!(qd2 == 18, 812);
+    }
+
+    #[test(deployer = @cash_orderbook)]
+    #[expected_failure(abort_code = 13, location = cash_orderbook::market)] // E_INVALID_DECIMALS
+    /// Test that 0 decimals is rejected
+    fun test_register_market_zero_decimals(deployer: &signer) acquires MarketRegistry, OrderBookRegistry {
+        let (base_metadata, quote_metadata) = setup_market_test_env(deployer);
+        register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 0);
+    }
+
+    #[test(deployer = @cash_orderbook)]
+    #[expected_failure(abort_code = 13, location = cash_orderbook::market)] // E_INVALID_DECIMALS
+    /// Test that 19 decimals is rejected (max is 18)
+    fun test_register_market_19_decimals(deployer: &signer) acquires MarketRegistry, OrderBookRegistry {
+        let (base_metadata, quote_metadata) = setup_market_test_env(deployer);
+        register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 19);
+    }
+
+    #[test(deployer = @cash_orderbook)]
+    #[expected_failure(abort_code = 13, location = cash_orderbook::market)] // E_INVALID_DECIMALS
+    /// Test that 255 decimals is rejected (max u8 value)
+    fun test_register_market_max_u8_decimals(deployer: &signer) acquires MarketRegistry, OrderBookRegistry {
+        let (base_metadata, quote_metadata) = setup_market_test_env(deployer);
+        register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 255);
+    }
+
+    #[test(deployer = @cash_orderbook)]
+    /// Test that 1 decimal is accepted (minimum valid)
+    fun test_register_market_1_decimal(deployer: &signer) acquires MarketRegistry, OrderBookRegistry {
+        let (base_metadata, quote_metadata) = setup_market_test_env(deployer);
+        register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 1);
+        assert!(market_exists(0), 830);
+        let (_b, _q, _l, _t, _m, _s, qd) = get_market_info(0);
+        assert!(qd == 1, 831);
     }
 
     #[test_only]

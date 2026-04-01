@@ -138,7 +138,7 @@ module cash_orderbook::admin {
         let (base_metadata, quote_metadata) = setup_admin_test_env(deployer);
 
         // Register a market
-        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
 
         // Verify initially active
         assert!(market::is_market_active(0), 100);
@@ -158,13 +158,13 @@ module cash_orderbook::admin {
         let (base_metadata, quote_metadata) = setup_admin_test_env(deployer);
 
         // Register market
-        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
 
         // Pause
         pause_market(deployer, 0);
 
         // Verify via market info
-        let (_base, _quote, _lot, _tick, _min, status) = market::get_market_info(0);
+        let (_base, _quote, _lot, _tick, _min, status, _qd) = market::get_market_info(0);
         assert!(status == types::market_status_paused(), 200);
     }
 
@@ -174,12 +174,12 @@ module cash_orderbook::admin {
         let (base_metadata, quote_metadata) = setup_admin_test_env(deployer);
 
         // Register market, pause, then unpause
-        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
         pause_market(deployer, 0);
         unpause_market(deployer, 0);
 
         // Verify via market info
-        let (_base, _quote, _lot, _tick, _min, status) = market::get_market_info(0);
+        let (_base, _quote, _lot, _tick, _min, status, _qd) = market::get_market_info(0);
         assert!(status == types::market_status_active(), 300);
     }
 
@@ -191,7 +191,7 @@ module cash_orderbook::admin {
         non_admin: &signer,
     ) {
         let (base_metadata, quote_metadata) = setup_admin_test_env(deployer);
-        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
 
         // Non-admin tries to pause — should fail
         pause_market(non_admin, 0);
@@ -205,7 +205,7 @@ module cash_orderbook::admin {
         non_admin: &signer,
     ) {
         let (base_metadata, quote_metadata) = setup_admin_test_env(deployer);
-        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
         pause_market(deployer, 0);
 
         // Non-admin tries to unpause — should fail
@@ -232,7 +232,7 @@ module cash_orderbook::admin {
     /// Test that assert_market_active aborts on paused market
     fun test_assert_market_active_when_paused(deployer: &signer) {
         let (base_metadata, quote_metadata) = setup_admin_test_env(deployer);
-        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
 
         // Pause market
         pause_market(deployer, 0);
@@ -248,7 +248,7 @@ module cash_orderbook::admin {
     /// Test that order placement on paused market aborts (simulated via assert_market_active)
     fun test_order_placement_on_paused_market_aborts(deployer: &signer) {
         let (base_metadata, quote_metadata) = setup_admin_test_env(deployer);
-        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
 
         // Pause market
         pause_market(deployer, 0);
@@ -261,7 +261,7 @@ module cash_orderbook::admin {
     /// Test that cancellation on paused market still works (assert_market_exists doesn't abort)
     fun test_cancellation_on_paused_market_works(deployer: &signer) {
         let (base_metadata, quote_metadata) = setup_admin_test_env(deployer);
-        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
 
         // Pause market
         pause_market(deployer, 0);
@@ -274,7 +274,7 @@ module cash_orderbook::admin {
     /// Test double pause is idempotent (doesn't abort)
     fun test_double_pause(deployer: &signer) {
         let (base_metadata, quote_metadata) = setup_admin_test_env(deployer);
-        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
 
         // Pause twice
         pause_market(deployer, 0);
@@ -288,7 +288,7 @@ module cash_orderbook::admin {
     /// Test double unpause is idempotent
     fun test_double_unpause(deployer: &signer) {
         let (base_metadata, quote_metadata) = setup_admin_test_env(deployer);
-        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
 
         // Already active, unpause again
         unpause_market(deployer, 0);

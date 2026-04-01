@@ -47,6 +47,15 @@ module cash_orderbook::views {
     }
 
     #[view]
+    /// Get the quote decimal precision for a market pair.
+    /// Returns the quote_decimals value (e.g., 6 for USDC, 8 for USD1).
+    public fun get_market_quote_decimals(pair_id: u64): u8 {
+        assert!(market::market_exists(pair_id), types::e_market_not_listed());
+        let (_base, _quote, _lot, _tick, _min, _status, quote_decimals) = market::get_market_info(pair_id);
+        quote_decimals
+    }
+
+    #[view]
     /// Get all open orders for a user on a specific market.
     /// Searches both bids and asks sides of the orderbook.
     /// Returns a vector of Orders belonging to the user.
@@ -158,7 +167,7 @@ module cash_orderbook::views {
         accounts::deposit(user, quote_metadata, 5_000_000_000);
 
         // Register market
-        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000);
+        market::register_market(deployer, base_metadata, quote_metadata, 1_000, 1_000, 10_000, 6);
 
         (base_metadata, quote_metadata, 0)
     }
@@ -312,5 +321,22 @@ module cash_orderbook::views {
         // User's orders — should find 1
         let user_orders = get_user_orders(user_addr, pair_id);
         assert!(vector::length(&user_orders) == 1, 601);
+    }
+
+    #[test(deployer = @cash_orderbook, user = @0xBEEF)]
+    /// Test get_market_quote_decimals returns correct value
+    fun test_get_market_quote_decimals(deployer: &signer, user: &signer) {
+        let (_bm, _qm, pair_id) = setup_view_test_env(deployer, user);
+
+        let qd = get_market_quote_decimals(pair_id);
+        assert!(qd == 6, 700);
+    }
+
+    #[test(deployer = @cash_orderbook, user = @0xBEEF)]
+    #[expected_failure(abort_code = 6, location = cash_orderbook::views)] // E_MARKET_NOT_LISTED
+    /// Test get_market_quote_decimals aborts for non-existent market
+    fun test_get_market_quote_decimals_not_exists(deployer: &signer, user: &signer) {
+        let (_bm, _qm, _pair_id) = setup_view_test_env(deployer, user);
+        get_market_quote_decimals(99);
     }
 }
