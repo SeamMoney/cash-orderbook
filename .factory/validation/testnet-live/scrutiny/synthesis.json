@@ -1,7 +1,7 @@
 {
   "milestone": "testnet-live",
-  "round": 1,
-  "status": "fail",
+  "round": 2,
+  "status": "pass",
   "validatorsRun": {
     "test": {
       "passed": true,
@@ -20,71 +20,30 @@
     }
   },
   "reviewsSummary": {
-    "total": 4,
+    "total": 1,
     "passed": 1,
-    "failed": 3,
-    "failedFeatures": [
-      "wallet-testnet-polymarket-login",
-      "heavy-reseed-testnet",
-      "demo-wallet-setup-script"
-    ]
+    "failed": 0,
+    "failedFeatures": []
   },
-  "blockingIssues": [
-    {
-      "featureId": "wallet-testnet-polymarket-login",
-      "severity": "blocking",
-      "description": "Wallet dropdown labels quote balance as USD1 but still reads `balances.usdc.available`, so the USD1 source mapping requirement is not satisfied."
-    },
-    {
-      "featureId": "heavy-reseed-testnet",
-      "severity": "blocking",
-      "description": "Reseed script hardcodes a deployer private key in source (`scripts/src/reseed-testnet.ts`) instead of loading it from local config or environment."
-    },
-    {
-      "featureId": "demo-wallet-setup-script",
-      "severity": "blocking",
-      "description": "Demo wallet setup script hardcodes a deployer private key fallback in source (`scripts/src/setup-demo-wallet.ts`)."
-    },
-    {
-      "featureId": "demo-wallet-setup-script",
-      "severity": "blocking",
-      "description": "USD1 orderbook balance reporting uses `balances.usdc.available` and USDC-decimal scaling, producing incorrect USD1 balance output."
-    }
-  ],
+  "blockingIssues": [],
   "appliedUpdates": [],
   "suggestedGuidanceUpdates": [
     {
-      "target": ".factory/skills/frontend-worker/SKILL.md",
-      "suggestion": "Replace hardcoded mainnet-only wallet derivation guidance with environment-aware guidance so testnet milestones do not conflict with skill instructions.",
-      "evidence": "wallet-testnet-polymarket-login required `Network.TESTNET`, while frontend-worker skill guidance currently directs `Network.MAINNET` for derivation settings.",
-      "isSystemic": false
-    },
-    {
       "target": ".factory/skills/backend-worker/SKILL.md",
-      "suggestion": "Add an explicit branch for operational on-chain scripts: require live execution verification, enforce secret loading from env/profile (no hardcoded fallback keys), and allow pragmatic non-TDD flow for one-shot operational scripts.",
-      "evidence": "Both heavy-reseed-testnet and demo-wallet-setup-script introduced hardcoded deployer key fallbacks; heavy-reseed-testnet also reported mismatch with mandatory TDD step for a one-shot live script.",
-      "isSystemic": true
-    },
-    {
-      "target": ".factory/skills/backend-worker/SKILL.md",
-      "suggestion": "Document Aptos testnet faucet instability/deprecation handling and a safe deployer-transfer fallback pattern for account funding in live-demo workflows.",
-      "evidence": "verify-live-demo required repeated fallback handling due faucet failures and explicitly requested this skill guidance in feedback.",
+      "suggestion": "Add explicit guidance that when quote/base decimal constants change (for example USDC 6-decimal to USD1 8-decimal), workers must update all affected tests and balance-formatting assertions in the same change.",
+      "evidence": "fix-scrutiny-blocking-issues handoff notes this exact gap and the fix required synchronized SDK/API/script and test updates.",
       "isSystemic": true
     }
   ],
   "rejectedObservations": [
     {
-      "observation": "WebSocket healthcheck command masks failures because it always succeeds via `|| echo \"ws check\"`.",
-      "reason": "Not applied in this run because changing it requires mutating an existing services.yaml entry (non-additive shared-state change)."
+      "observation": "Quote balance fields are still named `usdc` in API/web payloads while testnet quote asset is USD1.",
+      "reason": "Rejected for shared-state update because this is code/model naming debt, not a services.yaml or guidance update to apply in scrutiny synthesis."
     },
     {
-      "observation": "Architecture library note saying `wallet-provider.tsx` should not be modified.",
-      "reason": "Deferred because this is guidance curation and should be handled by orchestrator alongside broader AGENTS/skill updates."
-    },
-    {
-      "observation": "USD1/USDC naming ambiguity across API/hooks/docs.",
-      "reason": "Already represented as concrete blocking implementation issues in feature reviews; not independently actionable as a shared-state update in this pass."
+      "observation": "Default in-memory market metadata uses `CASH/USDC` labels in API state.",
+      "reason": "Rejected for shared-state update because this is an implementation concern that should be handled as a dedicated feature if required."
     }
   ],
-  "previousRound": null
+  "previousRound": ".factory/validation/testnet-live/scrutiny/synthesis.json (round 1)"
 }

@@ -1,0 +1,31 @@
+{
+  "featureId": "fix-scrutiny-blocking-issues",
+  "reviewedAt": "2026-04-01T07:13:51Z",
+  "commitId": "bd25042",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "I reviewed the fix commit (`bd25042`), the prior failed feature diffs (`cbc7ee6`, `a8f040c`, `bfbb999`), the fix handoff, and the fix transcript skeleton. The fix removes hardcoded deployer keys from both scripts with env/config loading and fail-fast behavior, corrects USD1 8-decimal scaling in SDK/API/script balance paths, and wires USD1 quote decimals into all relevant testnet script SDK clients so displayed USD1 balances are now sourced/scaled correctly.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "knowledge",
+      "observation": "Quote-balance naming remains USDC-shaped (`usdc`) even though this mission uses USD1 as quote, which can cause future implementation confusion.",
+      "evidence": "web/components/wallet/connect-button.tsx:148 uses `balances.usdc.available` under a USD1 label; web/hooks/use-balances.ts:8 still describes CASH+USDC balances; api/src/routes/balances.ts:7 documents `{ cash, usdc }`."
+    },
+    {
+      "area": "skills",
+      "observation": "Skill guidance could better cover decimal-constant migration impact on tests.",
+      "evidence": "Fix handoff (`.../handoffs/2026-04-01T07-08-26-951Z__fix-scrutiny-blocking-issues__b96dd53f-0197-47c2-bfad-7977431e25bd.json`) records `skillFeedback.suggestedChanges`: mention that changing decimal constants requires updating all affected tests; backend-worker skill currently has no explicit step for this."
+    },
+    {
+      "area": "knowledge",
+      "observation": "Some default market metadata remains USDC-labeled in state despite mission-level CASH/USD1 context.",
+      "evidence": "api/src/state/orderbook-state.ts:94 sets `pair: \"CASH/USDC\"` and line 96 sets `quoteAsset: \"USDC\"`, while mission AGENTS defines pair 0 as CASH/USD1."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/testnet-live/scrutiny/reviews/wallet-testnet-polymarket-login.json; .factory/validation/testnet-live/scrutiny/reviews/heavy-reseed-testnet.json; .factory/validation/testnet-live/scrutiny/reviews/demo-wallet-setup-script.json",
+  "summary": "PASS — the fix adequately addresses the three prior review failures for this blocking-issues bundle: hardcoded deployer keys are removed and replaced with secure env/config loading plus fail-fast errors, and USD1 quote-balance scaling is corrected to 8 decimals across the SDK/API/script pathways that feed script output and frontend dropdown balances."
+}
