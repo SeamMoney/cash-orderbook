@@ -1,30 +1,12 @@
 #!/bin/bash
 set -e
 
-echo "=== CASH Orderbook — Environment Setup ==="
+cd /Users/maxmohammadi/cash-orderbook
 
-# Install dependencies if node_modules missing
-if [ ! -d "node_modules" ]; then
-  echo "Installing dependencies..."
-  pnpm install
-fi
+# Install dependencies (idempotent)
+pnpm install --frozen-lockfile 2>/dev/null || pnpm install
 
-# Verify Aptos CLI
-if ! command -v aptos &> /dev/null; then
-  echo "ERROR: Aptos CLI not found. Install from https://aptos.dev/tools/aptos-cli/"
-  exit 1
-fi
+# Build shared and SDK packages (needed by web)
+pnpm -r build --filter=@cash/shared --filter=@cash/orderbook-sdk 2>/dev/null || true
 
-echo "Aptos CLI: $(aptos --version)"
-echo "Node: $(node --version)"
-echo "pnpm: $(pnpm --version)"
-
-# Create .env if not exists
-if [ ! -f ".env" ]; then
-  echo "Creating .env from .env.example..."
-  if [ -f ".env.example" ]; then
-    cp .env.example .env
-  fi
-fi
-
-echo "=== Setup complete ==="
+echo "Environment ready."

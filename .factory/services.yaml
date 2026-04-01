@@ -1,44 +1,30 @@
 commands:
   install: pnpm install
+  typecheck: pnpm -r typecheck
   build: pnpm -r build
   test: pnpm -r test
-  typecheck: pnpm -r typecheck
   lint: pnpm -r lint
-  move-compile: cd contracts && aptos move compile --named-addresses cash_orderbook=0xCAFE
-  move-test: cd contracts && aptos move test --named-addresses cash_orderbook=0xCAFE --coverage
-  deploy-testnet: bash scripts/deploy-testnet.sh
-  deploy-testnet-full: pnpm --filter @cash/scripts deploy-testnet-full
-  deploy-mainnet: bash scripts/deploy-mainnet.sh
-  register-market: pnpm --filter @cash/scripts register-market
-  seed-orderbook: pnpm --filter @cash/scripts seed-orderbook
-  integration-test: pnpm --filter @cash/scripts integration-test
-  buy-simulation: pnpm --filter @cash/scripts buy-simulation
-  market-maker-test: pnpm --filter @cash/scripts market-maker-test
-  import-history: pnpm --filter @cash/scripts import-history
-  reseed-testnet: pnpm --filter @cash/scripts reseed-testnet
-  performance-report: pnpm --filter @cash/scripts performance-report
-  setup-demo-wallet: pnpm --filter @cash/scripts setup-demo-wallet
-  cleanup-stale-orders: pnpm --filter @cash/scripts cleanup-stale-orders
-  dev-all: pnpm dev
+  web-build: cd web && pnpm build
+  web-dev: cd web && PORT=3103 pnpm dev
 
 services:
   api:
-    start: cd api && APTOS_NETWORK=testnet PORT=3100 pnpm dev
-    stop: lsof -ti :3100 | xargs kill -9 2>/dev/null || true
+    start: NETWORK=testnet node api/dist/index.js &
+    stop: lsof -ti :3100 | xargs kill 2>/dev/null || true
     healthcheck: curl -sf http://localhost:3100/health
     port: 3100
     depends_on: []
 
   websocket:
-    start: cd api && APTOS_NETWORK=testnet WS_PORT=3101 pnpm dev:ws
-    stop: lsof -ti :3101 | xargs kill -9 2>/dev/null || true
-    healthcheck: curl -sf http://localhost:3101/health 2>/dev/null || echo "ws check"
+    start: NETWORK=testnet node api/dist/ws-server.js &
+    stop: lsof -ti :3101 | xargs kill 2>/dev/null || true
+    healthcheck: "lsof -iTCP:3101 -sTCP:LISTEN | grep -q node"
     port: 3101
     depends_on: [api]
 
   web:
-    start: cd web && PORT=3102 pnpm dev
-    stop: lsof -ti :3102 | xargs kill -9 2>/dev/null || true
+    start: cd web && PORT=3102 npx next start -p 3102 &
+    stop: lsof -ti :3102 | xargs kill 2>/dev/null || true
     healthcheck: curl -sf http://localhost:3102
     port: 3102
-    depends_on: [api, websocket]
+    depends_on: []
