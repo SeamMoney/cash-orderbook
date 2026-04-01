@@ -118,7 +118,7 @@ function TokenRow({
           <span className="text-sm font-medium text-white">{token.name}</span>
           <span className="text-xs text-text-muted">{token.symbol}</span>
         </div>
-        <span className="text-sm font-mono text-text-secondary">
+        <span className="text-sm font-sans text-text-secondary">
           {balance !== null ? formatBalance(balance, 4) : "—"}
         </span>
       </button>

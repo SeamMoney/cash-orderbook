@@ -108,7 +108,7 @@ function QuoteRow({
       <span
         className={
           valueClassName ??
-          `text-[#888888] ${mono ? "font-mono" : ""}`
+          `text-[#888888] ${mono ? "font-sans" : ""}`
         }
       >
         {value}

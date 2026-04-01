@@ -127,7 +127,7 @@ export function SwapPriceDetails({
         onClick={() => setExpanded(!expanded)}
         className="flex w-full items-center justify-between rounded-xl bg-background border border-border px-3 py-2.5 min-h-[44px] text-xs transition-colors hover:border-surface-hover"
       >
-        <span className="font-mono text-text-secondary">{rateLabel}</span>
+        <span className="font-sans text-text-secondary">{rateLabel}</span>
         <motion.div
           animate={{ rotate: expanded ? 180 : 0 }}
           transition={{ duration: 0.2 }}
@@ -328,7 +328,7 @@ function PanoraPriceDetails({
         onClick={() => setExpanded(!expanded)}
         className="flex w-full items-center justify-between rounded-xl bg-background border border-border px-3 py-2.5 min-h-[44px] text-xs transition-colors hover:border-surface-hover"
       >
-        <span className="font-mono text-text-secondary">{rateLabel}</span>
+        <span className="font-sans text-text-secondary">{rateLabel}</span>
         <motion.div
           animate={{ rotate: expanded ? 180 : 0 }}
           transition={{ duration: 0.2 }}
@@ -402,7 +402,7 @@ function DetailRow({
       <span className="text-text-muted">{label}</span>
       <span
         className={
-          valueClassName ?? `text-text-secondary ${mono ? "font-mono" : ""}`
+          valueClassName ?? `text-text-secondary ${mono ? "font-sans" : ""}`
         }
       >
         {value}

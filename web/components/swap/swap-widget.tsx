@@ -560,7 +560,7 @@ export function SwapWidget(): React.ReactElement {
                 {connected && fromBalance !== null && (
                   <span className="text-xs text-text-muted">
                     Balance:{" "}
-                    <span className="font-mono text-text-secondary">
+                    <span className="font-sans text-text-secondary">
                       {formatBalance(fromBalance, 4)}
                     </span>
                   </span>
@@ -573,7 +573,7 @@ export function SwapWidget(): React.ReactElement {
                   placeholder="0"
                   value={inputAmount}
                   onChange={handleInputChange}
-                  className="flex-1 bg-transparent text-2xl font-mono text-white placeholder:text-text-muted outline-none min-w-0"
+                  className="flex-1 bg-transparent text-2xl font-sans text-white placeholder:text-text-muted outline-none min-w-0"
                 />
                 <TokenSelectorButton
                   ref={fromTokenBtnRef}
@@ -582,7 +582,7 @@ export function SwapWidget(): React.ReactElement {
                 />
               </div>
               {fromUsdEquivalent !== null && fromUsdEquivalent > 0 && (
-                <p className="mt-1 text-xs text-text-muted font-mono">
+                <p className="mt-1 text-xs text-text-muted font-sans">
                   ≈ ${formatBalance(fromUsdEquivalent, 2)}
                 </p>
               )}
@@ -609,7 +609,7 @@ export function SwapWidget(): React.ReactElement {
                 {connected && toBalance !== null && (
                   <span className="text-xs text-text-muted">
                     Balance:{" "}
-                    <span className="font-mono text-text-secondary">
+                    <span className="font-sans text-text-secondary">
                       {formatBalance(toBalance, 4)}
                     </span>
                   </span>
@@ -623,7 +623,7 @@ export function SwapWidget(): React.ReactElement {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -4 }}
                     transition={{ duration: 0.15 }}
-                    className="flex-1 text-2xl font-mono text-white min-w-0"
+                    className="flex-1 text-2xl font-sans text-white min-w-0"
                   >
                     {activeOutputAmount !== null
                       ? formatBalance(activeOutputAmount, 6)
@@ -637,7 +637,7 @@ export function SwapWidget(): React.ReactElement {
                 />
               </div>
               {toUsdEquivalent !== null && toUsdEquivalent > 0 && (
-                <p className="mt-1 text-xs text-text-muted font-mono">
+                <p className="mt-1 text-xs text-text-muted font-sans">
                   ≈ ${formatBalance(toUsdEquivalent, 2)}
                 </p>
               )}
@@ -735,7 +735,7 @@ export function SwapWidget(): React.ReactElement {
                 placeholder="0.00"
                 value={limitPrice}
                 onChange={handleLimitPriceChange}
-                className="w-full bg-transparent text-2xl font-mono text-white placeholder:text-text-muted outline-none"
+                className="w-full bg-transparent text-2xl font-sans text-white placeholder:text-text-muted outline-none"
               />
             </div>
 
@@ -746,7 +746,7 @@ export function SwapWidget(): React.ReactElement {
                 {connected && balances && (
                   <span className="text-xs text-text-muted">
                     Balance:{" "}
-                    <span className="font-mono text-text-secondary">
+                    <span className="font-sans text-text-secondary">
                       {limitSide === "sell"
                         ? formatBalance(balances.cash.available, 4)
                         : formatBalance(balances.usdc.available, 4)}
@@ -760,7 +760,7 @@ export function SwapWidget(): React.ReactElement {
                 placeholder="0.00"
                 value={limitAmount}
                 onChange={handleLimitAmountChange}
-                className="w-full bg-transparent text-2xl font-mono text-white placeholder:text-text-muted outline-none"
+                className="w-full bg-transparent text-2xl font-sans text-white placeholder:text-text-muted outline-none"
               />
             </div>
 
@@ -769,7 +769,7 @@ export function SwapWidget(): React.ReactElement {
               <div className="rounded-xl bg-background border border-border p-3 mb-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-text-muted">Total</span>
-                  <span className="font-mono text-white">
+                  <span className="font-sans text-white">
                     {formatBalance(
                       parseFloat(limitPrice) * parseFloat(limitAmount),
                       2,
