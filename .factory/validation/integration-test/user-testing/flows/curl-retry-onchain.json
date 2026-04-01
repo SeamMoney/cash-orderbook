@@ -1,0 +1,102 @@
+{
+  "groupId": "curl-retry-onchain",
+  "testedAt": "2026-04-01T01:58:22.917431+00:00",
+  "isolation": {
+    "surface": "curl/local script execution only",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "repoRoot": "/Users/maxmohammadi/cash-orderbook",
+    "aptosProfile": "cash-testnet",
+    "aptosConfigPath": "/Users/maxmohammadi/cash-orderbook/.aptos/config.yaml",
+    "contractAddress": "0xe66fef668077ab8dc5ea65539b6250d8ca3fc024ea4f16555fca9eaeb73b41d1",
+    "aptosNetwork": "testnet",
+    "servicesManaged": false
+  },
+  "toolsUsed": [
+    "pnpm",
+    "python3"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-INTEG-001",
+      "title": "$1000 buy simulation",
+      "status": "fail",
+      "reason": "Script executed and reported estimated fill/slippage/latency/gas, but the required on-chain fill was not confirmed: fill verification returned false with no trade events and no balance delta.",
+      "steps": [
+        {
+          "action": "Derive APTOS_PRIVATE_KEY from .aptos/config.yaml profile cash-testnet (strip optional ed25519-priv- prefix) and run buy simulation",
+          "expected": "$1000 market buy fills against seeded levels and output reports fill price, slippage %, and gas cost",
+          "observed": "Command exited 0 and reported metrics plus tx 0x203089150d5bc158a09699fdc741e5957ea755221d4908cf37d85af115b9c838, but report states 'Fill NOT verified \u2014 no trade events found and no balance change detected'"
+        }
+      ],
+      "commands": [
+        {
+          "command": "APTOS_PRIVATE_KEY=<redacted from cash-testnet profile> CONTRACT_ADDRESS=0xe66fef668077ab8dc5ea65539b6250d8ca3fc024ea4f16555fca9eaeb73b41d1 APTOS_NETWORK=testnet pnpm --filter @cash/scripts buy-simulation",
+          "exitCode": 0
+        }
+      ],
+      "evidence": {
+        "logs": [
+          "integration-test/curl-retry-onchain/VAL-INTEG-001-buy-simulation.log"
+        ],
+        "network": "Aptos testnet transaction succeeded: 0x203089150d5bc158a09699fdc741e5957ea755221d4908cf37d85af115b9c838"
+      },
+      "issues": "Assertion requires an order fill against seeded levels; concrete output shows unverified fill (no trade events, no balance delta)."
+    },
+    {
+      "id": "VAL-INTEG-002",
+      "title": "Market maker bot test",
+      "status": "blocked",
+      "reason": "Script cannot proceed past taker setup because generated taker accounts cannot be faucet-funded programmatically in current Aptos testnet flow, causing INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE before ladder/fill/rebalance steps.",
+      "steps": [
+        {
+          "action": "Derive APTOS_PRIVATE_KEY from .aptos/config.yaml profile cash-testnet (strip optional ed25519-priv- prefix) and run market-maker-test",
+          "expected": "Script places 10 bid/10 ask ladders, handles simulated fill, then rebalances with inventory tracking",
+          "observed": "Command exited 1 during taker setup: faucet funding failed and mint transaction aborted with INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE"
+        },
+        {
+          "action": "Retry market-maker-test with same required env values",
+          "expected": "Transient issue recovers and script proceeds through ladder/fill/rebalance",
+          "observed": "Retry exited 1 with same blocker (faucet funding unavailable and INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE)"
+        }
+      ],
+      "commands": [
+        {
+          "command": "APTOS_PRIVATE_KEY=<redacted from cash-testnet profile> CONTRACT_ADDRESS=0xe66fef668077ab8dc5ea65539b6250d8ca3fc024ea4f16555fca9eaeb73b41d1 APTOS_NETWORK=testnet pnpm --filter @cash/scripts market-maker-test",
+          "exitCode": 1
+        },
+        {
+          "command": "APTOS_PRIVATE_KEY=<redacted from cash-testnet profile> CONTRACT_ADDRESS=0xe66fef668077ab8dc5ea65539b6250d8ca3fc024ea4f16555fca9eaeb73b41d1 APTOS_NETWORK=testnet pnpm --filter @cash/scripts market-maker-test (retry)",
+          "exitCode": 1
+        }
+      ],
+      "evidence": {
+        "logs": [
+          "integration-test/curl-retry-onchain/VAL-INTEG-002-market-maker-test.log",
+          "integration-test/curl-retry-onchain/VAL-INTEG-002-market-maker-test-retry.log"
+        ],
+        "network": "Aptos fullnode POST /v1/transactions returned 400 vm_error INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE during taker USD1 mint"
+      },
+      "issues": "Blocked by external prerequisite (funded taker gas account) not satisfied in current environment; script never reached ladder/fill/rebalance validation steps."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "market-maker-test auto-generates a taker account and attempts programmatic faucet funding, but Aptos testnet currently returns 'no way to programmatically mint testnet APT'; this is not captured as an explicit prerequisite in the assertion contract.",
+      "resolved": false,
+      "resolution": "Retried command with same mandated env values; blocker persisted.",
+      "affectedAssertions": [
+        "VAL-INTEG-002"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Generated taker account lacks APT for transaction fees, and faucet funding path in script is unavailable programmatically in this environment.",
+      "affectedAssertions": [
+        "VAL-INTEG-002"
+      ],
+      "quickFixAttempted": "Retried market-maker-test once with same Aptos profile-derived credentials; same INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE error persisted."
+    }
+  ],
+  "summary": "Retested 2 assertions with Aptos profile credentials: VAL-INTEG-001 failed (run succeeded but fill not verified), VAL-INTEG-002 blocked (taker funding prerequisite unavailable; repeated INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE)."
+}

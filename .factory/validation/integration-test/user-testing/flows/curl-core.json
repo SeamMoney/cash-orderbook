@@ -1,0 +1,122 @@
+{
+  "groupId": "curl-core",
+  "testedAt": "2026-04-01T01:53:58.337602+00:00",
+  "isolation": {
+    "surface": "curl/local script execution only",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "repoRoot": "/Users/maxmohammadi/cash-orderbook",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "webUrl": "http://localhost:3102",
+    "servicesManaged": false
+  },
+  "toolsUsed": [
+    "curl",
+    "pnpm",
+    "python3"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-INTEG-001",
+      "title": "$1000 buy simulation",
+      "status": "blocked",
+      "reason": "Script could not execute simulation due invalid credential/config env values (private key/contract/network format invalid), so required fill/slippage/gas/latency outputs were not produced.",
+      "steps": [
+        {
+          "action": "Run buy simulation script with .env-derived vars",
+          "expected": "Output includes fill price, slippage, gas cost, and execution latency for $1000 buy",
+          "observed": "Script aborted before execution with Aptos hex parsing error from invalid env configuration"
+        }
+      ],
+      "commands": [
+        {
+          "command": "pnpm --filter @cash/scripts buy-simulation (with .env variables loaded via python wrapper)",
+          "exitCode": 1
+        }
+      ],
+      "evidence": {
+        "logs": [
+          "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/evidence/integration-test/curl-core/VAL-INTEG-001-buy-simulation.log",
+          "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/evidence/integration-test/curl-core/env-validation.log"
+        ],
+        "network": "Attempted script startup only; no successful simulation output generated"
+      },
+      "issues": "Blocked by invalid .env credentials/configuration format for required Aptos values"
+    },
+    {
+      "id": "VAL-INTEG-002",
+      "title": "Market maker bot test",
+      "status": "blocked",
+      "reason": "Script could not place ladders/fill/rebalance because required env credentials/config were invalid, causing immediate Aptos key parsing failure.",
+      "steps": [
+        {
+          "action": "Run market maker script with .env-derived vars",
+          "expected": "Output shows ladder placement, simulated fill handling, rebalance, and inventory tracking",
+          "observed": "Script aborted at startup with invalid hex error from env config"
+        }
+      ],
+      "commands": [
+        {
+          "command": "pnpm --filter @cash/scripts market-maker-test (with .env variables loaded via python wrapper)",
+          "exitCode": 1
+        }
+      ],
+      "evidence": {
+        "logs": [
+          "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/evidence/integration-test/curl-core/VAL-INTEG-002-market-maker-test.log",
+          "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/evidence/integration-test/curl-core/env-validation.log"
+        ],
+        "network": "No successful on-chain flow reached due startup failure"
+      },
+      "issues": "Blocked by invalid .env credentials/configuration format for required Aptos values"
+    },
+    {
+      "id": "VAL-INTEG-004",
+      "title": "Performance report",
+      "status": "fail",
+      "reason": "Report ran and included $100/$500/$1000 slippage comparison table, but output did not include execution time or total cost including gas as required by the assertion contract.",
+      "steps": [
+        {
+          "action": "Run performance report script",
+          "expected": "Comparison for $100/$500/$1000 with slippage, execution time, and total cost including gas",
+          "observed": "Generated comparison table with buy amounts and slippage, but no execution-time or gas/total-cost fields"
+        }
+      ],
+      "commands": [
+        {
+          "command": "pnpm --filter @cash/scripts performance-report",
+          "exitCode": 0
+        }
+      ],
+      "evidence": {
+        "logs": [
+          "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/evidence/integration-test/curl-core/VAL-INTEG-004-performance-report.log"
+        ],
+        "network": "Aptos testnet view calls + GeckoTerminal API fetch succeeded"
+      },
+      "issues": "Missing required execution-time and gas-inclusive total-cost comparison metrics"
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Repository .env entries for APTOS_PRIVATE_KEY, CONTRACT_ADDRESS, and APTOS_NETWORK are not in executable formats for these scripts, causing startup parse failures.",
+      "resolved": false,
+      "resolution": "Validated format and retried script execution with parsed .env values; still blocked",
+      "affectedAssertions": [
+        "VAL-INTEG-001",
+        "VAL-INTEG-002"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Invalid/misconfigured Aptos credentials and contract settings in .env prevent transaction-based integration scripts from running.",
+      "affectedAssertions": [
+        "VAL-INTEG-001",
+        "VAL-INTEG-002"
+      ],
+      "quickFixAttempted": "Retried with explicit .env parsing and sanitized export; scripts still failed with invalid hex configuration errors"
+    }
+  ],
+  "summary": "Tested 3 assertions: 0 passed, 1 failed (VAL-INTEG-004 missing execution-time and gas-inclusive cost metrics), 2 blocked (VAL-INTEG-001/002 due invalid env credentials/config)."
+}

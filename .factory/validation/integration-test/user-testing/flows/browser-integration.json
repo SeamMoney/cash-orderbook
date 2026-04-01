@@ -1,0 +1,247 @@
+{
+  "groupId": "browser-integration",
+  "testedAt": "2026-04-01T02:04:37Z",
+  "isolation": {
+    "surface": "agent-browser (isolated session: flow-browser-integration) + curl",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "repoRoot": "/Users/maxmohammadi/cash-orderbook",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "webUrl": "http://localhost:3102",
+    "servicesManaged": false
+  },
+  "toolsUsed": [
+    "agent-browser",
+    "curl"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-INTEG-003",
+      "title": "Frontend shows testnet data",
+      "status": "blocked",
+      "reason": "Frontend is connected to API/swap surface (CASH/USD1 market + depth visible), but testnet trade/candle data required for chart proof was unavailable (`/trades` and `/candles` returned empty arrays).",
+      "steps": [
+        {
+          "action": "Open web app and capture frontend state",
+          "expected": "Chart, header, and swap widget show testnet-backed trading data",
+          "observed": "Swap widget showed USD1/CASH and could quote from orderbook depth; transactions panel showed \"No recent transactions\""
+        },
+        {
+          "action": "Probe API endpoints used by frontend",
+          "expected": "Market/depth/trades/candles all populated for testnet validation",
+          "observed": "`/market` returned CASH/USD1 active (200), `/depth` returned bids/asks (200), but `/trades` and `/candles` were empty (200 [])"
+        }
+      ],
+      "commands": [
+        {
+          "command": "agent-browser --session flow-browser-integration open http://localhost:3102 && ... screenshot VAL-INTEG-003-frontend-overview.png",
+          "exitCode": 0,
+          "outcome": "Frontend loaded and screenshot captured"
+        },
+        {
+          "command": "curl -i http://localhost:3100/market",
+          "exitCode": 0,
+          "outcome": "HTTP 200, pair CASH/USD1, status active"
+        },
+        {
+          "command": "curl -i http://localhost:3100/depth && curl -i http://localhost:3100/trades?limit=10 && curl -i http://localhost:3100/candles?interval=5m",
+          "exitCode": 0,
+          "outcome": "Depth 200 with seeded levels; trades/candles 200 with empty arrays"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "integration-test/browser-integration/VAL-INTEG-003-frontend-overview.png",
+          "integration-test/browser-integration/overview-annotated.png"
+        ],
+        "consoleErrors": "none (integration-test/browser-integration/console-errors-after-reload.txt is empty)",
+        "network": "Browser captured repeated calls to /market, /depth, /candles, /trades (integration-test/browser-integration/network-requests-after-reload.txt); API responses captured in curl-market.txt, curl-depth-after-browser-close.txt, curl-trades-after-browser-close.txt, curl-candles-5m-after-browser-close.txt"
+      },
+      "issues": "Required chart/trade proof of testnet live data could not be completed because live trade/candle feeds were empty during validation."
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "title": "Full testnet swap lifecycle",
+      "status": "blocked",
+      "reason": "Swap execution prerequisite unavailable: no provisioned connectable funded wallet/signing flow in the isolated environment (wallet modal only offered install/connect options).",
+      "steps": [
+        {
+          "action": "Verify seeded book prerequisite",
+          "expected": "Book has bid/ask levels before frontend swap attempt",
+          "observed": "`/depth` returned bids and asks (seeded levels present)"
+        },
+        {
+          "action": "Enter swap amount in UI",
+          "expected": "Quote appears and swap can be executed via connected wallet",
+          "observed": "Quote appeared (`1 CASH = 0.000101 USD1`), but CTA remained `Connect Wallet`"
+        },
+        {
+          "action": "Attempt to connect wallet for execution",
+          "expected": "Connect funded wallet and submit on-chain swap",
+          "observed": "Wallet modal displayed provider install options (Petra/Nightly/Backpack) and no usable funded session; swap was not executable"
+        },
+        {
+          "action": "Check post-swap transaction/chart evidence",
+          "expected": "New trade appears in transactions and chart updates",
+          "observed": "No swap executed; transactions remained empty and no new trade evidence available"
+        }
+      ],
+      "commands": [
+        {
+          "command": "curl -i http://localhost:3100/depth",
+          "exitCode": 0,
+          "outcome": "HTTP 200 with bids/asks"
+        },
+        {
+          "command": "agent-browser fill amount + screenshot VAL-CROSS-001-swap-with-amount-annotated.png",
+          "exitCode": 0,
+          "outcome": "Quote rendered but action remained gated by wallet connection"
+        },
+        {
+          "command": "agent-browser click Connect Wallet + screenshot VAL-CROSS-001-wallet-modal-annotated.png",
+          "exitCode": 0,
+          "outcome": "Modal opened showing wallet install/connect options only"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "integration-test/browser-integration/VAL-CROSS-001-swap-with-amount-annotated.png",
+          "integration-test/browser-integration/VAL-CROSS-001-wallet-modal-annotated.png",
+          "integration-test/browser-integration/VAL-CROSS-001-fullpage-pre-swap.png"
+        ],
+        "consoleErrors": "none (integration-test/browser-integration/console-errors-cross-001.txt is empty)",
+        "network": "No successful signed swap request/transaction observed; API checks: curl-depth-after-browser-close.txt (seeded depth), curl-trades-after-browser-close.txt ([] trades)"
+      },
+      "issues": "Blocked until a funded, sign-capable wallet/session is provided for the isolated validator."
+    },
+    {
+      "id": "VAL-CROSS-002",
+      "title": "Chart historical + live continuity",
+      "status": "blocked",
+      "reason": "Could not verify required historical-to-live continuity because live candle feed was unavailable (`/candles` empty). Visual marker text appears partially (`New Ve`) but post-marker live testnet candle continuity cannot be confirmed.",
+      "steps": [
+        {
+          "action": "Switch chart to 1Y and capture candlestick continuity",
+          "expected": "Historical LiquidSwap candles + transition marker + live candles without gap",
+          "observed": "1Y chart rendered with marker text fragment and mixed segments, but continuity to live testnet candles was not verifiable"
+        },
+        {
+          "action": "Cross-check with line mode",
+          "expected": "Consistent continuous merged series",
+          "observed": "Line view showed discontinuous spikes/segments; did not provide reliable proof of live continuity"
+        },
+        {
+          "action": "Verify API candles backing live segment",
+          "expected": "Non-empty live candle data from API",
+          "observed": "`/candles?interval=5m` returned `[]` after rate-limit reset"
+        }
+      ],
+      "commands": [
+        {
+          "command": "agent-browser click 1Y + screenshot VAL-CROSS-002-chart-1Y-annotated.png",
+          "exitCode": 0,
+          "outcome": "1Y candlestick captured with transition-text fragment visible"
+        },
+        {
+          "command": "agent-browser click Line + screenshot VAL-CROSS-002-line-1Y-annotated.png",
+          "exitCode": 0,
+          "outcome": "Line continuity captured for comparison"
+        },
+        {
+          "command": "curl -i http://localhost:3100/candles?interval=5m",
+          "exitCode": 0,
+          "outcome": "HTTP 200 with empty array after browser session closed"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "integration-test/browser-integration/VAL-CROSS-002-chart-1Y-annotated.png",
+          "integration-test/browser-integration/VAL-CROSS-002-line-1Y-annotated.png"
+        ],
+        "consoleErrors": "none (integration-test/browser-integration/console-errors-cross-002.txt is empty)",
+        "network": "Chart requested /candles intervals in browser (network-requests-after-reload.txt); API confirmation in curl-candles-5m-after-browser-close.txt"
+      },
+      "issues": "Missing live post-marker candle stream prevented strict continuity pass/fail validation on required testnet-live segment."
+    },
+    {
+      "id": "VAL-CANDLE-006",
+      "title": "Real-time candle update",
+      "status": "blocked",
+      "reason": "No live trade trigger available during run: `/trades` remained empty across repeated checks and swap execution was blocked by missing funded wallet/signing, so rightmost-candle mutation could not be exercised.",
+      "steps": [
+        {
+          "action": "Establish prerequisite for live candle mutation (new trades)",
+          "expected": "Incoming trades available via API/WS",
+          "observed": "Repeated `/trades?limit=10` checks returned empty arrays"
+        },
+        {
+          "action": "Attempt to create trade trigger through frontend swap",
+          "expected": "Execute swap to mutate rightmost candle",
+          "observed": "Execution blocked at wallet-connect prerequisite"
+        }
+      ],
+      "commands": [
+        {
+          "command": "curl http://localhost:3100/trades?limit=10 (check 1) && sleep 3 && curl http://localhost:3100/trades?limit=10 (check 2)",
+          "exitCode": 0,
+          "outcome": "Both responses were []"
+        },
+        {
+          "command": "agent-browser swap attempt (amount entered) + wallet connect attempt",
+          "exitCode": 0,
+          "outcome": "No executable signed trade path in isolated environment"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "integration-test/browser-integration/VAL-CROSS-001-swap-with-amount-annotated.png",
+          "integration-test/browser-integration/VAL-CROSS-001-wallet-modal-annotated.png"
+        ],
+        "consoleErrors": "none (console-errors-cross-001.txt empty)",
+        "network": "integration-test/browser-integration/curl-trades-check-1.json = []; integration-test/browser-integration/curl-trades-check-2.json = []"
+      },
+      "issues": "Blocked pending a deterministic live-trade trigger (funded wallet or approved generator) to observe rightmost candle mutation behavior."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "While browser session was open, high-frequency frontend polling quickly exhausted API rate limits, producing 429 responses for `/trades`, `/candles`, and `/depth`.",
+      "resolved": true,
+      "resolution": "Closed browser session and retried curl checks after delay; endpoints returned 200 again.",
+      "affectedAssertions": [
+        "VAL-INTEG-003",
+        "VAL-CROSS-002",
+        "VAL-CANDLE-006"
+      ]
+    },
+    {
+      "description": "Wallet connect flow in this isolated run did not include a pre-provisioned funded signer session.",
+      "resolved": false,
+      "resolution": "N/A in scope (no service/account provisioning permitted for this validator).",
+      "affectedAssertions": [
+        "VAL-CROSS-001",
+        "VAL-CANDLE-006"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Missing funded/sign-capable wallet in isolated browser surface prevented swap execution required for lifecycle and live-candle assertions.",
+      "affectedAssertions": [
+        "VAL-CROSS-001",
+        "VAL-CANDLE-006"
+      ],
+      "quickFixAttempted": "Opened wallet modal and attempted connection path; only install/connect options were available, no funded signer session."
+    },
+    {
+      "description": "Live testnet trade/candle data unavailable during validation window (`/trades` and `/candles` empty after rate-limit reset).",
+      "affectedAssertions": [
+        "VAL-INTEG-003",
+        "VAL-CROSS-002",
+        "VAL-CANDLE-006"
+      ],
+      "quickFixAttempted": "Retried direct API probes after closing browser and waiting for rate-limit reset; endpoints recovered to 200 but still returned empty arrays."
+    }
+  ],
+  "summary": "Tested 4 browser assertions: 0 passed, 0 failed, 4 blocked. UI and API connectivity were confirmed (CASH/USD1 market + seeded depth), but required live trade/candle prerequisites and funded wallet execution path were unavailable for strict integration completion."
+}

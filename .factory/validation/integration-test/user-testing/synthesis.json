@@ -1,0 +1,58 @@
+{
+  "milestone": "integration-test",
+  "round": 1,
+  "status": "fail",
+  "generatedAt": "2026-04-01T02:07:09.488363+00:00",
+  "assertionsSummary": {
+    "total": 7,
+    "passed": 0,
+    "failed": 2,
+    "blocked": 5
+  },
+  "passedAssertions": [],
+  "failedAssertions": [
+    {
+      "id": "VAL-INTEG-001",
+      "reason": "buy-simulation executed on testnet but fill could not be verified (no trade events and no balance delta)."
+    },
+    {
+      "id": "VAL-INTEG-004",
+      "reason": "performance-report generated slippage comparison but lacked required execution-time and gas-inclusive total-cost metrics."
+    }
+  ],
+  "blockedAssertions": [
+    {
+      "id": "VAL-INTEG-002",
+      "blockedBy": "market-maker-test could not fund generated taker account; faucet path unavailable and taker tx failed with INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE."
+    },
+    {
+      "id": "VAL-INTEG-003",
+      "blockedBy": "frontend connected to testnet market/depth, but live trade/candle data remained empty (/trades and /candles returned [])."
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "blockedBy": "no funded sign-capable wallet session was available to execute a frontend swap in isolated browser validation."
+    },
+    {
+      "id": "VAL-CROSS-002",
+      "blockedBy": "historical/marker visuals present but live post-marker candles unavailable, preventing continuity verification."
+    },
+    {
+      "id": "VAL-CANDLE-006",
+      "blockedBy": "no live trade trigger to exercise rightmost-candle real-time update; frontend trade trigger path was wallet-blocked."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added integration-test setup notes: avoid placeholder .env for on-chain scripts, use cash-testnet profile-derived env vars; documented taker faucet limitation and live-trade prerequisite checks for chart assertions.",
+      "source": "setup|flow-report"
+    }
+  ],
+  "flowReports": [
+    ".factory/validation/integration-test/user-testing/flows/curl-core.json",
+    ".factory/validation/integration-test/user-testing/flows/curl-retry-onchain.json",
+    ".factory/validation/integration-test/user-testing/flows/browser-integration.json"
+  ],
+  "previousRound": null
+}
