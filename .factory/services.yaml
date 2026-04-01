@@ -20,14 +20,14 @@ commands:
 
 services:
   api:
-    start: cd api && PORT=3100 pnpm dev
+    start: cd api && APTOS_NETWORK=testnet PORT=3100 pnpm dev
     stop: lsof -ti :3100 | xargs kill -9 2>/dev/null || true
     healthcheck: curl -sf http://localhost:3100/health
     port: 3100
     depends_on: []
 
   websocket:
-    start: cd api && WS_PORT=3101 pnpm dev:ws
+    start: cd api && APTOS_NETWORK=testnet WS_PORT=3101 pnpm dev:ws
     stop: lsof -ti :3101 | xargs kill -9 2>/dev/null || true
     healthcheck: curl -sf http://localhost:3101/health 2>/dev/null || echo "ws check"
     port: 3101
