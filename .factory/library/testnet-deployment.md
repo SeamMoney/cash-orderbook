@@ -1,5 +1,8 @@
 # Testnet Deployment Details
 
+## Important: Faucet Deprecation
+The Aptos testnet faucet no longer supports programmatic minting. The SDK's `aptos.fundAccount()` and the CLI's `aptos account fund-with-faucet` will fail on testnet with: "There is no way to programmatically mint testnet APT, you must use the minting site at https://aptos.dev/network/faucet". Scripts must fund new accounts via APT transfers from the deployer instead. Both `buy-simulation.ts` and `setup-demo-wallet.ts` have been updated with this fallback.
+
 ## Contract Deployment
 - **Network**: Aptos Testnet
 - **Contract address**: `0xe66fef668077ab8dc5ea65539b6250d8ca3fc024ea4f16555fca9eaeb73b41d1`
