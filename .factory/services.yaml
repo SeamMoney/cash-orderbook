@@ -17,6 +17,7 @@ commands:
   import-history: pnpm --filter @cash/scripts import-history
   reseed-testnet: pnpm --filter @cash/scripts reseed-testnet
   performance-report: pnpm --filter @cash/scripts performance-report
+  setup-demo-wallet: pnpm --filter @cash/scripts setup-demo-wallet
   dev-all: pnpm dev
 
 services:

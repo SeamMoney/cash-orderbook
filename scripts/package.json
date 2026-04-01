@@ -17,6 +17,7 @@
     "market-maker-test": "tsx src/market-maker-test.ts",
     "reseed-testnet": "tsx src/reseed-testnet.ts",
     "performance-report": "tsx src/performance-report.ts",
+    "setup-demo-wallet": "tsx src/setup-demo-wallet.ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {
