@@ -4,9 +4,5 @@
   "compilerOptions": {
     "types": ["node", "vitest/globals", "chrome"]
   },
-  "references": [
-    {
-      "path": "../../config/vitest-presets"
-    }
-  ]
+  "references": []
 }

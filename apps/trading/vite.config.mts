@@ -207,8 +207,16 @@ export default defineConfig(({ mode }) => {
     'utilities/src': path.resolve(__dirname, '../../packages/uni-utilities/src'),
     'ui/src': path.resolve(__dirname, '../../packages/uni-ui/src'),
     'expo-clipboard': path.resolve(__dirname, 'src/lib/expo-clipboard.jsx'),
+    // Map @universe/* packages to local uni-* packages
+    '@universe/api': path.resolve(__dirname, '../../packages/uni-api'),
+    '@universe/gating': path.resolve(__dirname, '../../packages/uni-gating'),
+    '@universe/sessions': path.resolve(__dirname, '../../packages/uni-sessions'),
+    '@universe/notifications': path.resolve(__dirname, '../../packages/uni-notifications'),
+    '@universe/prices': path.resolve(__dirname, '../../packages/uni-prices'),
+    '@universe/websocket': path.resolve(__dirname, '../../packages/uni-websocket'),
+    '@universe/config': path.resolve(__dirname, 'src/stubs/universe-config'),
     // Force JSBI to use ESM build so transform plugin can add __esModule marker
-    jsbi: path.resolve(__dirname, '../../node_modules/jsbi/dist/jsbi.mjs'),
+    jsbi: path.resolve(__dirname, 'node_modules/jsbi/dist/jsbi.mjs'),
   }
 
   // Aliases that need exact matching (using resolve.alias array format)
@@ -448,7 +456,6 @@ export default defineConfig(({ mode }) => {
         'react-native-gesture-handler',
         'tamagui',
         '@tamagui/web',
-        'ui',
         '@uniswap/sdk-core',
         '@uniswap/v2-sdk',
         '@uniswap/v3-sdk',

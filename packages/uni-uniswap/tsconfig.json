@@ -3,28 +3,22 @@
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.json", "src/**/*.mts", "env.d.ts"],
   "references": [
     {
-      "path": "../utilities"
+      "path": "../uni-utilities"
     },
     {
-      "path": "../ui"
+      "path": "../uni-ui"
     },
     {
-      "path": "../prices"
+      "path": "../uni-prices"
     },
     {
-      "path": "../notifications"
+      "path": "../uni-notifications"
     },
     {
-      "path": "../gating"
+      "path": "../uni-gating"
     },
     {
-      "path": "../config"
-    },
-    {
-      "path": "../api"
-    },
-    {
-      "path": "../../config/vitest-presets"
+      "path": "../uni-api"
     }
   ],
   "compilerOptions": {

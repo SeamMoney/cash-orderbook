@@ -25,13 +25,10 @@
   "types": ["vitest/globals"],
   "references": [
     {
-      "path": "../utilities"
+      "path": "../uni-utilities"
     },
     {
-      "path": "../sessions"
-    },
-    {
-      "path": "../config"
+      "path": "../uni-sessions"
     }
   ]
 }

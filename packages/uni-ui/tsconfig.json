@@ -3,10 +3,7 @@
   "include": ["src"],
   "references": [
     {
-      "path": "../utilities"
-    },
-    {
-      "path": "../../config/vitest-presets"
+      "path": "../uni-utilities"
     }
   ],
   "compilerOptions": {

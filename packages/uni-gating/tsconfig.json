@@ -10,13 +10,10 @@
   },
   "references": [
     {
-      "path": "../config"
+      "path": "../uni-utilities"
     },
     {
-      "path": "../utilities"
-    },
-    {
-      "path": "../api"
+      "path": "../uni-api"
     }
   ]
 }

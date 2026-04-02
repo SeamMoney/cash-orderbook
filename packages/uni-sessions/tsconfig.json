@@ -12,7 +12,7 @@
   },
   "references": [
     {
-      "path": "../utilities"
+      "path": "../uni-utilities"
     }
   ]
 }

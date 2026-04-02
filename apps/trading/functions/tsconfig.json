@@ -14,13 +14,13 @@
   "include": ["../../../index.d.ts", "**/*.ts", "**/*.tsx"],
   "references": [
     {
-      "path": "../../../packages/ui"
+      "path": "../../../packages/uni-ui"
     },
     {
-      "path": "../../../packages/utilities"
+      "path": "../../../packages/uni-utilities"
     },
     {
-      "path": "../../../packages/uniswap"
+      "path": "../../../packages/uni-uniswap"
     }
   ]
 }

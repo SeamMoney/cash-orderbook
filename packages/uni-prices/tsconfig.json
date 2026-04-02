@@ -10,13 +10,13 @@
   },
   "references": [
     {
-      "path": "../utilities"
+      "path": "../uni-utilities"
     },
     {
-      "path": "../websocket"
+      "path": "../uni-websocket"
     },
     {
-      "path": "../api"
+      "path": "../uni-api"
     }
   ]
 }
