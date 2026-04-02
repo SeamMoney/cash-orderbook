@@ -48,7 +48,11 @@ Use for any feature involving:
 - Run `pnpm install` after any package.json changes
 - For dev server features: start with `cd apps/trading && npx vite --port 3200` and verify it boots
 - For data layer features: use agent-browser to navigate and verify rendering
-- Always run `pnpm -r typecheck && pnpm -r test` for existing packages to ensure no regressions
+- Always use the scoped validation commands from `.factory/services.yaml` (NOT `pnpm -r test` or `pnpm -r typecheck` which hit broken Uniswap/legacy suites):
+  - Test: `pnpm --filter @cash/api --filter @cash/orderbook-sdk --filter @cash/shared --filter @cash/scripts test`
+  - Typecheck: `pnpm --filter @cash/api --filter @cash/orderbook-sdk --filter @cash/shared --filter @cash/scripts typecheck`
+- Note: apps/trading has 277 pre-existing test failures (Uniswap's @universe/gating) and ~6578 TS errors. web/ has pre-existing React type issues. Both are excluded from validation.
+- For Aptos addresses: Uniswap's shortenAddress only handles EVM/SVM. Use custom address formatting for Aptos surfaces.
 
 ### 4. Commit
 - Commit with conventional commit messages
