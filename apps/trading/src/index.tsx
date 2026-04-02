@@ -33,6 +33,7 @@ import store from '~/state'
 import { LivePricesProvider } from '~/state/livePrices/LivePricesProvider'
 import { ThemedGlobalStyle, ThemeProvider } from '~/theme'
 import { TamaguiProvider } from '~/theme/tamaguiProvider'
+import { AptosWalletProvider } from '~/cash/providers/AptosWalletProvider'
 import { isBrowserRouterEnabled } from '~/utils/env'
 import { unregister as unregisterServiceWorker } from '~/utils/serviceWorker'
 import { getCanonicalUrl } from '~/utils/urlRoutes'
@@ -101,6 +102,7 @@ const RootApp = (): JSX.Element => {
           <Provider store={store}>
             <QueryClientPersistProvider>
               <NuqsAdapter>
+                <AptosWalletProvider>
                 <Router>
                   <I18nextProvider i18n={i18n}>
                     <LanguageProvider>
@@ -139,6 +141,7 @@ const RootApp = (): JSX.Element => {
                     </LanguageProvider>
                   </I18nextProvider>
                 </Router>
+                </AptosWalletProvider>
               </NuqsAdapter>
             </QueryClientPersistProvider>
           </Provider>

@@ -10,7 +10,7 @@ import { SearchBar } from '~/components/NavBar/SearchBar'
 import { useIsSearchBarVisible } from '~/components/NavBar/SearchBar/useIsSearchBarVisible'
 import { Tabs } from '~/components/NavBar/Tabs/Tabs'
 import TestnetModeTooltip from '~/components/NavBar/TestnetMode/TestnetModeTooltip'
-import Web3Status from '~/components/Web3Status'
+import { AptosConnectButton } from '~/cash/providers/AptosConnectButton'
 import { css, deprecatedStyled } from '~/lib/deprecated-styled'
 
 // Flex is position relative by default, we must unset the position on every Flex
@@ -65,7 +65,7 @@ export default function Navbar() {
           {!isSearchBarVisible && <SearchBar />}
           {!isConnected && <PreferenceMenu />}
           {isTestnetModeEnabled && <TestnetModeTooltip />}
-          <Web3Status />
+          <AptosConnectButton />
         </Right>
       </UnpositionedFlex>
     </Nav>

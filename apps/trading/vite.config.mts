@@ -502,7 +502,15 @@ export default defineConfig(({ mode }) => {
         '@visx/responsive',
       ],
       // Libraries that shouldn't be pre-bundled
-      exclude: ['expo-clipboard', '@connectrpc/connect', '@uniswap/client-liquidity'],
+      exclude: [
+        'expo-clipboard',
+        '@connectrpc/connect',
+        '@uniswap/client-liquidity',
+        // Derived wallet packages require ethers v6 which conflicts with v5 in this project.
+        // They are dynamically imported and fail gracefully at runtime.
+        '@aptos-labs/derived-wallet-ethereum',
+        '@aptos-labs/derived-wallet-solana',
+      ],
       esbuildOptions: {
         resolveExtensions: ['.web-app.js', '.web-app.ts', '.web-app.tsx', '.web.js', '.web.ts', '.web.tsx', '.js', '.ts', '.tsx'],
         loader: {

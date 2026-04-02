@@ -50,3 +50,8 @@ export { usePriceChange } from "./hooks/use-price-change";
 export { useScroll } from "./hooks/use-scroll";
 export { useScrollCompact } from "./hooks/use-scroll-compact";
 export { useMinDuration } from "./hooks/use-min-duration";
+
+// ---- Providers ----
+export { AptosWalletProvider } from "./providers/AptosWalletProvider";
+export { WalletSelectorModal } from "./providers/WalletSelectorModal";
+export { AptosConnectButton } from "./providers/AptosConnectButton";
