@@ -1,6 +1,6 @@
 "use client";
 
-import { Text } from "@tamagui/core";
+import { Text, useTheme } from "@tamagui/core";
 import { ChevronRight } from "lucide-react";
 import { Flex } from "@/components/ui/Flex";
 
@@ -13,6 +13,7 @@ import { Flex } from "@/components/ui/Flex";
  * Matches Uniswap's BreadcrumbNavContainer + BreadcrumbNavLink pattern.
  */
 export function Breadcrumb(): React.ReactElement {
+  const theme = useTheme();
   return (
     <Flex
       row
@@ -32,7 +33,7 @@ export function Breadcrumb(): React.ReactElement {
       >
         Tokens
       </Text>
-      <ChevronRight size={16} color="rgba(255,255,255,0.38)" />
+      <ChevronRight size={16} color={theme.neutral3.val} />
       <Text
         fontFamily="$body"
         fontSize={15}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { styled, Text, useMedia } from "@tamagui/core";
+import { styled, Text, useMedia, useTheme } from "@tamagui/core";
 import { AnimatePresence, motion } from "framer-motion";
 import { Search, Menu, X } from "lucide-react";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
@@ -81,7 +81,7 @@ const SearchBarContainer = styled(Flex, {
   cursor: "pointer",
 
   hoverStyle: {
-    backgroundColor: "$surface2Hovered",
+    borderColor: "$surface3",
   },
 });
 
@@ -151,8 +151,8 @@ const HamburgerButton = styled(Flex, {
  * Matches Uniswap's NavBar: surface1 bg, 72px height, full width.
  *
  * Responsive behavior:
- * - md breakpoint (≤640px): hides tabs + wallet, shows hamburger
- * - lg breakpoint (≤768px): hides search bar
+ * - xl breakpoint (≤1024px): hides tabs + search + wallet, shows hamburger
+ * - At ≥1024px: shows full desktop nav with tabs, search bar, and wallet
  */
 export function Nav({
   activeTab = "trade",
@@ -162,11 +162,10 @@ export function Nav({
   const [selectorOpen, setSelectorOpen] = useState(false);
   const { connected, account } = useWallet();
   const media = useMedia();
+  const theme = useTheme();
 
-  // md = maxWidth 640px — when true, we're on mobile
-  const isMobile = media.md;
-  // lg = maxWidth 768px — when true, hide search bar
-  const isTablet = media.lg;
+  // xl = maxWidth 1024px — when true, collapse to hamburger menu
+  const isCollapsed = media.xl;
 
   const handleTabChange = useCallback(
     (tab: NavTab): void => {
@@ -190,8 +189,8 @@ export function Nav({
           <LogoText>CASH</LogoText>
         </Flex>
 
-        {/* Center: Navigation Tabs — hidden on mobile (≤640px) */}
-        {!isMobile && (
+        {/* Center: Navigation Tabs — hidden below xl (≤1024px) */}
+        {!isCollapsed && (
           <Flex row alignItems="center" gap="$spacing12">
             {NAV_TABS.map((tab) => (
               <NavTabText
@@ -207,10 +206,10 @@ export function Nav({
 
         {/* Right: Search + Wallet */}
         <Flex row alignItems="center" gap="$spacing12">
-          {/* Search bar — hidden below lg (≤768px) */}
-          {!isTablet && (
+          {/* Search bar — hidden below xl (≤1024px) */}
+          {!isCollapsed && (
             <SearchBarContainer>
-              <Search size={14} color="rgba(255,255,255,0.38)" />
+              <Search size={14} color={theme.neutral3.val} />
               <Text
                 fontFamily="$body"
                 fontSize={15}
@@ -221,8 +220,8 @@ export function Nav({
             </SearchBarContainer>
           )}
 
-          {/* Wallet area — hidden on mobile */}
-          {!isMobile && (
+          {/* Wallet area — hidden below xl (≤1024px) */}
+          {!isCollapsed && (
             <Flex row alignItems="center" gap="$spacing8">
               {connected && account ? (
                 <ConnectButton />
@@ -246,16 +245,16 @@ export function Nav({
             </Flex>
           )}
 
-          {/* Hamburger — mobile only (≤640px) */}
-          {isMobile && (
+          {/* Hamburger — visible below xl (≤1024px) */}
+          {isCollapsed && (
             <HamburgerButton
               onPress={() => setMobileMenuOpen((prev) => !prev)}
               aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             >
               {mobileMenuOpen ? (
-                <X size={20} color="rgba(255,255,255,0.65)" />
+                <X size={20} color={theme.neutral2.val} />
               ) : (
-                <Menu size={20} color="rgba(255,255,255,0.65)" />
+                <Menu size={20} color={theme.neutral2.val} />
               )}
             </HamburgerButton>
           )}
@@ -275,8 +274,8 @@ export function Nav({
               position: "sticky",
               top: 72,
               zIndex: 49,
-              borderTop: "1px solid rgba(255,255,255,0.12)",
-              background: "#131313",
+              borderTop: `1px solid ${theme.surface3.val}`,
+              background: theme.surface1.val,
             }}
           >
             <Flex padding="$spacing16" gap="$spacing12">
