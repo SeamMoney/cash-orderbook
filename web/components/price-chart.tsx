@@ -96,17 +96,22 @@ export function PriceChart({
   const hasData = candles.length > 0;
   const isEmpty = !loading && !hasData;
 
+  // Access theme tokens for dynamic color usage
+  const theme = useTheme();
+
   // Determine if period is positive (first close < last close)
   const isPositive =
     hasData ? candles[candles.length - 1].close >= candles[0].close : true;
 
-  const lineColor = isPositive ? "#00D54B" : "#FF3B30";
+  const lineColor = isPositive
+    ? (theme.accent1?.val as string)
+    : (theme.statusCritical?.val as string);
   const topGradient = isPositive
     ? "rgba(0, 213, 75, 0.3)"
-    : "rgba(255, 59, 48, 0.3)";
+    : "rgba(255, 89, 60, 0.3)";
   const bottomGradient = isPositive
     ? "rgba(0, 213, 75, 0.0)"
-    : "rgba(255, 59, 48, 0.0)";
+    : "rgba(255, 89, 60, 0.0)";
 
   // Price display helpers
   const isPricePositive = change24h !== null && change24h >= 0;
@@ -130,9 +135,6 @@ export function PriceChart({
   useEffect(() => {
     applyFlash(flashDirection ?? null);
   }, [flashDirection, applyFlash]);
-
-  // Access theme tokens for dynamic color usage
-  const theme = useTheme();
 
   return (
     <Flex data-testid="chart-section">
@@ -279,7 +281,7 @@ export function PriceChart({
                   : "transparent",
               color:
                 chartMode === "candle"
-                  ? "#000000"
+                  ? (theme.black?.val as string)
                   : (theme.neutral3?.val as string),
             }}
             aria-label="Candlestick chart"
@@ -306,7 +308,7 @@ export function PriceChart({
                   : "transparent",
               color:
                 chartMode === "line"
-                  ? "#000000"
+                  ? (theme.black?.val as string)
                   : (theme.neutral3?.val as string),
             }}
             aria-label="Line chart"
@@ -467,6 +469,7 @@ function LightweightChart({
   /** Timestamp (ms) marking the transition from historical to live data. */
   transitionTimestamp?: number | null;
 }): React.ReactElement {
+  const theme = useTheme();
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ReturnType<
     typeof import("lightweight-charts").createChart
@@ -515,43 +518,48 @@ function LightweightChart({
 
       if (disposed || !chartContainerRef.current) return;
 
+      // Resolve theme tokens for lightweight-charts (accepts hex/rgba strings only)
+      const neutral3Val = theme.neutral3?.val as string;
+      const surface3Val = theme.surface3?.val as string;
+      const surface2Val = theme.surface2?.val as string;
+
       const chart = createChart(chartContainerRef.current, {
         width: chartContainerRef.current.clientWidth,
         height: chartContainerRef.current.clientHeight || 300,
         layout: {
           background: { color: "transparent" },
-          textColor: "rgba(255,255,255,0.38)",
+          textColor: neutral3Val,
           fontFamily: "var(--font-geist-mono), monospace",
           fontSize: 11,
         },
         grid: {
           vertLines: { visible: false },
-          horzLines: { color: "rgba(255,255,255,0.12)", style: 2 },
+          horzLines: { color: surface3Val, style: 2 },
         },
         crosshair: {
           mode: CrosshairMode.Normal,
           vertLine: {
-            color: "rgba(255,255,255,0.38)",
+            color: neutral3Val,
             width: 1,
             style: 2,
-            labelBackgroundColor: "#1F1F1F",
+            labelBackgroundColor: surface2Val,
           },
           horzLine: {
-            color: "rgba(255,255,255,0.38)",
+            color: neutral3Val,
             width: 1,
             style: 2,
-            labelBackgroundColor: "#1F1F1F",
+            labelBackgroundColor: surface2Val,
           },
         },
         rightPriceScale: {
-          borderColor: "rgba(255,255,255,0.12)",
+          borderColor: surface3Val,
           scaleMargins: {
             top: 0.1,
             bottom: 0.1,
           },
         },
         timeScale: {
-          borderColor: "rgba(255,255,255,0.12)",
+          borderColor: surface3Val,
           timeVisible: true,
           secondsVisible: false,
         },
@@ -565,13 +573,15 @@ function LightweightChart({
 
       if (chartMode === "candle") {
         // --- Candlestick Series ---
+        const accent1Val = theme.accent1?.val as string;
+        const criticalVal = theme.statusCritical?.val as string;
         const candleSeries = chart.addSeries(CandlestickSeries, {
-          upColor: "#00D54B",
-          downColor: "#FF3B30",
-          wickUpColor: "#00D54B",
-          wickDownColor: "#FF3B30",
-          borderUpColor: "#00D54B",
-          borderDownColor: "#FF3B30",
+          upColor: accent1Val,
+          downColor: criticalVal,
+          wickUpColor: accent1Val,
+          wickDownColor: criticalVal,
+          borderUpColor: accent1Val,
+          borderDownColor: criticalVal,
           priceFormat: {
             type: "price",
             precision: 4,
@@ -655,7 +665,7 @@ function LightweightChart({
           crosshairMarkerVisible: true,
           crosshairMarkerRadius: 4,
           crosshairMarkerBackgroundColor: lineColor,
-          crosshairMarkerBorderColor: "#FFFFFF",
+          crosshairMarkerBorderColor: theme.neutral1?.val as string,
           crosshairMarkerBorderWidth: 2,
           priceFormat: {
             type: "price",
@@ -726,7 +736,7 @@ function LightweightChart({
               {
                 time: transitionTimeSec,
                 position: "aboveBar" as const,
-                color: "rgba(255,255,255,0.38)",
+                color: neutral3Val,
                 shape: "arrowDown" as const,
                 text: "New Venue",
               },

@@ -11,7 +11,7 @@ import {
 } from "@tanstack/react-table";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
-import { Text } from "@tamagui/core";
+import { Text, useTheme } from "@tamagui/core";
 import { Flex } from "@/components/ui/Flex";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TradeEntry } from "@/components/orderbook/trade-ticker";
@@ -85,6 +85,8 @@ export function TransactionsTable({
   trades,
   loading,
 }: TransactionsTableProps): React.ReactElement {
+  const theme = useTheme();
+  const surface3Val = theme.surface3?.val as string;
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const columns = useMemo<ColumnDef<TradeEntry>[]>(
@@ -236,7 +238,7 @@ export function TransactionsTable({
                           ? "right"
                           : "left",
                       fontWeight: "normal",
-                      borderBottom: "1px solid rgba(255,255,255,0.12)",
+                      borderBottom: `1px solid ${surface3Val}`,
                       cursor: header.column.getCanSort() ? "pointer" : "default",
                       userSelect: header.column.getCanSort() ? "none" : "auto",
                     }}
@@ -274,7 +276,7 @@ export function TransactionsTable({
                   style={{
                     borderBottom:
                       i < 4
-                        ? "1px solid rgba(255,255,255,0.12)"
+                        ? `1px solid ${surface3Val}`
                         : "none",
                   }}
                 >
@@ -299,7 +301,7 @@ export function TransactionsTable({
               /* Empty state */
               <tr>
                 <td colSpan={5} style={{ paddingTop: 48, paddingBottom: 48, textAlign: "center" }}>
-                  <Flex alignItems="center" gap="$spacing8">
+                  <Flex flexDirection="column" alignItems="center" gap="$spacing8">
                     <Text
                       fontFamily="$body"
                       fontSize={15}
@@ -333,7 +335,7 @@ export function TransactionsTable({
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.25, ease: "easeOut" }}
                     style={{
-                      borderBottom: "1px solid rgba(255,255,255,0.12)",
+                      borderBottom: `1px solid ${surface3Val}`,
                     }}
                     data-testid="transaction-row"
                   >

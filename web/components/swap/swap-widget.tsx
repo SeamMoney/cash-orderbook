@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef, forwardRef } from "react";
-import { Text, styled } from "@tamagui/core";
+import { Text, styled, useTheme } from "@tamagui/core";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { ArrowDownUp, Loader2, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
@@ -243,6 +243,7 @@ function isPanoraPair(from: TokenInfo, to: TokenInfo): boolean {
  * - Toast notifications on execution
  */
 export function SwapWidget(): React.ReactElement {
+  const theme = useTheme();
   const { connected, account, signAndSubmitTransaction } = useWallet();
   const { depth, loading: depthLoading } = useDepth(3000);
 
@@ -784,7 +785,7 @@ export function SwapWidget(): React.ReactElement {
                     background: "transparent",
                     fontSize: 28,
                     fontFamily: "var(--font-geist-sans), sans-serif",
-                    color: "#FFFFFF",
+                    color: theme.neutral1?.val as string,
                     border: "none",
                     outline: "none",
                     minWidth: 0,
@@ -823,7 +824,7 @@ export function SwapWidget(): React.ReactElement {
                   data-testid="swap-arrow"
                 >
                   <ArrowContainer>
-                    <ArrowDownUp size={16} color="rgba(255,255,255,0.65)" />
+                    <ArrowDownUp size={16} color={theme.neutral2?.val as string} />
                   </ArrowContainer>
                 </ArrowWrapper>
               </motion.div>
@@ -905,10 +906,10 @@ export function SwapWidget(): React.ReactElement {
                 marginTop="$spacing12"
                 borderRadius="$rounded12"
                 padding="$spacing12"
-                backgroundColor="rgba(255, 89, 60, 0.10)"
+                backgroundColor="$statusCritical2"
                 borderWidth={1}
                 borderStyle="solid"
-                borderColor="rgba(255, 89, 60, 0.20)"
+                borderColor="$statusCritical2Hovered"
               >
                 <Text fontFamily="$body" fontSize={13} lineHeight={16} color="$statusCritical">
                   ⚠ {panoraError}
@@ -929,7 +930,7 @@ export function SwapWidget(): React.ReactElement {
                     animation: "spin 1s linear infinite",
                     marginRight: 8,
                   }}
-                  color="rgba(255,255,255,0.38)"
+                  color={theme.neutral3?.val as string}
                 />
               )}
               <Text
@@ -989,7 +990,9 @@ export function SwapWidget(): React.ReactElement {
                         inset: 0,
                         borderRadius: 999999,
                         backgroundColor:
-                          side === "buy" ? "#21C95E" : "#FF593C",
+                          side === "buy"
+                            ? (theme.statusSuccess?.val as string)
+                            : (theme.statusCritical?.val as string),
                       }}
                       transition={{
                         type: "spring",
@@ -1036,7 +1039,7 @@ export function SwapWidget(): React.ReactElement {
                   background: "transparent",
                   fontSize: 28,
                   fontFamily: "var(--font-geist-sans), sans-serif",
-                  color: "#FFFFFF",
+                  color: theme.neutral1?.val as string,
                   border: "none",
                   outline: "none",
                   padding: 0,
@@ -1073,7 +1076,7 @@ export function SwapWidget(): React.ReactElement {
                   background: "transparent",
                   fontSize: 28,
                   fontFamily: "var(--font-geist-sans), sans-serif",
-                  color: "#FFFFFF",
+                  color: theme.neutral1?.val as string,
                   border: "none",
                   outline: "none",
                   padding: 0,
@@ -1129,7 +1132,7 @@ export function SwapWidget(): React.ReactElement {
                     animation: "spin 1s linear infinite",
                     marginRight: 8,
                   }}
-                  color="rgba(255,255,255,0.38)"
+                  color={theme.neutral3?.val as string}
                 />
               )}
               <Text
@@ -1182,6 +1185,7 @@ const TokenSelectorButton = forwardRef<
   HTMLButtonElement,
   { symbol: string; onClick: () => void }
 >(function TokenSelectorButton({ symbol, onClick }, ref): React.ReactElement {
+  const theme = useTheme();
   const token = TOKENS[symbol];
 
   if (!token) return <></>;
@@ -1225,7 +1229,7 @@ const TokenSelectorButton = forwardRef<
       </Text>
 
       {/* Chevron — 20px, neutral2 */}
-      <ChevronDown size={20} color="rgba(255,255,255,0.65)" />
+      <ChevronDown size={20} color={theme.neutral2?.val as string} />
     </TokenPill>
   );
 });

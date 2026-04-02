@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { Copy, Check, ExternalLink, Globe } from "lucide-react";
-import { Text } from "@tamagui/core";
+import { Text, useTheme } from "@tamagui/core";
 import { Flex } from "@/components/ui/Flex";
 import { CONTRACT_ADDRESS } from "@/lib/sdk";
 
@@ -122,6 +122,7 @@ function LinkPill({
  * - Link pills row: Flex row, gap $spacing8, flexWrap wrap
  */
 export function TokenInfo(): React.ReactElement {
+  const theme = useTheme();
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -224,9 +225,9 @@ export function TokenInfo(): React.ReactElement {
         <LinkPill
           icon={
             copied ? (
-              <Check size={16} color="#21C95E" />
+              <Check size={16} color={theme.statusSuccess?.val as string} />
             ) : (
-              <Copy size={16} color="rgba(255, 255, 255, 0.65)" />
+              <Copy size={16} color={theme.neutral2?.val as string} />
             )
           }
           label={copied ? "Copied!" : truncatedAddress}
@@ -237,7 +238,7 @@ export function TokenInfo(): React.ReactElement {
         {/* Explorer pill */}
         <LinkPill
           icon={
-            <ExternalLink size={16} color="rgba(255, 255, 255, 0.65)" />
+            <ExternalLink size={16} color={theme.neutral2?.val as string} />
           }
           label="Explorer"
           href={explorerUrl}
@@ -245,7 +246,7 @@ export function TokenInfo(): React.ReactElement {
 
         {/* Website pill */}
         <LinkPill
-          icon={<Globe size={16} color="rgba(255, 255, 255, 0.65)" />}
+          icon={<Globe size={16} color={theme.neutral2?.val as string} />}
           label="Website"
           href={WEBSITE_URL}
         />
