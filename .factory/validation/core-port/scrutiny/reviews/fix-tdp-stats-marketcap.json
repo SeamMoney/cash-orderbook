@@ -1,0 +1,21 @@
+{
+  "featureId": "fix-tdp-stats-marketcap",
+  "reviewedAt": "2026-04-02T22:28:54Z",
+  "commitId": "1a54cfb",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix directly addresses the prior blocking gap for stats: commit 10444da left market cap/FDV null, while commit 1a54cfb computes both as totalSupply × lastPrice in `useCashTokenData` and propagates them into the TDP query shape. This satisfies the scoped core-port requirement to show Market Cap and FDV values (not '—') while leaving TVL as N/A and preserving volume/52W fields.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "knowledge",
+      "observation": "The architecture note about where CASH-specific frontend code lives is stale and can mislead workers reviewing/fixing TDP features.",
+      "evidence": ".factory/library/architecture.md:47 says all CASH-specific code lives under `apps/trading/src/cash/`, but this fix and the original feature modify `apps/trading/src/pages/CashTDP/CashTDPProvider.tsx` and `apps/trading/src/data/hooks.ts`."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/core-port/scrutiny/reviews/cash-tdp-full-data.json",
+  "summary": "Review result: pass. The market cap/FDV null rendering failure from cash-tdp-full-data is fixed by commit 1a54cfb in core-port scope, and the out-of-scope swap-default behavior was not used as a blocker."
+}

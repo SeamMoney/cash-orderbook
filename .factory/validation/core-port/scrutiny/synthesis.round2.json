@@ -1,0 +1,80 @@
+{
+  "milestone": "core-port",
+  "round": 2,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "pnpm --filter @cash/api --filter @cash/orderbook-sdk --filter @cash/shared --filter @cash/scripts test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm --filter @cash/api --filter @cash/orderbook-sdk --filter @cash/shared --filter @cash/scripts typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm --filter @cash/api --filter @cash/orderbook-sdk --filter @cash/shared --filter @cash/scripts lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 3,
+    "passed": 2,
+    "failed": 1,
+    "failedFeatures": [
+      "cash-tdp-full-data"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "cash-tdp-full-data",
+      "severity": "blocking",
+      "description": "Market cap and FDV remain null in CASH TDP data hook; required populated stats are incomplete."
+    },
+    {
+      "featureId": "cash-tdp-full-data",
+      "severity": "blocking",
+      "description": "Swap defaults still resolve through Ethereum-native currency path, so CASH is not the default token in the swap flow."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "library",
+      "description": "Corrected .factory/library/architecture.md to reflect that apps/trading/src/cash/hooks contains 14 hooks, matching web/hooks source-of-truth.",
+      "sourceFeature": "port-core-lib-and-hooks"
+    },
+    {
+      "target": "library",
+      "description": "Added .factory/library/aptos-derived-wallet-ethers-compat.md documenting ethers v5/v6 incompatibility impact on Aptos derived-wallet flows in apps/trading.",
+      "sourceFeature": "aptos-wallet-integration"
+    },
+    {
+      "target": "library",
+      "description": "Added .factory/library/uniswap-shortenaddress-aptos-gap.md documenting that Uniswap shortenAddress utility does not support Aptos addresses.",
+      "sourceFeature": "cash-tdp-full-data"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": ".factory/skills/fork-worker/SKILL.md",
+      "suggestion": "Replace unconditional `pnpm -r typecheck && pnpm -r test` validation instruction with mission-aware command selection (prefer `.factory/services.yaml` scoped validators when present).",
+      "evidence": "All three core-port reviews flagged mismatch between skill guidance and scoped validation policy in mission AGENTS/services.yaml, causing avoidable failures against known-broken suites.",
+      "isSystemic": true
+    },
+    {
+      "target": ".factory/skills/fork-worker/SKILL.md",
+      "suggestion": "Add an explicit checklist item for non-EVM ports: verify address-format utility compatibility and avoid EVM-only helpers for Aptos address display/default-token flows.",
+      "evidence": "cash-tdp-full-data review found blocking ETH-default swap behavior and non-blocking Aptos address rendering regression from reuse of EVM-centric utilities/components.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Repeated reports that fork-worker validation guidance conflicts with scoped mission validators.",
+      "reason": "duplicate"
+    }
+  ],
+  "previousRound": ".factory/validation/core-port/scrutiny/synthesis.round1.json"
+}

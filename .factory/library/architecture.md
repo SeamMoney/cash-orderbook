@@ -44,13 +44,17 @@ User Browser → apps/trading (Vite SPA, port 3200)
 
 ## CASH-Specific Code in apps/trading/
 
-All CASH-specific code lives in `apps/trading/src/cash/`:
+Most CASH-specific code lives in `apps/trading/src/cash/`:
 - `lib/` — Pure logic: swap-quote.ts, panora.ts, sdk.ts, config.ts, utils.ts
 - `hooks/` — 14 React hooks for REST/WS data (balances, depth, trades, candles, etc.)
 - `providers/` — AptosWalletProvider, CashSwapProvider
 - `data/` — historical-candles.json
 
-The CashTDPProvider (in `src/pages/CashTDP/`) maps REST API data into the Uniswap TDP Zustand store shape.
+Additional CASH integration touchpoints exist outside `src/cash/`, including:
+- `apps/trading/src/pages/CashTDP/CashTDPProvider.tsx`
+- `apps/trading/src/data/hooks.ts` (CASH token market data mapping)
+
+The CashTDPProvider maps REST API data into the Uniswap TDP Zustand store shape.
 
 ## Key Paths
 - Uniswap source reference: /Users/maxmohammadi/uniswap-frontend/
