@@ -1,0 +1,25 @@
+{
+  "milestone": "fork-setup",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "FORK-001",
+    "FORK-002"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added fork-setup trading surface guidance and dedicated Flow Validator Guidance section for trading-web plus FORK-001 CLI scope.",
+      "source": "setup"
+    }
+  ],
+  "previousRound": null
+}

@@ -1,0 +1,28 @@
+{
+  "groupId": "group-cli",
+  "milestone": "fork-setup",
+  "testedAt": "2026-04-02T07:53:49Z",
+  "isolation": {
+    "surface": "CLI only",
+    "workingDirectory": "/Users/maxmohammadi/cash-orderbook",
+    "targetUrl": "http://localhost:3200"
+  },
+  "assertions": [
+    {
+      "id": "FORK-001",
+      "title": "Uniswap web app copied and dev server starts",
+      "status": "pass",
+      "reason": "curl -i -sS http://localhost:3200 returned HTTP/1.1 200 OK with Content-Type text/html and an HTML document (<!DOCTYPE html>), with curl exit code 0."
+    }
+  ],
+  "toolsUsed": ["curl"],
+  "frictions": [],
+  "blockers": [],
+  "evidence": [
+    {
+      "type": "command",
+      "pathOrInline": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/evidence/fork-setup/group-cli/FORK-001-curl-http-localhost-3200.txt"
+    }
+  ],
+  "notes": "Captured curl command output including response headers, HTML payload, and exit code."
+}

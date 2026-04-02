@@ -3,6 +3,7 @@
 ## Validation Surface
 
 - **Primary surface:** Web browser at localhost:3102 (production build via `next start`)
+- **Fork setup surface:** Vite trading app at localhost:3200 (`apps/trading`)
 - **Reference surface:** Uniswap TDP at localhost:3000 (for visual comparison)
 - **Tool:** agent-browser for all visual/interactive assertions
 - **Build before testing:** Must run `cd web && pnpm build` then `PORT=3102 npx next start -p 3102`
@@ -44,6 +45,15 @@
 ## Flow Validator Guidance: cli
 
 - Surface: repository shell at `/Users/maxmohammadi/cash-orderbook`.
-- Scope: `CROSS-004` command assertions only (`pnpm -r typecheck`, `pnpm -r test`, `pnpm -r lint`, `pnpm -r build`).
+- Scope: CLI/curl assertions only, including `FORK-001` (`curl http://localhost:3200`) and `CROSS-004` command assertions (`pnpm -r typecheck`, `pnpm -r test`, `pnpm -r lint`, `pnpm -r build`).
 - Run commands sequentially in one validator to avoid workspace cache contention and noisy duplicate installs.
 - Preserve command output in the flow report with exit codes and key summary lines (errors, pass counts, build success).
+
+## Flow Validator Guidance: trading-web
+
+- Surface URL: `http://localhost:3200`.
+- Scope: fork setup browser assertions for Uniswap-fork UI rendering (currently `FORK-002`).
+- Use a dedicated browser session and avoid reusing any session from other validators.
+- Allowed interactions: navigate directly to the token route, wait for render completion, capture screenshot evidence, inspect visible chart/stats sections.
+- Keep testing read-only; do not mutate app or repository state from browser tools.
+- Save evidence under `{missionDir}/evidence/fork-setup/<group-id>/`.

@@ -1,0 +1,38 @@
+{
+  "groupId": "group-trading-web",
+  "milestone": "fork-setup",
+  "testedAt": "2026-04-02T07:58:03.032604Z",
+  "isolation": {
+    "surface": "browser",
+    "baseUrl": "http://localhost:3200",
+    "route": "/explore/tokens/ethereum/NATIVE",
+    "session": "fork-setup-group-trading-web-fork002"
+  },
+  "assertions": [
+    {
+      "id": "FORK-002",
+      "status": "pass",
+      "reason": "ETH token detail page rendered successfully with live token values, visible chart controls/canvas, populated stats (TVL/Market cap/FDV/1 day volume), About section, and Transactions list.",
+      "evidence": {
+        "screenshot": "fork-setup/group-trading-web/FORK-002-eth-tdp-chart-stats.png",
+        "consoleErrors": "none",
+        "network": [
+          "POST https://tame-frequent-fog.quiknode.pro/... (fetch observed in session)",
+          "POST https://metrics.interface.gateway.uniswap.org/v1/amplitude-proxy (fetch observed in session)"
+        ]
+      }
+    }
+  ],
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "frictions": [],
+  "blockers": [],
+  "evidence": [
+    {
+      "type": "screenshot",
+      "pathOrInline": "fork-setup/group-trading-web/FORK-002-eth-tdp-chart-stats.png"
+    }
+  ],
+  "notes": "Validation executed read-only against localhost:3200 in a dedicated browser session. Browser session was closed after evidence capture."
+}
