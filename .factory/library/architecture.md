@@ -46,7 +46,7 @@ User Browser → apps/trading (Vite SPA, port 3200)
 
 All CASH-specific code lives in `apps/trading/src/cash/`:
 - `lib/` — Pure logic: swap-quote.ts, panora.ts, sdk.ts, config.ts, utils.ts
-- `hooks/` — 15 React hooks for REST/WS data (balances, depth, trades, candles, etc.)
+- `hooks/` — 14 React hooks for REST/WS data (balances, depth, trades, candles, etc.)
 - `providers/` — AptosWalletProvider, CashSwapProvider
 - `data/` — historical-candles.json
 

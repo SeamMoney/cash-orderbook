@@ -1,0 +1,33 @@
+{
+  "featureId": "port-core-lib-and-hooks",
+  "reviewedAt": "2026-04-02T22:12:49Z",
+  "commitId": "34e3832",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Commit 34e3832 ports the CASH core package into apps/trading/src/cash with all required file groups present (6 lib files, 14 hooks matching web/hooks source, historical candle data, env wiring, deps, and barrel exports), and the import/env adaptations are applied consistently.",
+    "issues": [
+      {
+        "file": "apps/trading/src/cash/lib/panora.ts",
+        "line": 25,
+        "severity": "non_blocking",
+        "description": "Panora API key is hardcoded in client-side source. Shared knowledge in .factory/library/panora-api-auth-requirement.md says this key should be kept in environment configuration rather than hardcoded client code."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "knowledge",
+      "observation": "Shared architecture/docs still state that cash/hooks contains 15 hooks, but the source-of-truth web/hooks directory has 14 files and this feature correctly ports those 14. This mismatch can create false failures during review.",
+      "evidence": ".factory/library/architecture.md:49 says \"15 React hooks\"; web/hooks directory listing shows 14 files; commit 34e3832 adds 14 files under apps/trading/src/cash/hooks."
+    },
+    {
+      "area": "skills",
+      "observation": "fork-worker verification instructions are misaligned with this mission's scoped validation model and can direct workers to inappropriate full-repo checks.",
+      "evidence": ".factory/skills/fork-worker/SKILL.md:51 requires `pnpm -r typecheck && pnpm -r test`; .factory/services.yaml:3 and :5 define scoped typecheck/test commands; transcript skeleton for session 1c5701fc-7a08-45f6-b21e-b2f0cea52d2e contains the scoped test command and no agent-browser step."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed feature port-core-lib-and-hooks via handoff, transcript skeleton, and commit diff. The feature meets its implementation goals and is marked pass; one non-blocking security/config issue (hardcoded Panora key) and two shared-state gaps (hook-count drift and skill validation guidance drift) were recorded."
+}

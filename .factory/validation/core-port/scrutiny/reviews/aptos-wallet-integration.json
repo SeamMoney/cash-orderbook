@@ -1,0 +1,39 @@
+{
+  "featureId": "aptos-wallet-integration",
+  "reviewedAt": "2026-04-02T22:13:10Z",
+  "commitId": "5499ef8",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Implementation covers navbar Aptos wallet connection flow and meets INT-002 expectations (modal opens with Aptos wallets + Google/Apple, provider wraps app, connected state renders truncated address). One non-blocking gap remains: cross-chain derivation is configured but effectively disabled by an ethers v5/v6 incompatibility workaround.",
+    "issues": [
+      {
+        "file": "apps/trading/src/cash/providers/AptosWalletProvider.tsx",
+        "line": 10,
+        "severity": "non_blocking",
+        "description": "Cross-chain wallet derivation is not actually functional in this app: the provider documents and swallows import failures caused by ethers v6 requirements, so Ethereum/Solana derived wallet connection path is unavailable despite crossChainWallets=true configuration."
+      },
+      {
+        "file": "apps/trading/vite.config.mts",
+        "line": 511,
+        "severity": "non_blocking",
+        "description": "Derived-wallet packages are excluded from Vite optimizeDeps as a workaround for the ethers v5/v6 conflict, reinforcing that cross-chain derived wallets are currently best-effort rather than fully working."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "fork-worker verification guidance conflicts with mission-level validation constraints, causing avoidable failed runs against known-broken suites.",
+      "evidence": ".factory/skills/fork-worker/SKILL.md:51 says to always run `pnpm -r typecheck && pnpm -r test`, while mission AGENTS explicitly scopes validation to core packages and notes known apps/trading failures (/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/AGENTS.md:52,60,62)."
+    },
+    {
+      "area": "knowledge",
+      "observation": "The Aptos derived-wallet ethers-v6 incompatibility in apps/trading is a recurring implementation gotcha but is not captured in shared library notes.",
+      "evidence": "apps/trading/package.json:209 pins ethers 5.7.2; Aptos provider acknowledges derived-wallet import failures (apps/trading/src/cash/providers/AptosWalletProvider.tsx:10,29,40). No corresponding note exists under .factory/library/."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed handoff, commit 5499ef8 diff, transcript skeleton, and fork-worker skill. The feature satisfies the required wallet integration behavior for navbar connect flow and connected address display, so review passes. Cross-chain derived wallet support remains degraded due the documented ethers compatibility workaround (non-blocking), and shared-state updates are recommended for skill validation guidance and library knowledge capture."
+}

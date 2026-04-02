@@ -1,0 +1,50 @@
+{
+  "featureId": "cash-tdp-full-data",
+  "reviewedAt": "2026-04-02T22:13:53Z",
+  "commitId": "10444da",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature substantially improves CASH TDP data wiring and replaces ETH activity rows with CASH trades, but two required behaviors remain unmet: swap defaults still resolve to ETH, and Market cap/FDV remain unpopulated.",
+    "issues": [
+      {
+        "file": "apps/trading/src/data/hooks.ts",
+        "line": 77,
+        "severity": "blocking",
+        "description": "useCashTokenData still hard-codes `marketCap` and `fdv` to null, and CashStats renders these as `—`. The feature description requires all six stats to be shown with values (TVL can be N/A, but Market cap and FDV should be populated/computed)."
+      },
+      {
+        "file": "apps/trading/src/pages/CashTDP/CashTDPProvider.tsx",
+        "line": 288,
+        "severity": "blocking",
+        "description": "CashTDPProvider constructs currency from Ethereum native mainnet (`nativeOnChain(UniverseChainId.Mainnet)`), and TDPSwapComponent's default logic therefore seeds native token defaults (`getNativeAddress(currency.chainId)`), leaving ETH as the default side in the swap flow rather than CASH."
+      },
+      {
+        "file": "apps/trading/src/pages/TokenDetails/components/header/TokenDetailsHeader.tsx",
+        "line": 125,
+        "severity": "non_blocking",
+        "description": "Header address text is rendered via `shortenAddress({ address })`, but the utility only supports EVM/SVM addresses, so Aptos addresses render as empty text in the header copy helper. The About section has a working custom Aptos address pill, but header-level address UX is still broken."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "fork-worker verification guidance appears stale relative to this mission's scoped validation policy.",
+      "evidence": ".factory/skills/fork-worker/SKILL.md:51 instructs `pnpm -r typecheck && pnpm -r test`, while mission AGENTS scopes checks and documents pre-existing failures in apps/trading/web (mission AGENTS.md:52,54,61,62)."
+    },
+    {
+      "area": "skills",
+      "observation": "fork-worker skill lacks explicit procedure notes for Aptos/non-EVM address compatibility when reusing Uniswap components.",
+      "evidence": "Handoff skill feedback calls this out directly (`suggestedChanges`): handoffs/2026-04-02T20-55-53-934Z__cash-tdp-full-data__8d9b9c6a-f3cb-4a50-976c-9d578a3db589.json:59-60; related issue noted at lines 47-48."
+    },
+    {
+      "area": "knowledge",
+      "observation": "There is no shared-library note documenting that `shortenAddress` rejects Aptos addresses, despite this impacting CASH TDP header behavior.",
+      "evidence": "packages/uni-utilities/src/addresses/index.ts validates only EVM/SVM addresses before shortening; `.factory/library/` contains no `shortenAddress`/non-EVM compatibility note."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review result: fail. CASH-specific stats/activity/about wiring is largely present, but required acceptance behavior is incomplete because swap defaults still rely on ETH and Market cap/FDV remain unset."
+}
