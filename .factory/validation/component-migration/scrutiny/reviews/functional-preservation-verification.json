@@ -1,0 +1,28 @@
+{
+  "featureId": "functional-preservation-verification",
+  "reviewedAt": "2026-04-02T01:37:01Z",
+  "commitId": "cc96e77a41024ca5110eaed15b8259945eb1d63c",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "Validator commands and most interactive checks were executed, but required FUNC-005 evidence is missing: balances were not verified in a connected-wallet state, so functional-preservation coverage is incomplete.",
+    "issues": [
+      {
+        "file": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/handoffs/2026-04-02T01-33-31-329Z__functional-preservation-verification__5a9e6c8e-8880-46c5-939a-5cd0cd8b4842.json",
+        "line": 88,
+        "severity": "blocking",
+        "description": "The handoff explicitly states FUNC-005 could not be fully verified because no wallet extension was available, but this feature fulfills FUNC-005 and the contract requires balances to be validated with a connected wallet (`validation-contract.md:308-311`). This leaves a required behavior unverified."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "knowledge",
+      "observation": "Mission validation requires connected-wallet balance verification (FUNC-005), but the headless verification path lacks a deterministic wallet-capable setup, causing repeated partial verification outcomes.",
+      "evidence": "Requirement: `validation-contract.md:308-311` and feature checklist in `features.json:487` (\"With wallet connected, balance should appear\"). Limitation observed in handoff at line 88 and documented generally in `.factory/library/user-testing.md` (\"headless testing may show 'Connect Wallet' state only\")."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "I reviewed the transcript skeleton, handoff, skill, and commit diff. The feature demonstrates broad preservation checks and passing validators, but it does not satisfy the required connected-wallet balance verification (FUNC-005), so this review fails with one blocking issue."
+}

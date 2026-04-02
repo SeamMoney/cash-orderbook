@@ -1,0 +1,38 @@
+{
+  "featureId": "swap-widget-tamagui",
+  "reviewedAt": "2026-04-02T01:37:04Z",
+  "commitId": "cc96e77",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The migration rewrites the swap widget to Tamagui and preserves swap/limit behavior, routing, wallet flows, and modal interactions in the reviewed diff. Required styling targets in the feature contract are implemented, with no blocking functional regressions identified in the commit.",
+    "issues": [
+      {
+        "file": "web/components/swap/swap-widget.tsx",
+        "line": 710,
+        "severity": "non_blocking",
+        "description": "The component includes several hardcoded color literals (e.g., lines 710, 787, 992) instead of theme tokens, which diverges from mission convention and may reduce long-term theming consistency."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The skill's mandatory TDD step does not fit this class of visual migration work where no swap-widget test harness exists, leading to justified procedural deviation.",
+      "evidence": "SKILL.md section '2. Write Tests First (TDD)' vs handoff.skillFeedback.deviations[0] explicitly skipping TDD for this feature."
+    },
+    {
+      "area": "skills",
+      "observation": "The skill should document current agent-browser command patterns to avoid trial-and-error during required visual checks.",
+      "evidence": "Transcript skeleton records failed command `agent-browser --session \"ea262eb3b7d5\" --url \"http://localhost:3102\" screenshot ...` with `Unknown command: --url` before switching to `open`/`screenshot`."
+    },
+    {
+      "area": "conventions",
+      "observation": "Color-token guidance is absolute in mission AGENTS.md but real component migrations still require raw style literals in places; the convention needs scoped exceptions or explicit fallback guidance.",
+      "evidence": "Mission AGENTS.md states 'ALWAYS use Tamagui theme tokens, never hardcoded hex colors'; this feature uses literals at web/components/swap/swap-widget.tsx lines 710, 787, 992."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed feature swap-widget-tamagui at commit cc96e77: implementation satisfies the migration intent and preserves behavior, so review passes. Logged one non-blocking convention issue (hardcoded colors) and shared-state observations about skill procedure/documentation gaps."
+}

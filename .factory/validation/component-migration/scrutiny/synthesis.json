@@ -1,0 +1,79 @@
+{
+  "milestone": "component-migration",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "pnpm -r test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm -r typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm -r lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 7,
+    "passed": 6,
+    "failed": 1,
+    "failedFeatures": [
+      "functional-preservation-verification"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "functional-preservation-verification",
+      "severity": "blocking",
+      "description": "FUNC-005 remains unverified: connected-wallet balance behavior was not validated even though the feature claims to fulfill FUNC-005 and the validation contract requires connected-wallet evidence."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "skill:tamagui-frontend-worker",
+      "suggestion": "Make the TDD step conditional for UI-only migration work when no frontend test harness exists. Require explicit visual/assertion-based verification + validators instead of mandatory test-first.",
+      "evidence": "token-header-tamagui, chart-section-tamagui, stats-section-tamagui, about-section-tamagui, transactions-table-tamagui, and swap-widget-tamagui reviews all reported repeated deviation from mandatory TDD because web/package.json test is a stub.",
+      "isSystemic": true
+    },
+    {
+      "target": "skill:tamagui-frontend-worker",
+      "suggestion": "Add canonical agent-browser CLI examples (session usage, open, screenshot, evaluate) to reduce command trial-and-error during required visual checks.",
+      "evidence": "token-header-tamagui, stats-section-tamagui, and swap-widget-tamagui reviews cite failed initial agent-browser invocations before correction.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Clarify token-only color guidance with explicit exceptions for non-Tamagui styling sinks (e.g., lightweight-charts config and inline SVG/icon style props) and preferred fallback patterns.",
+      "evidence": "chart-section-tamagui, about-section-tamagui, transactions-table-tamagui, and swap-widget-tamagui reviews each found non-blocking hardcoded color literals despite the current absolute wording.",
+      "isSystemic": true
+    },
+    {
+      "target": "skill:user-testing-validator",
+      "suggestion": "Require explicit connected-wallet evidence (or explicit failure) for assertions like FUNC-005 instead of allowing partial fulfillment when no wallet-capable environment is available.",
+      "evidence": "functional-preservation-verification failed in scrutiny because FUNC-005 was marked fulfilled without connected-wallet balance verification.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Repeated TDD mismatch observations across multiple reviews",
+      "reason": "duplicate"
+    },
+    {
+      "observation": "Repeated agent-browser CLI guidance gaps across multiple reviews",
+      "reason": "duplicate"
+    },
+    {
+      "observation": "Headless wallet limitations for connected-balance checks",
+      "reason": "already-documented in .factory/library/user-testing.md"
+    }
+  ],
+  "previousRound": null
+}
