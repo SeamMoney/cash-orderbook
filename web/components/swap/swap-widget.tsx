@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef, forwardRef } from "react";
+import { Text, styled } from "@tamagui/core";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { ArrowDownUp, Loader2, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
@@ -28,6 +29,175 @@ import {
 } from "@/components/swap/token-selector-modal";
 import { WalletSelector } from "@/components/wallet/wallet-selector";
 import { formatBalance } from "@/lib/utils";
+import { Flex } from "@/components/ui/Flex";
+
+// ---------------------------------------------------------------------------
+// Styled Tamagui Components — Matching Uniswap SwapSkeleton / styled.tsx
+// ---------------------------------------------------------------------------
+
+/**
+ * SwapContainer — outer wrapper matching Uniswap's LoadingWrapper.
+ * surface1 bg, 1px surface3 border, rounded16, 8px padding.
+ */
+const SwapContainer = styled(Flex, {
+  backgroundColor: "$surface1",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "$surface3",
+  borderRadius: "$rounded16",
+  padding: "$spacing8",
+});
+
+/**
+ * SwapSection — input sections matching Uniswap's SwapSection from styled.tsx.
+ * surface2 bg, 120px height, rounded16, 16px padding, invisible border that
+ * changes to surface2Hovered on hover and surface3 on focus-within.
+ */
+const SwapSection = styled(Flex, {
+  backgroundColor: "$surface2",
+  borderRadius: "$rounded16",
+  minHeight: 120,
+  padding: "$spacing16",
+  position: "relative",
+  borderStyle: "solid",
+  borderWidth: 1,
+  borderColor: "$surface2",
+
+  hoverStyle: {
+    borderColor: "$surface2Hovered",
+  },
+
+  focusWithinStyle: {
+    borderColor: "$surface3",
+  },
+});
+
+/**
+ * ArrowWrapper — matching Uniswap's ArrowWrapper from styled.tsx.
+ * 40x40, rounded12, surface2 bg, 4px surface1 border, -18px vertical overlap.
+ */
+const ArrowWrapper = styled(Flex, {
+  display: "flex",
+  borderRadius: "$rounded12",
+  height: 40,
+  width: 40,
+  position: "relative",
+  marginTop: -18,
+  marginBottom: -18,
+  marginLeft: "auto",
+  marginRight: "auto",
+  backgroundColor: "$surface2",
+  borderWidth: 4,
+  borderStyle: "solid",
+  borderColor: "$surface1",
+  zIndex: 2,
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+
+  hoverStyle: {
+    opacity: 0.8,
+  },
+});
+
+/**
+ * ArrowContainer — inner flex centering for the arrow icon.
+ */
+const ArrowContainer = styled(Flex, {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "100%",
+  height: "100%",
+});
+
+/**
+ * SwapCTAButton — primary action button matching Uniswap's swap CTA.
+ * accent1 bg (#00D54B), rounded20, 56px min-height, buttonLabel2 (17px).
+ */
+const SwapCTAButton = styled(Flex, {
+  tag: "button",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "$accent1",
+  borderRadius: "$rounded20",
+  minHeight: 56,
+  width: "100%",
+  cursor: "pointer",
+  marginTop: "$spacing16",
+
+  hoverStyle: {
+    opacity: 0.9,
+  },
+
+  variants: {
+    disabled: {
+      true: {
+        backgroundColor: "$surface3Solid",
+        cursor: "not-allowed",
+        hoverStyle: {
+          opacity: 1,
+        },
+      },
+    },
+  } as const,
+});
+
+/**
+ * TokenPill — token selector pill matching Uniswap's SelectTokenButton.
+ * roundedFull border radius, surface1 bg, row layout with icon + name + chevron.
+ */
+const TokenPill = styled(Flex, {
+  tag: "button",
+  flexDirection: "row",
+  alignItems: "center",
+  gap: "$spacing6",
+  backgroundColor: "$surface1",
+  borderRadius: "$roundedFull",
+  paddingHorizontal: "$spacing8",
+  paddingVertical: "$spacing4",
+  cursor: "pointer",
+  flexShrink: 0,
+
+  hoverStyle: {
+    backgroundColor: "$surface1Hovered",
+  },
+});
+
+/**
+ * SegmentedTabBar — container for Swap/Limit tabs.
+ */
+const SegmentedTabBar = styled(Flex, {
+  flexDirection: "row",
+  alignItems: "center",
+  marginBottom: "$spacing12",
+});
+
+/**
+ * SegmentedTab — individual tab button.
+ */
+const SegmentedTab = styled(Flex, {
+  tag: "button",
+  flex: 1,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  paddingVertical: "$spacing8",
+  cursor: "pointer",
+  position: "relative",
+
+  variants: {
+    isActive: {
+      true: {},
+      false: {},
+    },
+  } as const,
+});
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 /** Tab types for the swap widget */
 type SwapTab = "swap" | "limit";
@@ -55,6 +225,10 @@ function isPanoraPair(from: TokenInfo, to: TokenInfo): boolean {
     (from.symbol === "USD1" && to.symbol === "CASH");
   return !isCashUsd1;
 }
+
+// ---------------------------------------------------------------------------
+// SwapWidget
+// ---------------------------------------------------------------------------
 
 /**
  * SwapWidget — Uniswap-style swap card with Swap and Limit tabs.
@@ -516,21 +690,25 @@ export function SwapWidget(): React.ReactElement {
   const limitCta = getLimitCtaState();
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-2">
-      {/* Swap / Limit Tabs */}
-      <div className="mb-3 flex items-center gap-1 rounded-full bg-background p-1">
+    <SwapContainer data-testid="swap-widget">
+      {/* Swap / Limit SegmentedControl Tabs */}
+      <SegmentedTabBar data-testid="swap-tabs">
         {(["swap", "limit"] as const).map((tab) => (
-          <button
+          <SegmentedTab
             key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`relative flex-1 rounded-full px-4 py-2 min-h-[44px] text-sm font-medium transition-colors ${
-              activeTab === tab ? "text-white" : "text-text-muted hover:text-text-secondary"
-            }`}
+            isActive={activeTab === tab}
+            onPress={() => setActiveTab(tab)}
+            data-testid={`swap-tab-${tab}`}
           >
             {activeTab === tab && (
               <motion.div
                 layoutId="swap-tab-indicator"
-                className="absolute inset-0 rounded-full bg-secondary"
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  borderRadius: 8,
+                  backgroundColor: "rgba(255,255,255,0.08)",
+                }}
                 transition={{
                   type: "spring",
                   stiffness: 400,
@@ -538,10 +716,21 @@ export function SwapWidget(): React.ReactElement {
                 }}
               />
             )}
-            <span className="relative z-10 capitalize">{tab}</span>
-          </button>
+            <Text
+              fontFamily="$body"
+              fontSize={17}
+              lineHeight={22.1}
+              fontWeight="535"
+              color={activeTab === tab ? "$neutral1" : "$neutral2"}
+              position="relative"
+              zIndex={1}
+              textTransform="capitalize"
+            >
+              {tab}
+            </Text>
+          </SegmentedTab>
         ))}
-      </div>
+      </SegmentedTabBar>
 
       {/* Tab Content */}
       <AnimatePresence mode="wait">
@@ -554,120 +743,205 @@ export function SwapWidget(): React.ReactElement {
             transition={{ duration: 0.15 }}
           >
             {/* You Pay */}
-            <div className="rounded-2xl bg-[#1F1F1F] border border-[#1F1F1F] hover:border-[#242424] focus-within:border-white/12 p-4 mb-1 min-h-[120px] transition-colors">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-text-muted">You pay</span>
+            <SwapSection data-testid="swap-input-pay">
+              <Flex row alignItems="center" justifyContent="space-between" marginBottom="$spacing8">
+                <Text
+                  fontFamily="$body"
+                  fontSize={13}
+                  lineHeight={16}
+                  color="$neutral3"
+                >
+                  You pay
+                </Text>
                 {connected && fromBalance !== null && (
-                  <span className="text-xs text-text-muted">
+                  <Text
+                    fontFamily="$body"
+                    fontSize={13}
+                    lineHeight={16}
+                    color="$neutral3"
+                  >
                     Balance:{" "}
-                    <span className="font-sans text-text-secondary">
+                    <Text
+                      fontFamily="$body"
+                      fontSize={13}
+                      lineHeight={16}
+                      color="$neutral2"
+                    >
                       {formatBalance(fromBalance, 4)}
-                    </span>
-                  </span>
+                    </Text>
+                  </Text>
                 )}
-              </div>
-              <div className="flex items-center gap-3">
+              </Flex>
+              <Flex row alignItems="center" gap="$spacing12">
                 <input
                   type="text"
                   inputMode="decimal"
                   placeholder="0"
                   value={inputAmount}
                   onChange={handleInputChange}
-                  className="flex-1 bg-transparent text-[28px] font-sans text-white placeholder:text-text-muted outline-none min-w-0"
+                  style={{
+                    flex: 1,
+                    background: "transparent",
+                    fontSize: 28,
+                    fontFamily: "var(--font-geist-sans), sans-serif",
+                    color: "#FFFFFF",
+                    border: "none",
+                    outline: "none",
+                    minWidth: 0,
+                    padding: 0,
+                  }}
+                  className="placeholder:text-[rgba(255,255,255,0.38)]"
                 />
                 <TokenSelectorButton
                   ref={fromTokenBtnRef}
                   symbol={fromToken.symbol}
                   onClick={() => setSelectorOpen("from")}
                 />
-              </div>
+              </Flex>
               {fromUsdEquivalent !== null && fromUsdEquivalent > 0 && (
-                <p className="mt-1 text-xs text-text-muted font-sans">
+                <Text
+                  fontFamily="$body"
+                  fontSize={13}
+                  lineHeight={16}
+                  color="$neutral3"
+                  marginTop="$spacing4"
+                >
                   ≈ ${formatBalance(fromUsdEquivalent, 2)}
-                </p>
+                </Text>
               )}
-            </div>
+            </SwapSection>
 
-            {/* Direction Toggle */}
-            <div className="flex justify-center -my-[18px] relative z-10">
-              <motion.button
+            {/* Direction Toggle — Arrow */}
+            <Flex alignItems="center" justifyContent="center" zIndex={2}>
+              <motion.div
                 animate={{ rotate: directionRotation }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                whileHover={{ opacity: 0.8 }}
-                onClick={handleDirectionToggle}
-                className="flex items-center justify-center rounded-xl h-10 w-10 border-4 border-[#131313] bg-[#1F1F1F] text-text-muted hover:text-white transition-colors"
+                style={{ display: "flex" }}
               >
-                <ArrowDownUp className="h-4 w-4" />
-              </motion.button>
-            </div>
+                <ArrowWrapper
+                  onPress={handleDirectionToggle}
+                  data-testid="swap-arrow"
+                >
+                  <ArrowContainer>
+                    <ArrowDownUp size={16} color="rgba(255,255,255,0.65)" />
+                  </ArrowContainer>
+                </ArrowWrapper>
+              </motion.div>
+            </Flex>
 
             {/* You Receive */}
-            <div className="rounded-2xl bg-[#1F1F1F] border border-[#1F1F1F] hover:border-[#242424] focus-within:border-white/12 p-4 mt-1 min-h-[120px] transition-colors">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-text-muted">You receive</span>
+            <SwapSection data-testid="swap-input-receive">
+              <Flex row alignItems="center" justifyContent="space-between" marginBottom="$spacing8">
+                <Text
+                  fontFamily="$body"
+                  fontSize={13}
+                  lineHeight={16}
+                  color="$neutral3"
+                >
+                  You receive
+                </Text>
                 {connected && toBalance !== null && (
-                  <span className="text-xs text-text-muted">
+                  <Text
+                    fontFamily="$body"
+                    fontSize={13}
+                    lineHeight={16}
+                    color="$neutral3"
+                  >
                     Balance:{" "}
-                    <span className="font-sans text-text-secondary">
+                    <Text
+                      fontFamily="$body"
+                      fontSize={13}
+                      lineHeight={16}
+                      color="$neutral2"
+                    >
                       {formatBalance(toBalance, 4)}
-                    </span>
-                  </span>
+                    </Text>
+                  </Text>
                 )}
-              </div>
-              <div className="flex items-center gap-3">
+              </Flex>
+              <Flex row alignItems="center" gap="$spacing12">
                 <AnimatePresence mode="wait">
-                  <motion.p
+                  <motion.div
                     key={quote?.outputAmount ?? "empty"}
                     initial={{ opacity: 0, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -4 }}
                     transition={{ duration: 0.15 }}
-                    className="flex-1 text-[28px] font-sans text-white min-w-0"
+                    style={{ flex: 1, minWidth: 0 }}
                   >
-                    {activeOutputAmount !== null
-                      ? formatBalance(activeOutputAmount, 6)
-                      : "0"}
-                  </motion.p>
+                    <Text
+                      fontFamily="$body"
+                      fontSize={28}
+                      color="$neutral1"
+                    >
+                      {activeOutputAmount !== null
+                        ? formatBalance(activeOutputAmount, 6)
+                        : "0"}
+                    </Text>
+                  </motion.div>
                 </AnimatePresence>
                 <TokenSelectorButton
                   ref={toTokenBtnRef}
                   symbol={toToken.symbol}
                   onClick={() => setSelectorOpen("to")}
                 />
-              </div>
+              </Flex>
               {toUsdEquivalent !== null && toUsdEquivalent > 0 && (
-                <p className="mt-1 text-xs text-text-muted font-sans">
+                <Text
+                  fontFamily="$body"
+                  fontSize={13}
+                  lineHeight={16}
+                  color="$neutral3"
+                  marginTop="$spacing4"
+                >
                   ≈ ${formatBalance(toUsdEquivalent, 2)}
-                </p>
+                </Text>
               )}
-            </div>
+            </SwapSection>
 
             {/* Panora route error banner */}
             {usePanora && panoraError && (
-              <div className="mt-3 rounded-xl bg-cash-red/10 border border-cash-red/20 px-3 py-2.5">
-                <p className="text-xs text-cash-red">
+              <Flex
+                marginTop="$spacing12"
+                borderRadius="$rounded12"
+                padding="$spacing12"
+                backgroundColor="rgba(255, 89, 60, 0.10)"
+                borderWidth={1}
+                borderStyle="solid"
+                borderColor="rgba(255, 89, 60, 0.20)"
+              >
+                <Text fontFamily="$body" fontSize={13} lineHeight={16} color="$statusCritical">
                   ⚠ {panoraError}
-                </p>
-              </div>
+                </Text>
+              </Flex>
             )}
 
             {/* CTA Button */}
-            <button
-              onClick={swapCta.connectWallet ? () => setWalletSelectorOpen(true) : handleSwap}
+            <SwapCTAButton
               disabled={swapCta.disabled}
-              className="mt-4 w-full rounded-[20px] py-3.5 min-h-[56px] text-[17px] font-semibold transition-all
-                bg-primary text-primary-foreground hover:brightness-110
-                disabled:bg-[#393939] disabled:text-white/38 disabled:cursor-not-allowed"
+              onPress={swapCta.connectWallet ? () => setWalletSelectorOpen(true) : handleSwap}
+              data-testid="swap-cta"
             >
-              {isSwapping ? (
-                <span className="flex items-center justify-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {swapCta.label}
-                </span>
-              ) : (
-                swapCta.label
+              {isSwapping && (
+                <Loader2
+                  size={16}
+                  style={{
+                    animation: "spin 1s linear infinite",
+                    marginRight: 8,
+                  }}
+                  color="rgba(255,255,255,0.38)"
+                />
               )}
-            </button>
+              <Text
+                fontFamily="$button"
+                fontSize={17}
+                lineHeight={19.55}
+                fontWeight="535"
+                color={swapCta.disabled ? "$neutral3" : "$neutral1"}
+              >
+                {swapCta.label}
+              </Text>
+            </SwapCTAButton>
 
             {/* Price Details (expandable) — below CTA */}
             <SwapPriceDetails
@@ -692,25 +966,31 @@ export function SwapWidget(): React.ReactElement {
             transition={{ duration: 0.15 }}
           >
             {/* Buy/Sell Toggle */}
-            <div className="mb-4 flex items-center gap-1 rounded-full bg-background p-1">
+            <Flex row alignItems="center" gap="$spacing4" marginBottom="$spacing16">
               {(["buy", "sell"] as const).map((side) => (
-                <button
+                <Flex
                   key={side}
-                  onClick={() => setLimitSide(side)}
-                  className={`relative flex-1 rounded-full px-4 py-2 min-h-[44px] text-sm font-semibold transition-colors ${
-                    limitSide === side
-                      ? side === "buy"
-                        ? "text-primary-foreground"
-                        : "text-white"
-                      : "text-text-muted hover:text-text-secondary"
-                  }`}
+                  tag="button"
+                  flex={1}
+                  alignItems="center"
+                  justifyContent="center"
+                  borderRadius="$roundedFull"
+                  paddingVertical="$spacing8"
+                  minHeight={44}
+                  cursor="pointer"
+                  position="relative"
+                  onPress={() => setLimitSide(side)}
                 >
                   {limitSide === side && (
                     <motion.div
                       layoutId="limit-side-indicator"
-                      className={`absolute inset-0 rounded-full ${
-                        side === "buy" ? "bg-cash-green" : "bg-cash-red"
-                      }`}
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        borderRadius: 999999,
+                        backgroundColor:
+                          side === "buy" ? "#21C95E" : "#FF593C",
+                      }}
                       transition={{
                         type: "spring",
                         stiffness: 400,
@@ -718,92 +998,150 @@ export function SwapWidget(): React.ReactElement {
                       }}
                     />
                   )}
-                  <span className="relative z-10 capitalize">{side}</span>
-                </button>
+                  <Text
+                    fontFamily="$button"
+                    fontSize={15}
+                    lineHeight={17.25}
+                    fontWeight="535"
+                    color={
+                      limitSide === side
+                        ? "$neutral1"
+                        : "$neutral2"
+                    }
+                    position="relative"
+                    zIndex={1}
+                    textTransform="capitalize"
+                  >
+                    {side}
+                  </Text>
+                </Flex>
               ))}
-            </div>
+            </Flex>
 
             {/* Price Input */}
-            <div className="rounded-2xl bg-[#1F1F1F] border border-[#1F1F1F] hover:border-[#242424] focus-within:border-white/12 p-4 mb-3 transition-colors">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-text-muted">Price (USD1)</span>
-              </div>
+            <SwapSection marginBottom="$spacing12">
+              <Flex row alignItems="center" justifyContent="space-between" marginBottom="$spacing8">
+                <Text fontFamily="$body" fontSize={13} lineHeight={16} color="$neutral3">
+                  Price (USD1)
+                </Text>
+              </Flex>
               <input
                 type="text"
                 inputMode="decimal"
                 placeholder="0.00"
                 value={limitPrice}
                 onChange={handleLimitPriceChange}
-                className="w-full bg-transparent text-[28px] font-sans text-white placeholder:text-text-muted outline-none"
+                style={{
+                  width: "100%",
+                  background: "transparent",
+                  fontSize: 28,
+                  fontFamily: "var(--font-geist-sans), sans-serif",
+                  color: "#FFFFFF",
+                  border: "none",
+                  outline: "none",
+                  padding: 0,
+                }}
+                className="placeholder:text-[rgba(255,255,255,0.38)]"
               />
-            </div>
+            </SwapSection>
 
             {/* Amount Input */}
-            <div className="rounded-2xl bg-[#1F1F1F] border border-[#1F1F1F] hover:border-[#242424] focus-within:border-white/12 p-4 mb-3 transition-colors">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-text-muted">Amount (CASH)</span>
+            <SwapSection marginBottom="$spacing12">
+              <Flex row alignItems="center" justifyContent="space-between" marginBottom="$spacing8">
+                <Text fontFamily="$body" fontSize={13} lineHeight={16} color="$neutral3">
+                  Amount (CASH)
+                </Text>
                 {connected && balances && (
-                  <span className="text-xs text-text-muted">
+                  <Text fontFamily="$body" fontSize={13} lineHeight={16} color="$neutral3">
                     Balance:{" "}
-                    <span className="font-sans text-text-secondary">
+                    <Text fontFamily="$body" fontSize={13} lineHeight={16} color="$neutral2">
                       {limitSide === "sell"
                         ? formatBalance(balances.cash.available, 4)
                         : formatBalance(balances.usdc.available, 4)}
-                    </span>
-                  </span>
+                    </Text>
+                  </Text>
                 )}
-              </div>
+              </Flex>
               <input
                 type="text"
                 inputMode="decimal"
                 placeholder="0.00"
                 value={limitAmount}
                 onChange={handleLimitAmountChange}
-                className="w-full bg-transparent text-[28px] font-sans text-white placeholder:text-text-muted outline-none"
+                style={{
+                  width: "100%",
+                  background: "transparent",
+                  fontSize: 28,
+                  fontFamily: "var(--font-geist-sans), sans-serif",
+                  color: "#FFFFFF",
+                  border: "none",
+                  outline: "none",
+                  padding: 0,
+                }}
+                className="placeholder:text-[rgba(255,255,255,0.38)]"
               />
-            </div>
+            </SwapSection>
 
             {/* Order Total */}
             {limitPrice && limitAmount && parseFloat(limitPrice) > 0 && parseFloat(limitAmount) > 0 && (
-              <div className="rounded-2xl bg-[#1F1F1F] border border-[#1F1F1F] p-3 mb-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-text-muted">Total</span>
-                  <span className="font-sans text-white">
+              <Flex
+                backgroundColor="$surface2"
+                borderRadius="$rounded16"
+                borderWidth={1}
+                borderStyle="solid"
+                borderColor="$surface2"
+                padding="$spacing12"
+                marginBottom="$spacing12"
+              >
+                <Flex row alignItems="center" justifyContent="space-between">
+                  <Text fontFamily="$body" fontSize={15} lineHeight={19.5} color="$neutral3">
+                    Total
+                  </Text>
+                  <Text fontFamily="$body" fontSize={15} lineHeight={19.5} color="$neutral1">
                     {formatBalance(
                       parseFloat(limitPrice) * parseFloat(limitAmount),
                       2,
                     )}{" "}
                     USD1
-                  </span>
-                </div>
-              </div>
+                  </Text>
+                </Flex>
+              </Flex>
             )}
 
             {/* Place Order CTA */}
-            <button
-              onClick={limitCta.connectWallet ? () => setWalletSelectorOpen(true) : handlePlaceLimitOrder}
+            <SwapCTAButton
               disabled={limitCta.disabled}
-              className={`mt-1 w-full rounded-[20px] py-3.5 min-h-[56px] text-[17px] font-semibold transition-all
-                disabled:bg-[#393939] disabled:text-white/38 disabled:cursor-not-allowed
-                ${
-                  !limitCta.disabled
-                    ? limitCta.connectWallet
-                      ? "bg-primary text-primary-foreground hover:brightness-110"
-                      : limitSide === "buy"
-                        ? "bg-cash-green text-primary-foreground hover:brightness-110"
-                        : "bg-cash-red text-white hover:brightness-110"
-                    : ""
-                }`}
+              onPress={limitCta.connectWallet ? () => setWalletSelectorOpen(true) : handlePlaceLimitOrder}
+              {...(!limitCta.disabled && !limitCta.connectWallet
+                ? {
+                    backgroundColor:
+                      limitSide === "buy"
+                        ? "$statusSuccess"
+                        : "$statusCritical",
+                  }
+                : {})}
+              data-testid="limit-cta"
             >
-              {isPlacingOrder ? (
-                <span className="flex items-center justify-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {limitCta.label}
-                </span>
-              ) : (
-                limitCta.label
+              {isPlacingOrder && (
+                <Loader2
+                  size={16}
+                  style={{
+                    animation: "spin 1s linear infinite",
+                    marginRight: 8,
+                  }}
+                  color="rgba(255,255,255,0.38)"
+                />
               )}
-            </button>
+              <Text
+                fontFamily="$button"
+                fontSize={17}
+                lineHeight={19.55}
+                fontWeight="535"
+                color={limitCta.disabled ? "$neutral3" : "$neutral1"}
+              >
+                {limitCta.label}
+              </Text>
+            </SwapCTAButton>
           </motion.div>
         )}
       </AnimatePresence>
@@ -827,12 +1165,17 @@ export function SwapWidget(): React.ReactElement {
         isOpen={walletSelectorOpen}
         onClose={() => setWalletSelectorOpen(false)}
       />
-    </div>
+    </SwapContainer>
   );
 }
 
+// ---------------------------------------------------------------------------
+// TokenSelectorButton — Tamagui pill matching Uniswap's SelectTokenButton
+// ---------------------------------------------------------------------------
+
 /**
  * TokenSelectorButton — shows token icon + ticker with a chevron.
+ * Uses roundedFull border radius matching Uniswap's SelectTokenButton pattern.
  * Clicking opens the token selector modal.
  */
 const TokenSelectorButton = forwardRef<
@@ -844,21 +1187,84 @@ const TokenSelectorButton = forwardRef<
   if (!token) return <></>;
 
   return (
-    <button
-      ref={ref}
-      type="button"
-      onClick={onClick}
-      className="flex items-center gap-2 rounded-full bg-secondary px-3 py-2 min-h-[44px] shrink-0 hover:bg-surface-hover transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card"
+    <TokenPill
+      ref={ref as React.Ref<HTMLElement>}
+      onPress={onClick}
+      data-testid={`token-selector-${symbol}`}
     >
-      <div
-        className={`h-6 w-6 rounded-full bg-gradient-to-br ${token.gradient} flex items-center justify-center`}
+      {/* Token Icon — 28px circle */}
+      <Flex
+        width={28}
+        height={28}
+        borderRadius="$roundedFull"
+        alignItems="center"
+        justifyContent="center"
+        style={{
+          backgroundImage: `linear-gradient(to bottom right, ${getGradientColors(token.gradient)})`,
+        }}
       >
-        <span className="text-[10px] font-bold text-white">
+        <Text
+          fontFamily="$button"
+          fontSize={10}
+          fontWeight="535"
+          color="$neutral1"
+        >
           {token.symbol[0]}
-        </span>
-      </div>
-      <span className="text-sm font-medium text-white">{token.symbol}</span>
-      <ChevronDown className="h-3.5 w-3.5 text-text-muted" />
-    </button>
+        </Text>
+      </Flex>
+
+      {/* Token Name — buttonLabel2 (17px) */}
+      <Text
+        fontFamily="$button"
+        fontSize={17}
+        lineHeight={19.55}
+        fontWeight="535"
+        color="$neutral1"
+      >
+        {token.symbol}
+      </Text>
+
+      {/* Chevron — 20px, neutral2 */}
+      <ChevronDown size={20} color="rgba(255,255,255,0.65)" />
+    </TokenPill>
   );
 });
+
+/**
+ * Parse Tailwind gradient classes to CSS gradient colors.
+ * e.g. "from-green-400 to-emerald-600" → "#4ade80, #059669"
+ */
+function getGradientColors(gradient: string): string {
+  const colorMap: Record<string, string> = {
+    "green-400": "#4ade80",
+    "emerald-600": "#059669",
+    "blue-400": "#60a5fa",
+    "blue-600": "#2563eb",
+    "purple-400": "#c084fc",
+    "purple-600": "#9333ea",
+    "orange-400": "#fb923c",
+    "orange-600": "#ea580c",
+    "pink-400": "#f472b6",
+    "pink-600": "#db2777",
+    "yellow-400": "#facc15",
+    "yellow-600": "#ca8a04",
+    "cyan-400": "#22d3ee",
+    "cyan-600": "#0891b2",
+    "red-400": "#f87171",
+    "red-600": "#dc2626",
+    "teal-400": "#2dd4bf",
+    "teal-600": "#0d9488",
+    "indigo-400": "#818cf8",
+    "indigo-600": "#4f46e5",
+    "gray-400": "#9ca3af",
+    "gray-600": "#4b5563",
+  };
+
+  const fromMatch = gradient.match(/from-([a-z]+-\d+)/);
+  const toMatch = gradient.match(/to-([a-z]+-\d+)/);
+
+  const from = fromMatch ? colorMap[fromMatch[1]] ?? "#888" : "#888";
+  const to = toMatch ? colorMap[toMatch[1]] ?? "#666" : "#666";
+
+  return `${from}, ${to}`;
+}
