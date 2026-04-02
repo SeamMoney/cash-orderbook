@@ -11,7 +11,7 @@ services:
   api:
     start: NETWORK=testnet node api/dist/index.js &
     stop: lsof -ti :3100 | xargs kill 2>/dev/null || true
-    healthcheck: curl -sf http://localhost:3100/health
+    healthcheck: "lsof -iTCP:3100 -sTCP:LISTEN | grep -q node"
     port: 3100
     depends_on: []
 

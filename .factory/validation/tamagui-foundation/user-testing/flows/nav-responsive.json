@@ -1,0 +1,54 @@
+{
+  "groupId": "nav-responsive",
+  "milestone": "tamagui-foundation",
+  "testedAt": "2026-04-02T00:38:45.758327+00:00",
+  "isolation": {
+    "appUrl": "http://localhost:3102",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "browserSession": "nav-responsive-79476079",
+    "interactionBoundary": "read-only validation interactions (navigation, viewport resize, scroll, inspect, screenshots)"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertionResults": [
+    {
+      "id": "NAV-004",
+      "status": "pass",
+      "reason": "Navbar rendered at 72px height with surface1 background (rgb(19, 19, 19)). A wallet/auth trigger button is visible in the navbar right section as 'Log In' (top=19px,left=1266px,width=67px,height=35px,color=rgba(255, 255, 255, 0.65)). Clicking it opened the wallet connection modal with options including Aptos/Solana/Ethereum and social login providers; console errors remained empty.",
+      "evidence": [
+        "tamagui-foundation/nav-responsive/desktop-top-1440x900.png",
+        "tamagui-foundation/nav-responsive/nav-login-click-result.png"
+      ]
+    },
+    {
+      "id": "HEADER-004",
+      "status": "pass",
+      "reason": "Breadcrumb above token header uses an SVG chevron separator between 'Tokens' and 'CASH'. DOM sibling inspection returned [span 'Tokens', svg, span 'CASH'], confirming separator is an <svg> element and not text '>' or '/'. Console errors remained empty.",
+      "evidence": [
+        "tamagui-foundation/nav-responsive/header-breadcrumb-desktop.png"
+      ]
+    },
+    {
+      "id": "CROSS-002",
+      "status": "pass",
+      "reason": "At 1023x768 viewport, main layout computed styles showed display:flex with flex-direction:column and only one primary child column (childCount=1), confirming two-column collapse below 1024px. Horizontal overflow check was false (document scrollWidth=1023, clientWidth=1023).",
+      "evidence": [
+        "tamagui-foundation/nav-responsive/cross-002-1023x768.png"
+      ]
+    },
+    {
+      "id": "CROSS-003",
+      "status": "pass",
+      "reason": "Desktop (1440x900): swap sidebar ancestor computed position:sticky with top:72px; after scrolling to scrollY=446 it remained pinned at topViewport=72, confirming sticky right sidebar behavior. Mobile (<1024): at 768x1024 layout computed flex-direction:column and swap container/button computed position:static with inline width (container width=728px, button width=710px), confirming inline flow instead of fixed sidebar.",
+      "evidence": [
+        "tamagui-foundation/nav-responsive/desktop-sticky-scroll-1440x900.png",
+        "tamagui-foundation/nav-responsive/mobile-inline-swap-768x1024.png",
+        "tamagui-foundation/nav-responsive/mobile-top-768x1024.png"
+      ]
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Validated 4 assigned assertions on localhost:3102: NAV-004 pass, HEADER-004 pass, CROSS-002 pass, CROSS-003 pass. No blockers and no browser console errors observed."
+}

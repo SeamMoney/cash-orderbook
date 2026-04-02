@@ -24,5 +24,16 @@
 
 - Use production build (`next start`) not dev server for visual testing — dev server has CSS rendering issues in headless mode
 - API returns 429 under heavy polling — space out requests or use single-request checks
+- `GET /health` can also be rate-limited during validation; prefer a port-listener healthcheck for API readiness (`lsof -iTCP:3100 -sTCP:LISTEN`)
 - Transaction table may be empty if no recent trades — functional assertions should account for empty state
 - Wallet connection requires browser extension or Aptos Connect — headless testing may show "Connect Wallet" state only
+- When validating nav hover states, use exact-text targeting for `Explore` to avoid collisions with `Explorer`.
+
+## Flow Validator Guidance: web
+
+- Surface URL: `http://localhost:3102`.
+- Validation scope for this milestone is visual/layout/theme assertions plus wallet modal visibility; no swap execution or data mutation flows are required.
+- Each flow validator must use its own browser session name and must not reuse another validator's session.
+- Allowed interactions: navigation, viewport resizing, scrolling, opening menus/modals, computed-style reads, screenshots.
+- Avoid actions that can cause cross-validator interference (for example repeatedly triggering heavy refresh loops that can cause API 429 noise).
+- Keep evidence isolated per group under `{missionDir}/evidence/tamagui-foundation/<group-id>/`.

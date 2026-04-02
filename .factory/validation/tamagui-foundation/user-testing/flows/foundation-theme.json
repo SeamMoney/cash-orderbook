@@ -1,0 +1,79 @@
+{
+  "groupId": "foundation-theme",
+  "testedAt": "2026-04-02T00:38:46Z",
+  "milestone": "tamagui-foundation",
+  "isolation": {
+    "appUrl": "http://localhost:3102",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "browserSession": "foundation-theme-79476079",
+    "interactionMode": "read-only validation"
+  },
+  "toolsUsed": [
+    "agent-browser",
+    "Read",
+    "Grep"
+  ],
+  "assertionResults": [
+    {
+      "id": "FOUNDATION-001",
+      "status": "pass",
+      "reason": "Page rendered successfully at http://localhost:3102 with dark theme active (computed body background: rgb(19, 19, 19)). No Tamagui/React hydration errors were found in filtered console checks (no matches for tamagui|hydrat|react). Console had repeated 429 API errors, but none referenced Tamagui provider/rendering.",
+      "evidence": [
+        "tamagui-foundation/foundation-theme/FOUNDATION-001-page-load.png",
+        "tamagui-foundation/foundation-theme/foundation-console.log"
+      ]
+    },
+    {
+      "id": "FOUNDATION-002",
+      "status": "pass",
+      "reason": "Surface tokens are defined in web/tamagui.config.ts (surface1 #131313, surface2 #1F1F1F, surface2Hovered #242424, surface3 rgba(255,255,255,0.12), surface3Solid #393939). Computed UI values: body background rgb(19, 19, 19), token selector background rgb(31, 31, 31), stat row border-bottom oklab(... / 0.12) with 1px solid, and an input card border candidate at rgb(36, 36, 36) (#242424).",
+      "evidence": [
+        "tamagui-foundation/foundation-theme/FOUNDATION-002-surface-colors.png",
+        "tamagui-foundation/foundation-theme/FOUNDATION-002-hover-check.txt",
+        "tamagui-foundation/foundation-theme/foundation-style-observations.json",
+        "/Users/maxmohammadi/cash-orderbook/web/tamagui.config.ts"
+      ]
+    },
+    {
+      "id": "FOUNDATION-003",
+      "status": "pass",
+      "reason": "Neutral text colors are applied: heading text computed as rgb(255, 255, 255) (neutral1), secondary labels include rgba(255, 255, 255, 0.65) / oklab(... / 0.65) (neutral2), and muted text/placeholder computed as rgba(255, 255, 255, 0.38) (neutral3).",
+      "evidence": [
+        "tamagui-foundation/foundation-theme/FOUNDATION-003-neutral-colors.png",
+        "tamagui-foundation/foundation-theme/FOUNDATION-003-neutral-color-samples.json",
+        "tamagui-foundation/foundation-theme/foundation-style-observations.json"
+      ]
+    },
+    {
+      "id": "FOUNDATION-006",
+      "status": "pass",
+      "reason": "Computed page background on <body> is exactly rgb(19, 19, 19), matching #131313.",
+      "evidence": [
+        "tamagui-foundation/foundation-theme/FOUNDATION-006-page-background.png",
+        "tamagui-foundation/foundation-theme/foundation-style-observations.json"
+      ]
+    },
+    {
+      "id": "FOUNDATION-007",
+      "status": "pass",
+      "reason": "Theme config defines required spacing tokens (4, 8, 12, 16, 20, 24, 32, 40, 48, 60) in web/tamagui.config.ts. Rendered UI computed styles confirm at least 5 values in use: 4px (nav gap), 8px, 12px, 16px, 20px, 24px, 32px, 40px, and 48px.",
+      "evidence": [
+        "tamagui-foundation/foundation-theme/FOUNDATION-007-spacing-layout.png",
+        "tamagui-foundation/foundation-theme/foundation-style-observations.json",
+        "/Users/maxmohammadi/cash-orderbook/web/tamagui.config.ts"
+      ]
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Console output was noisy with continuous 429 responses during visual validation, which can obscure UI-framework error scanning.",
+      "resolved": true,
+      "resolution": "Used focused console filtering (tamagui|hydrat|react) and style-based checks for assigned assertions.",
+      "affectedAssertions": [
+        "FOUNDATION-001"
+      ]
+    }
+  ],
+  "blockers": [],
+  "summary": "Validated 5 assigned assertions (FOUNDATION-001, 002, 003, 006, 007): 5 pass, 0 fail, 0 blocked. Evidence saved under missionDir/evidence/tamagui-foundation/foundation-theme and flow report written to the assigned output path."
+}

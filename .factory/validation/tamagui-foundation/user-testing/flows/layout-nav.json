@@ -1,0 +1,75 @@
+{
+  "groupId": "layout-nav",
+  "testedAt": "2026-04-02T00:37:37Z",
+  "isolation": {
+    "milestone": "tamagui-foundation",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "appUrl": "http://localhost:3102",
+    "browserSession": "layout-nav-79476079",
+    "interactionMode": "read-only validation interactions"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertionResults": [
+    {
+      "id": "FOUNDATION-004",
+      "status": "pass",
+      "reason": "At 1440x900, the desktop layout renders two columns with required dimensions: main max-width 1200px, content wrapper gap 80px, horizontal padding 40px, and right panel width 360px.",
+      "evidence": [
+        "tamagui-foundation/layout-nav/FOUNDATION-004-desktop-1440x900-annotated.png",
+        "Computed styles observed: main.maxWidth=1200px; layout.gap=80px; layout.paddingLeft=40px; layout.paddingRight=40px; rightPanel.width=360px; leftPanel.width=680px."
+      ]
+    },
+    {
+      "id": "FOUNDATION-005",
+      "status": "fail",
+      "reason": "At 768x1024, layout stacks to one column and no horizontal overflow occurs, but horizontal padding is 20px per side instead of required 16px.",
+      "evidence": [
+        "tamagui-foundation/layout-nav/FOUNDATION-005-mobile-768x1024-annotated.png",
+        "tamagui-foundation/layout-nav/FOUNDATION-005-mobile-768x1024-full.png",
+        "Computed styles observed: layout.flexDirection=column; layout.gap=0px; layout.paddingLeft=20px; layout.paddingRight=20px; leftPanel.width=728px; htmlScrollWidth=768 equals viewportWidth=768 (no overflow). Swap widget tabs render inline in content flow below stats at y=924.5."
+      ]
+    },
+    {
+      "id": "NAV-001",
+      "status": "pass",
+      "reason": "Navbar renders at exact required height and full viewport width with matching surface1 background.",
+      "evidence": [
+        "tamagui-foundation/layout-nav/NAV-001-003-navbar-desktop-1440x900-annotated.png",
+        "Computed styles observed: header.height=72px; header.width=1440px at viewport 1440px; header.backgroundColor=rgb(19, 19, 19)."
+      ]
+    },
+    {
+      "id": "NAV-002",
+      "status": "fail",
+      "reason": "Tab typography and active/inactive colors match (Trade 15px white, Explore 15px rgba(255,255,255,0.65)), and hover changes Explore to white, but hover transition is not smooth because computed transition-duration is 0s.",
+      "evidence": [
+        "tamagui-foundation/layout-nav/NAV-001-003-navbar-desktop-1440x900-annotated.png",
+        "tamagui-foundation/layout-nav/NAV-002-hover-explore-1440x900-annotated.png",
+        "Computed styles observed: Trade.fontSize=15px, Trade.color=rgb(255,255,255); Explore.fontSize=15px, Explore.color=rgba(255,255,255,0.65) idle -> rgb(255,255,255) on hover; Explore.transitionProperty=all; Explore.transitionDuration=0s."
+      ]
+    },
+    {
+      "id": "NAV-003",
+      "status": "pass",
+      "reason": "Search bar styling matches expected surface2 background and neutral3 placeholder color with rounded shape.",
+      "evidence": [
+        "tamagui-foundation/layout-nav/NAV-001-003-navbar-desktop-1440x900-annotated.png",
+        "Computed styles observed: searchContainer.width=280px; searchContainer.height=40px; searchContainer.backgroundColor=rgb(31, 31, 31); searchContainer.borderRadius=999999px; placeholderText('Search tokens').color=rgba(255, 255, 255, 0.38)."
+      ]
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Hovering by text locator 'Explore' initially failed because both 'Explore' and 'Explorer' matched in strict mode.",
+      "resolved": true,
+      "resolution": "Used exact text matching ('find text \"Explore\" hover --exact').",
+      "affectedAssertions": [
+        "NAV-002"
+      ]
+    }
+  ],
+  "blockers": [],
+  "summary": "Validated 5 assigned assertions on localhost:3102. Passed: FOUNDATION-004, NAV-001, NAV-003. Failed: FOUNDATION-005 (20px mobile horizontal padding instead of required 16px) and NAV-002 (hover transition-duration is 0s). Console error checks returned none. Relevant network activity observed during validation includes GET / (3102), static assets, and API fetches to /depth, /market, /candles, and /trades on localhost:3100."
+}
