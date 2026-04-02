@@ -32,6 +32,13 @@ import { createTDPStore } from '~/pages/TokenDetails/context/createTDPStore'
 
 const CASH_GREEN = '#00D54B'
 
+/** CASH contract address on Aptos */
+const CASH_CONTRACT_ADDRESS = '0xe66fef668077ab8dc5ea65539b6250d8ca3fc024ea4f16555fca9eaeb73b41d1'
+
+/** Full CASH token description (from web/components/token-info.tsx) */
+const CASH_DESCRIPTION =
+  'CASH is a token on the Aptos blockchain powering the CASH Orderbook, a high-performance Central Limit Order Book (CLOB) for zero-slippage trading. Built on Aptos\' parallel execution engine (Block-STM), the CASH Orderbook delivers sub-second finality and throughput exceeding 100,000 transactions per second, enabling institutional-grade trading with price-time priority matching, maker/taker fee tiers, and full on-chain settlement via the FungibleAsset standard.'
+
 /** Map TimePeriod → API candle interval */
 const PERIOD_TO_INTERVAL: Record<TimePeriod, CashCandleInterval> = {
   [TimePeriod.HOUR]: '1m',
@@ -88,10 +95,9 @@ function buildTokenQueryData(market: {
         __typename: 'TokenProject' as const,
         id: 'cash-project',
         name: 'CASH',
-        description:
-          'CASH is a spot trading token on the Aptos blockchain. It powers the CASH Central Limit Order Book (CLOB), providing decentralized price discovery and settlement for digital assets.',
-        homepageUrl: null,
-        twitterName: null,
+        description: CASH_DESCRIPTION,
+        homepageUrl: 'https://github.com/nicholasgasior/cash-orderbook',
+        twitterName: 'CashOrderbook',
         logoUrl: null,
         isSpam: false,
         tokens: [
@@ -276,13 +282,17 @@ export function CashTDPProvider({ children }: CashTDPProviderProps): JSX.Element
   const { data: tokenData, loading: tokenLoading } = useCashTokenData()
   const chartState = useCashChartState()
 
-  // Use Ethereum native currency as a stand-in, but override name/symbol to "CASH"
-  // so the header and other TDP components display the correct token identity.
+  // Create a Token-like currency for CASH so the header shows name/symbol and
+  // the address pill renders the contract address with a copy button.
   const currency = useMemo(() => {
     const native = nativeOnChain(UniverseChainId.Mainnet)
     return Object.create(native, {
       name: { value: 'CASH', writable: false, enumerable: true, configurable: true },
       symbol: { value: 'CASH', writable: false, enumerable: true, configurable: true },
+      // Mark as non-native so the contract address pill appears in the header
+      isNative: { value: false, writable: false, enumerable: true, configurable: true },
+      isToken: { value: true, writable: false, enumerable: true, configurable: true },
+      address: { value: CASH_CONTRACT_ADDRESS, writable: false, enumerable: true, configurable: true },
     }) as typeof native
   }, [])
 
@@ -314,7 +324,7 @@ export function CashTDPProvider({ children }: CashTDPProviderProps): JSX.Element
       currency,
       currencyChain: GraphQLApi.Chain.Ethereum,
       currencyChainId: UniverseChainId.Mainnet,
-      address: 'NATIVE',
+      address: CASH_CONTRACT_ADDRESS,
       tokenQuery,
       chartState,
       multiChainMap,

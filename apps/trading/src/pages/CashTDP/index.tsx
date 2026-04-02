@@ -9,7 +9,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { Helmet } from 'react-helmet-async/lib/index'
 import { Flex, Text } from 'ui/src'
 import { CashTDPProvider } from '~/pages/CashTDP/CashTDPProvider'
-import { TokenDetailsContent } from '~/pages/TokenDetails/components/TokenDetails'
+import { CashTokenDetailsContent } from '~/pages/CashTDP/CashTokenDetailsContent'
 
 // ---------------------------------------------------------------------------
 // Error boundary — catches EVM-specific crashes (wagmi, provider context, etc.)
@@ -68,7 +68,7 @@ export default function CashTokenDetailPage() {
         }
       >
         <CashTDPProvider>
-          <TokenDetailsContent isCompact={false} />
+          <CashTokenDetailsContent isCompact={false} />
         </CashTDPProvider>
       </TDPErrorBoundary>
     </>

@@ -1,14 +1,16 @@
 /**
- * CASH transactions table — displays recent trades from our REST API.
+ * CASH activity section — displays recent trades from our REST API with
+ * real-time WebSocket updates.
+ *
+ * Replaces the Uniswap ActivitySection which queries GraphQL for ETH transactions.
  */
 
 import { Flex, Text } from 'ui/src'
-import type { CashTrade } from '~/data/api'
+import { useCashTrades } from '~/data/hooks'
 
-interface CashTransactionsTableProps {
-  trades: CashTrade[]
-  loading: boolean
-}
+// ---------------------------------------------------------------------------
+// Formatting helpers
+// ---------------------------------------------------------------------------
 
 function formatTime(timestamp: number): string {
   const date = new Date(timestamp)
@@ -21,8 +23,42 @@ function formatTime(timestamp: number): string {
   return date.toLocaleDateString()
 }
 
-function TradeRow({ trade }: { trade: CashTrade }) {
-  const sideColor = trade.side === 'buy' ? '#21C95E' : '#FF593C'
+function formatPrice(price: number): string {
+  if (price >= 1) return `$${price.toFixed(2)}`
+  return `$${price.toFixed(4)}`
+}
+
+function formatAmount(quantity: number): string {
+  if (quantity >= 1_000_000) return `${(quantity / 1_000_000).toFixed(2)}M`
+  if (quantity >= 1_000) return `${(quantity / 1_000).toFixed(2)}K`
+  return quantity.toLocaleString(undefined, { maximumFractionDigits: 2 })
+}
+
+function formatTotal(price: number, quantity: number): string {
+  const total = price * quantity
+  if (total >= 1_000_000) return `$${(total / 1_000_000).toFixed(2)}M`
+  if (total >= 1_000) return `$${(total / 1_000).toFixed(2)}K`
+  return `$${total.toFixed(2)}`
+}
+
+// ---------------------------------------------------------------------------
+// Trade row component
+// ---------------------------------------------------------------------------
+
+interface TradeRowProps {
+  trade: {
+    id: string
+    price: number
+    quantity: number
+    side: 'buy' | 'sell'
+    timestamp: number
+  }
+}
+
+function TradeRow({ trade }: TradeRowProps) {
+  const isBuy = trade.side === 'buy'
+  const sideColor = isBuy ? '#21C95E' : '#FF593C'
+  const sideLabel = isBuy ? 'Buy' : 'Sell'
 
   return (
     <Flex
@@ -33,35 +69,41 @@ function TradeRow({ trade }: { trade: CashTrade }) {
       alignItems="center"
     >
       <Flex flex={1}>
-        <Text variant="body3" style={{ color: sideColor }} textTransform="capitalize">
-          {trade.side}
-        </Text>
-      </Flex>
-      <Flex flex={1} alignItems="flex-end">
-        <Text variant="body3" color="$neutral1">
-          ${trade.price.toFixed(4)}
-        </Text>
-      </Flex>
-      <Flex flex={1} alignItems="flex-end">
-        <Text variant="body3" color="$neutral1">
-          {trade.quantity.toLocaleString()}
-        </Text>
-      </Flex>
-      <Flex flex={1} alignItems="flex-end">
-        <Text variant="body3" color="$neutral2">
-          ${(trade.price * trade.quantity).toFixed(2)}
-        </Text>
-      </Flex>
-      <Flex flex={1} alignItems="flex-end">
         <Text variant="body3" color="$neutral2">
           {formatTime(trade.timestamp)}
+        </Text>
+      </Flex>
+      <Flex flex={1}>
+        <Text variant="body3" style={{ color: sideColor }} fontWeight="$medium">
+          {sideLabel}
+        </Text>
+      </Flex>
+      <Flex flex={1} alignItems="flex-end">
+        <Text variant="body3" color="$neutral1">
+          {formatPrice(trade.price)}
+        </Text>
+      </Flex>
+      <Flex flex={1} alignItems="flex-end">
+        <Text variant="body3" color="$neutral1">
+          {formatAmount(trade.quantity)}
+        </Text>
+      </Flex>
+      <Flex flex={1} alignItems="flex-end">
+        <Text variant="body3" color="$neutral2">
+          {formatTotal(trade.price, trade.quantity)}
         </Text>
       </Flex>
     </Flex>
   )
 }
 
-export function CashTransactionsTable({ trades, loading }: CashTransactionsTableProps) {
+// ---------------------------------------------------------------------------
+// Main activity section
+// ---------------------------------------------------------------------------
+
+export function CashActivitySection() {
+  const { trades, loading } = useCashTrades(50)
+
   return (
     <Flex width="100%" data-testid="cash-transactions-section">
       <Text variant="heading3" mb="$spacing24">
@@ -75,6 +117,11 @@ export function CashTransactionsTable({ trades, loading }: CashTransactionsTable
         borderBottomWidth={0.5}
         borderBottomColor="$surface3"
       >
+        <Flex flex={1}>
+          <Text variant="body3" color="$neutral2" fontWeight="$medium">
+            Time
+          </Text>
+        </Flex>
         <Flex flex={1}>
           <Text variant="body3" color="$neutral2" fontWeight="$medium">
             Type
@@ -93,11 +140,6 @@ export function CashTransactionsTable({ trades, loading }: CashTransactionsTable
         <Flex flex={1} alignItems="flex-end">
           <Text variant="body3" color="$neutral2" fontWeight="$medium">
             Total
-          </Text>
-        </Flex>
-        <Flex flex={1} alignItems="flex-end">
-          <Text variant="body3" color="$neutral2" fontWeight="$medium">
-            Time
           </Text>
         </Flex>
       </Flex>
