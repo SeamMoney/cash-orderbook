@@ -15,7 +15,7 @@ const NETWORK_PARAM = "?network=mainnet";
 const WEBSITE_URL = "https://github.com/nicholasgasior/cash-orderbook";
 
 const TOKEN_DESCRIPTION =
-  "CASH is a token on the Aptos blockchain powering the CASH Orderbook, a high-performance Central Limit Order Book (CLOB) for zero-slippage trading.";
+  "CASH is a token on the Aptos blockchain powering the CASH Orderbook, a high-performance Central Limit Order Book (CLOB) for zero-slippage trading. Built on Aptos' parallel execution engine (Block-STM), the CASH Orderbook delivers sub-second finality and throughput exceeding 100,000 transactions per second, enabling institutional-grade trading with price-time priority matching, maker/taker fee tiers, and full on-chain settlement via the FungibleAsset standard.";
 
 const TRUNCATE_CHARACTER_COUNT = 300;
 

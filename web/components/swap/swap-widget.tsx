@@ -937,7 +937,7 @@ export function SwapWidget(): React.ReactElement {
                 fontFamily="$button"
                 fontSize={17}
                 lineHeight={19.55}
-                fontWeight="535"
+                fontWeight="485"
                 color={swapCta.disabled ? "$neutral3" : "$neutral1"}
               >
                 {swapCta.label}
@@ -1139,7 +1139,7 @@ export function SwapWidget(): React.ReactElement {
                 fontFamily="$button"
                 fontSize={17}
                 lineHeight={19.55}
-                fontWeight="535"
+                fontWeight="485"
                 color={limitCta.disabled ? "$neutral3" : "$neutral1"}
               >
                 {limitCta.label}

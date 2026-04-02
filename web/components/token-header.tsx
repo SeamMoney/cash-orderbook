@@ -105,7 +105,7 @@ export function TokenHeader({ price }: TokenHeaderProps): React.ReactElement {
               </Text>
             </Flex>
 
-            {/* Compact name */}
+            {/* Compact name + price */}
             <Text
               fontFamily="$body"
               fontSize={17}
@@ -117,19 +117,16 @@ export function TokenHeader({ price }: TokenHeaderProps): React.ReactElement {
               CASH
             </Text>
 
-            {/* Price in compact header */}
-            {price != null && (
-              <Text
-                fontFamily="$body"
-                fontSize={17}
-                lineHeight={20}
-                fontWeight="485"
-                color="$neutral2"
-                style={{ transition: HEADER_TRANSITION }}
-              >
-                ${price.toFixed(4)}
-              </Text>
-            )}
+            <Text
+              fontFamily="$body"
+              fontSize={17}
+              lineHeight={20}
+              fontWeight="485"
+              color="$neutral2"
+              style={{ transition: HEADER_TRANSITION }}
+            >
+              {price != null ? `$${price.toFixed(4)}` : "–"}
+            </Text>
           </Flex>
         </Flex>
       </div>
