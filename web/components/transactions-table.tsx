@@ -11,6 +11,8 @@ import {
 } from "@tanstack/react-table";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Text } from "@tamagui/core";
+import { Flex } from "@/components/ui/Flex";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TradeEntry } from "@/components/orderbook/trade-ticker";
 
@@ -69,13 +71,15 @@ interface TransactionsTableProps {
 /**
  * TransactionsTable — recent trades table using @tanstack/react-table.
  *
- * Features:
- * - Columns: Time, Type, Price, Amount, Address
- * - Buy rows green, sell rows red
- * - Sortable columns (click header)
- * - New trades animate in via Framer Motion
- * - Empty state when no trades
- * - Monospace font for numbers
+ * Migrated to Tamagui matching Uniswap's ActivitySection pattern:
+ * - Section heading: Text heading3 (25px/30px), neutral1
+ * - Table headers: Text body4 (13px), neutral2 color
+ * - Table cells: Text body4 (13px), neutral1 for values
+ * - Row height: ~52px (paddingVertical ~18px)
+ * - Row borders: surface3
+ * - Buy/sell: statusSuccess / statusCritical
+ *
+ * Preserves @tanstack/react-table, sort, and animated row entry.
  */
 export function TransactionsTable({
   trades,
@@ -89,7 +93,16 @@ export function TransactionsTable({
         accessorKey: "timestamp",
         header: "Time",
         cell: ({ getValue }) => (
-          <span className="text-white/65">{timeAgo(getValue<number>())}</span>
+          <Text
+            fontFamily="$body"
+            fontSize={13}
+            lineHeight={16}
+            fontWeight="485"
+            color="$neutral2"
+            data-testid="cell-time"
+          >
+            {timeAgo(getValue<number>())}
+          </Text>
         ),
         sortingFn: "basic",
       },
@@ -99,13 +112,16 @@ export function TransactionsTable({
         cell: ({ getValue }) => {
           const side = getValue<"buy" | "sell">();
           return (
-            <span
-              className={`font-medium ${
-                side === "buy" ? "text-cash-green" : "text-cash-red"
-              }`}
+            <Text
+              fontFamily="$body"
+              fontSize={13}
+              lineHeight={16}
+              fontWeight="535"
+              color={side === "buy" ? "$statusSuccess" : "$statusCritical"}
+              data-testid="cell-type"
             >
               {side === "buy" ? "Buy" : "Sell"}
-            </span>
+            </Text>
           );
         },
         sortingFn: "basic",
@@ -114,7 +130,16 @@ export function TransactionsTable({
         accessorKey: "price",
         header: "Price",
         cell: ({ getValue }) => (
-          <span className="font-sans text-white">{formatPrice(getValue<number>())}</span>
+          <Text
+            fontFamily="$body"
+            fontSize={13}
+            lineHeight={16}
+            fontWeight="485"
+            color="$neutral1"
+            data-testid="cell-price"
+          >
+            {formatPrice(getValue<number>())}
+          </Text>
         ),
         sortingFn: "basic",
       },
@@ -122,7 +147,16 @@ export function TransactionsTable({
         accessorKey: "quantity",
         header: "Amount",
         cell: ({ getValue }) => (
-          <span className="font-sans text-white">{formatAmount(getValue<number>())}</span>
+          <Text
+            fontFamily="$body"
+            fontSize={13}
+            lineHeight={16}
+            fontWeight="485"
+            color="$neutral1"
+            data-testid="cell-amount"
+          >
+            {formatAmount(getValue<number>())}
+          </Text>
         ),
         sortingFn: "basic",
       },
@@ -134,13 +168,20 @@ export function TransactionsTable({
           (row as TradeEntry & { maker?: string; makerAddress?: string })
             .makerAddress ??
           null,
-        header: "Address",
+        header: "Wallet",
         cell: ({ getValue }) => {
           const addr = getValue<string | null>();
           return (
-            <span className="font-sans text-white/65">
+            <Text
+              fontFamily="$body"
+              fontSize={13}
+              lineHeight={16}
+              fontWeight="485"
+              color="$neutral2"
+              data-testid="cell-wallet"
+            >
               {addr ? truncateAddr(addr) : "—"}
-            </span>
+            </Text>
           );
         },
         enableSorting: false,
@@ -159,42 +200,61 @@ export function TransactionsTable({
   });
 
   return (
-    <div>
-      {/* Header */}
-      <div className="mb-4">
-        <h3 className="text-[25px] leading-[30px] font-medium text-white">Transactions</h3>
-      </div>
+    <Flex width="100%" data-testid="transactions-section">
+      {/* Section heading — heading3: 25px/30px, neutral1 */}
+      <Text
+        tag="h3"
+        fontFamily="$heading"
+        fontSize={25}
+        lineHeight={30}
+        fontWeight="485"
+        color="$neutral1"
+        marginBottom="$spacing24"
+        data-testid="transactions-heading"
+      >
+        Transactions
+      </Text>
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[400px] text-[13px]">
+      <Flex width="100%" style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", minWidth: 400, borderCollapse: "collapse" }}>
           {/* Column Headers */}
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
-              <tr
-                key={headerGroup.id}
-                className="border-b border-border text-white/65"
-              >
+              <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className={`pb-2 text-left font-normal ${
-                      header.column.getCanSort()
-                        ? "cursor-pointer select-none hover:text-text-secondary transition-colors"
-                        : ""
-                    } ${
-                      header.id === "price" ||
-                      header.id === "quantity" ||
-                      header.id === "address"
-                        ? "text-right"
-                        : ""
-                    }`}
                     onClick={header.column.getToggleSortingHandler()}
+                    data-testid="table-header"
+                    style={{
+                      paddingBottom: 8,
+                      textAlign:
+                        header.id === "price" ||
+                        header.id === "quantity" ||
+                        header.id === "address"
+                          ? "right"
+                          : "left",
+                      fontWeight: "normal",
+                      borderBottom: "1px solid rgba(255,255,255,0.12)",
+                      cursor: header.column.getCanSort() ? "pointer" : "default",
+                      userSelect: header.column.getCanSort() ? "none" : "auto",
+                    }}
                   >
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext(),
-                    )}
+                    <Text
+                      fontFamily="$body"
+                      fontSize={13}
+                      lineHeight={16}
+                      fontWeight="485"
+                      color="$neutral2"
+                      display="inline"
+                      data-testid="header-text"
+                    >
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
+                    </Text>
                     {header.column.getCanSort() && (
                       <SortIcon column={header.column} />
                     )}
@@ -211,25 +271,55 @@ export function TransactionsTable({
               Array.from({ length: 5 }).map((_, i) => (
                 <tr
                   key={`skel-${i}`}
-                  className="border-b border-border/50 last:border-0"
+                  style={{
+                    borderBottom:
+                      i < 4
+                        ? "1px solid rgba(255,255,255,0.12)"
+                        : "none",
+                  }}
                 >
-                  <td className="py-3"><Skeleton className="h-3 w-12 rounded" /></td>
-                  <td className="py-3"><Skeleton className="h-3 w-8 rounded" /></td>
-                  <td className="py-3 text-right"><Skeleton className="h-3 w-14 rounded ml-auto" /></td>
-                  <td className="py-3 text-right"><Skeleton className="h-3 w-12 rounded ml-auto" /></td>
-                  <td className="py-3 text-right"><Skeleton className="h-3 w-16 rounded ml-auto" /></td>
+                  <td style={{ paddingTop: 18, paddingBottom: 18 }}>
+                    <Skeleton className="h-3 w-12 rounded" />
+                  </td>
+                  <td style={{ paddingTop: 18, paddingBottom: 18 }}>
+                    <Skeleton className="h-3 w-8 rounded" />
+                  </td>
+                  <td style={{ paddingTop: 18, paddingBottom: 18, textAlign: "right" }}>
+                    <Skeleton className="h-3 w-14 rounded ml-auto" />
+                  </td>
+                  <td style={{ paddingTop: 18, paddingBottom: 18, textAlign: "right" }}>
+                    <Skeleton className="h-3 w-12 rounded ml-auto" />
+                  </td>
+                  <td style={{ paddingTop: 18, paddingBottom: 18, textAlign: "right" }}>
+                    <Skeleton className="h-3 w-16 rounded ml-auto" />
+                  </td>
                 </tr>
               ))
             ) : trades.length === 0 ? (
               /* Empty state */
               <tr>
-                <td colSpan={5} className="py-12 text-center">
-                  <div className="flex flex-col items-center gap-2">
-                    <span className="text-sm text-text-muted">No recent transactions</span>
-                    <span className="text-xs text-text-muted/60">
+                <td colSpan={5} style={{ paddingTop: 48, paddingBottom: 48, textAlign: "center" }}>
+                  <Flex alignItems="center" gap="$spacing8">
+                    <Text
+                      fontFamily="$body"
+                      fontSize={15}
+                      lineHeight={19.5}
+                      fontWeight="485"
+                      color="$neutral3"
+                    >
+                      No recent transactions
+                    </Text>
+                    <Text
+                      fontFamily="$body"
+                      fontSize={13}
+                      lineHeight={16}
+                      fontWeight="485"
+                      color="$neutral3"
+                      opacity={0.6}
+                    >
                       Trades will appear here in real-time
-                    </span>
-                  </div>
+                    </Text>
+                  </Flex>
                 </td>
               </tr>
             ) : (
@@ -242,18 +332,25 @@ export function TransactionsTable({
                     animate={{ opacity: 1, height: "auto", y: 0 }}
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.25, ease: "easeOut" }}
-                    className="border-b border-border/50 last:border-0"
+                    style={{
+                      borderBottom: "1px solid rgba(255,255,255,0.12)",
+                    }}
+                    data-testid="transaction-row"
                   >
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
-                        className={`py-3.5 ${
-                          cell.column.id === "price" ||
-                          cell.column.id === "quantity" ||
-                          cell.column.id === "address"
-                            ? "text-right"
-                            : ""
-                        }`}
+                        data-testid="table-cell"
+                        style={{
+                          paddingTop: 18,
+                          paddingBottom: 18,
+                          textAlign:
+                            cell.column.id === "price" ||
+                            cell.column.id === "quantity" ||
+                            cell.column.id === "address"
+                              ? "right"
+                              : "left",
+                        }}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
@@ -267,7 +364,7 @@ export function TransactionsTable({
             )}
           </tbody>
         </table>
-      </div>
-    </div>
+      </Flex>
+    </Flex>
   );
 }
