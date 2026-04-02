@@ -1,87 +1,25 @@
 {
   "milestone": "component-migration",
-  "round": 1,
+  "round": 4,
   "status": "fail",
   "assertionsSummary": {
-    "total": 33,
-    "passed": 25,
-    "failed": 3,
-    "blocked": 5
+    "total": 2,
+    "passed": 0,
+    "failed": 2,
+    "blocked": 0
   },
-  "passedAssertions": [
-    "ABOUT-001",
-    "ABOUT-002",
-    "CHART-001",
-    "CHART-002",
-    "CHART-003",
-    "CHART-004",
-    "CROSS-004",
-    "FUNC-001",
-    "FUNC-002",
-    "HEADER-001",
-    "HEADER-002",
-    "HEADER-003",
-    "STATS-001",
-    "STATS-002",
-    "STATS-003",
-    "STATS-004",
-    "STATS-005",
-    "SWAP-001",
-    "SWAP-002",
-    "SWAP-003",
-    "SWAP-004",
-    "SWAP-006",
-    "SWAP-007",
-    "TXN-001",
-    "TXN-003"
-  ],
+  "passedAssertions": [],
   "failedAssertions": [
     {
-      "id": "HEADER-005",
-      "reason": "Condensed sticky header appears on scroll but lacks required key price info (observed only \"CCASH\")."
-    },
-    {
       "id": "ABOUT-004",
-      "reason": "Link pill typography mismatch: observed 16px white text instead of 17px neutral2."
+      "reason": "Typography/color mismatch persists on link pills: expected 17px neutral2 text, observed 16px white text."
     },
     {
       "id": "SWAP-005",
-      "reason": "CTA typography mismatch: observed 16px/400 instead of 17px/medium."
+      "reason": "CTA typography mismatch persists: expected 17px/500, observed 16px/400."
     }
   ],
-  "blockedAssertions": [
-    {
-      "id": "ABOUT-003",
-      "blockedBy": "About description fixture is 146 chars (<300), so truncation toggle is not rendered."
-    },
-    {
-      "id": "TXN-002",
-      "blockedBy": "Transactions table stayed empty-state with no live rows to validate data-cell typography."
-    },
-    {
-      "id": "FUNC-003",
-      "blockedBy": "Could not confirm WS message flow under persistent API 429 noise during user-surface run."
-    },
-    {
-      "id": "FUNC-004",
-      "blockedBy": "Chart remained in error state under sustained API 429 responses, preventing live-update verification."
-    },
-    {
-      "id": "FUNC-005",
-      "blockedBy": "Connected-wallet balance state unreachable in headless session without wallet credentials/extension."
-    }
-  ],
-  "appliedUpdates": [
-    {
-      "target": "services.yaml",
-      "description": "Fixed service start commands: use APTOS_NETWORK=testnet and corrected websocket entry from api/dist/ws-server.js to api/dist/ws.js.",
-      "source": "setup"
-    },
-    {
-      "target": "user-testing.md",
-      "description": "Updated flow guidance for component-migration and documented corrected API/WS startup commands and constraints.",
-      "source": "setup"
-    }
-  ],
-  "previousRound": null
+  "blockedAssertions": [],
+  "appliedUpdates": [],
+  "previousRound": ".factory/validation/component-migration/user-testing/synthesis.round3.json"
 }

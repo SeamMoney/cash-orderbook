@@ -1,0 +1,70 @@
+{
+  "groupId": "ui-rerun-round4",
+  "testedAt": "2026-04-02T03:00:01Z",
+  "isolation": {
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "milestone": "component-migration",
+    "surface": "web",
+    "baseUrl": "http://localhost:3102",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "browserSession": "ui-rerun-round4-79476079"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "ABOUT-004",
+      "title": "Link pills use surface2 background, rounded20, body2 text 17px, neutral2 color",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Open http://localhost:3102, scroll to About section, and inspect computed styles on external link pills (Website/Explorer)",
+          "expected": "background rgb(31, 31, 31), border-radius 20px, font-size 17px, color rgba(255, 255, 255, 0.65)",
+          "observed": "Website and Explorer pills had background rgb(31, 31, 31) and border-radius 20px, but computed font-size was 16px and color was rgb(255, 255, 255)."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "component-migration/ui-rerun-round4/ABOUT-004-link-pills-round4.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Observed frontend fetches to GET http://localhost:3100/depth, GET /candles?interval=1h and 5m, and repeated GET /market during this run."
+      },
+      "issues": "Typography/color mismatch persists on link pills: expected 17px neutral2 text, observed 16px white text."
+    },
+    {
+      "id": "SWAP-005",
+      "title": "Main CTA button uses 17px text, medium weight, rounded20, min-height 56px",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Inspect computed styles of the main swap CTA (`Connect Wallet`) on http://localhost:3102",
+          "expected": "font-size 17px, font-weight medium (500), border-radius 20px, min-height 56px",
+          "observed": "CTA had border-radius 20px and min-height 56px, but computed font-size was 16px and font-weight was 400."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "component-migration/ui-rerun-round4/SWAP-005-cta-button-round4.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Observed frontend fetches to GET http://localhost:3100/depth, GET /candles?interval=1h and 5m, and repeated GET /market during this run."
+      },
+      "issues": "CTA typography mismatch persists: expected 17px/500, observed 16px/400."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "The tested token page exposed Website and Explorer pills but no Twitter pill, so style checks were performed on the visible external pills.",
+      "resolved": true,
+      "resolution": "Validated all available external link pills in the About section (Website, Explorer).",
+      "affectedAssertions": [
+        "ABOUT-004"
+      ]
+    }
+  ],
+  "blockers": [],
+  "summary": "Retested 2 assertions (ABOUT-004, SWAP-005): both failed. Background/radius requirements matched, but required 17px/neutral2 and 17px/medium typography values were still not met in the production surface."
+}

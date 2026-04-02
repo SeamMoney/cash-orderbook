@@ -1,0 +1,44 @@
+{
+  "milestone": "component-migration",
+  "round": 3,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 7,
+    "passed": 1,
+    "failed": 2,
+    "blocked": 4
+  },
+  "passedAssertions": [
+    "HEADER-005"
+  ],
+  "failedAssertions": [
+    {
+      "id": "ABOUT-004",
+      "reason": "Link pill typography mismatch persists: observed 16px white text instead of required 17px neutral2."
+    },
+    {
+      "id": "SWAP-005",
+      "reason": "CTA typography mismatch persists: observed 16px/400 instead of required 17px/medium."
+    }
+  ],
+  "blockedAssertions": [
+    {
+      "id": "TXN-002",
+      "blockedBy": "Blocked: no real transaction data rows rendered after retries/reloads (empty-state only), so body4/13px data-cell typography could not be measured."
+    },
+    {
+      "id": "FUNC-003",
+      "blockedBy": "Blocked: in-session WebSocket message receipt could not be observed; probe connected to ws://localhost:3101 but received zero messages during observation window."
+    },
+    {
+      "id": "FUNC-004",
+      "blockedBy": "Blocked: chart remained in \"Unable to load chart data\" state and showed no live updates during timed observation; repeated API 429 rate limiting observed."
+    },
+    {
+      "id": "FUNC-005",
+      "blockedBy": "Blocked: connected-wallet state could not be reached in headless environment due to missing wallet extension/credentials, so balances could not be validated."
+    }
+  ],
+  "appliedUpdates": [],
+  "previousRound": ".factory/validation/component-migration/user-testing/synthesis.round2.json"
+}

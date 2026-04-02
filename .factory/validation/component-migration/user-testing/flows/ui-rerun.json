@@ -1,0 +1,130 @@
+{
+  "groupId": "ui-rerun",
+  "testedAt": "2026-04-02T02:44:39Z",
+  "isolation": {
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "baseUrl": "http://localhost:3102",
+    "browserSession": "ui-rerun-validator-79476079",
+    "milestone": "component-migration",
+    "surface": "web"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "HEADER-005",
+      "title": "Sticky header behavior on scroll",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Open http://localhost:3102 and scroll down 500px",
+          "expected": "Condensed sticky header appears at top with token name and price",
+          "observed": "Sticky header appeared and remained pinned below navbar"
+        },
+        {
+          "action": "Scroll deeper (~1200px total) and inspect sticky text via DOM",
+          "expected": "Header still shows token name + concrete price text (not dash-only)",
+          "observed": "Sticky token text observed as `CCASH$0.0000` at top=72"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "component-migration/ui-rerun/HEADER-005-sticky-header-rerun.png",
+          "component-migration/ui-rerun/HEADER-005-sticky-header-deep-scroll-rerun.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Resource timing showed repeated API 429s on /market, /depth, /candles during run; sticky header still rendered token + numeric price"
+      },
+      "issues": null
+    },
+    {
+      "id": "ABOUT-004",
+      "title": "Link pills use surface2 background and rounded20",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Inspect computed styles for `Website`/`Explorer` link pills",
+          "expected": "background rgb(31,31,31), border-radius 20px, font-size 17px, color rgba(255,255,255,0.65)",
+          "observed": "background rgb(31,31,31) and border-radius 20px matched, but font-size was 16px and color was rgb(255,255,255)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "component-migration/ui-rerun/ABOUT-004-link-pills-rerun.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Repeated API 429s observed in resource timings (non-blocking for style read)"
+      },
+      "issues": "Typography/color mismatch persists: observed 16px white text instead of required 17px neutral2."
+    },
+    {
+      "id": "SWAP-005",
+      "title": "CTA button uses buttonLabel2 (17px), rounded20, 56px min-height",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Inspect computed styles for `Connect Wallet` CTA button",
+          "expected": "font-size 17px, medium weight, border-radius 20px, min-height 56px",
+          "observed": "border-radius 20px and min-height 56px matched, but font-size was 16px and font-weight was 400"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "component-migration/ui-rerun/SWAP-005-cta-button-rerun.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Repeated API 429s observed in resource timings (non-blocking for CTA style read)"
+      },
+      "issues": "CTA typography mismatch persists: 16px/400 instead of required 17px/medium."
+    },
+    {
+      "id": "TXN-002",
+      "title": "Table cells use body4 (13px)",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Navigate to Transactions and inspect tbody rows",
+          "expected": "At least one real data row exists so td typography can be measured",
+          "observed": "Only empty-state row present: `No recent transactions / Trades will appear here in real-time`"
+        },
+        {
+          "action": "Retry with reload/open + wait (2s then 10s) and re-check rows",
+          "expected": "Data row appears after reasonable wait/reload attempts",
+          "observed": "After 3 attempts, rowCount remained 1 with dataRowCount 0 (empty-state only)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "component-migration/ui-rerun/TXN-002-no-rows-rerun-attempt1.png",
+          "component-migration/ui-rerun/TXN-002-no-rows-rerun-attempt2.png",
+          "component-migration/ui-rerun/TXN-002-no-rows-rerun-attempt3.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Resource timing repeatedly returned 429 for API requests (e.g., /market, /depth, /candles), and no transaction data rows materialized"
+      },
+      "issues": "Blocked: actual transaction data rows were unavailable, so body4/13px could not be measured on real data cells."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "During validation, API fetches repeatedly returned 429 in browser resource timing data, causing unstable/empty data surfaces.",
+      "resolved": false,
+      "resolution": "Worked around by retrying page open/reload and waiting up to 10 seconds; style assertions remained testable but TXN-002 row-data check remained blocked.",
+      "affectedAssertions": [
+        "HEADER-005",
+        "TXN-002"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "No real transaction rows rendered after reasonable retries, so TXN-002 data-cell typography could not be validated.",
+      "affectedAssertions": [
+        "TXN-002"
+      ],
+      "quickFixAttempted": "3 attempts total (initial check + open/reload with waits of 2s and 10s); table stayed in empty-state only."
+    }
+  ],
+  "summary": "Validated 4 rerun assertions: 1 pass (HEADER-005), 2 fail (ABOUT-004, SWAP-005), 1 blocked (TXN-002 due to absent data rows after retries)."
+}

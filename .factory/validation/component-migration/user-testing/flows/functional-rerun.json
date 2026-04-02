@@ -1,0 +1,154 @@
+{
+  "groupId": "functional-rerun",
+  "testedAt": "2026-04-02T02:52:08Z",
+  "isolation": {
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "baseUrl": "http://localhost:3102",
+    "apiUrl": "http://localhost:3100",
+    "wsUrl": "ws://localhost:3101",
+    "browserSession": "functional-rerun-79476079"
+  },
+  "toolsUsed": ["agent-browser"],
+  "assertions": [
+    {
+      "id": "FUNC-003",
+      "title": "Real-time data flows via WebSocket",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Open app at localhost:3102 and observe runtime traffic",
+          "expected": "WebSocket connection to localhost:3101 is established and inbound messages are visible in-session",
+          "observed": "Frequent HTTP polling to localhost:3100 was visible; no ws://localhost:3101 requests were captured in network request log"
+        },
+        {
+          "action": "Run in-page WebSocket probe to ws://localhost:3101",
+          "expected": "Connection opens and messages are received",
+          "observed": "Probe connected successfully (connected=true) but received zero messages during 7s observation"
+        },
+        {
+          "action": "Check UI indicators tied to real-time stream",
+          "expected": "Live trade/orderbook updates appear",
+          "observed": "Transactions section remained 'No recent transactions' and chart area reported data load failure"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "component-migration/functional-rerun/FUNC-003-ws-session-view.png",
+          "component-migration/functional-rerun/FUNC-003-after-reload.png"
+        ],
+        "consoleErrors": "Repeated 429 Too Many Requests errors during observation",
+        "network": "No ws://localhost:3101 entries captured via agent-browser request log; in-page WS probe file shows connected=true with messages=[]",
+        "artifacts": [
+          "component-migration/functional-rerun/FUNC-003-ws-probe.json",
+          "component-migration/functional-rerun/FUNC-003-network-3101.log",
+          "component-migration/functional-rerun/FUNC-003-004-network.log",
+          "component-migration/functional-rerun/FUNC-003-004-console.log"
+        ]
+      },
+      "issues": "Could not observe required in-session WebSocket message receipt despite successful socket handshake; concurrent API 429 responses likely impacted live-data validation."
+    },
+    {
+      "id": "FUNC-004",
+      "title": "Chart displays historical data and live updates",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Load token page and inspect chart area",
+          "expected": "Historical chart data renders",
+          "observed": "Chart pane displayed: 'Unable to load chart data. Check that the API is running.'"
+        },
+        {
+          "action": "Run explicit observation window (~70s) between start/end captures",
+          "expected": "Live chart updates appear over time",
+          "observed": "No chart rendering or live updates became visible; state remained unchanged"
+        },
+        {
+          "action": "Capture API-backed chart observation snapshots",
+          "expected": "Candles endpoint returns historical candle array",
+          "observed": "Observation JSON captured RATE_LIMITED responses from candles API and no chart canvas rendered"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "component-migration/functional-rerun/FUNC-004-chart-start.png",
+          "component-migration/functional-rerun/FUNC-004-chart-end.png",
+          "component-migration/functional-rerun/FUNC-004-reopen-after-cooldown.png"
+        ],
+        "consoleErrors": "Repeated 429 Too Many Requests during observation window",
+        "network": "Frequent GET polling to /depth, /market, /candles with repeated rate-limit symptoms; chart UI stayed in failure state",
+        "artifacts": [
+          "component-migration/functional-rerun/FUNC-004-observation-start.json",
+          "component-migration/functional-rerun/FUNC-004-observation-end.json",
+          "component-migration/functional-rerun/FUNC-004-diff.txt",
+          "component-migration/functional-rerun/FUNC-003-004-network.log"
+        ]
+      },
+      "issues": "Validation blocked by backend/API rate limiting (429), preventing historical chart load and any observable live update behavior."
+    },
+    {
+      "id": "FUNC-005",
+      "title": "Balances display correctly when wallet is connected",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Click 'Connect Wallet' in swap widget",
+          "expected": "Wallet connect flow opens with available Aptos options",
+          "observed": "Modal opened with Aptos/Solana/Ethereum tabs and install links for Petra/Nightly/Backpack"
+        },
+        {
+          "action": "Attempt Aptos wallet connection path",
+          "expected": "Wallet connects and balance values appear in swap inputs",
+          "observed": "Aptos option remained on install-only path in headless environment; no extension/session credential available to complete connection"
+        },
+        {
+          "action": "Open Petra install link from modal",
+          "expected": "If not installed, install flow is reachable",
+          "observed": "Navigated to Chrome Web Store Petra page, confirming missing wallet extension dependency"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "component-migration/functional-rerun/FUNC-005-before-connect.png",
+          "component-migration/functional-rerun/FUNC-005-wallet-modal.png",
+          "component-migration/functional-rerun/FUNC-005-petra-install-page.png",
+          "component-migration/functional-rerun/FUNC-005-after-attempt.png"
+        ],
+        "consoleErrors": "Console included ongoing 429 errors from background API polling",
+        "network": "Wallet modal exposed install links; connection could not proceed to authenticated wallet state in headless run",
+        "artifacts": [
+          "component-migration/functional-rerun/FUNC-005-console.log",
+          "component-migration/functional-rerun/FUNC-005-errors.log",
+          "component-migration/functional-rerun/FUNC-005-network.log"
+        ]
+      },
+      "issues": "Blocked by missing wallet extension/credentials in headless environment; balance assertion requires successful wallet connection first."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "API polling quickly hit rate limits (429), producing noisy console errors and preventing stable functional-read validation.",
+      "resolved": false,
+      "resolution": "Retried with reload and cooldown window; issue persisted.",
+      "affectedAssertions": ["FUNC-003", "FUNC-004", "FUNC-005"]
+    },
+    {
+      "description": "Wallet connection in headless browser required extension installation/real credentials not available in this isolation context.",
+      "resolved": false,
+      "resolution": "Validated modal/installation path only; could not complete connected-wallet state.",
+      "affectedAssertions": ["FUNC-005"]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Rate-limited API responses (429) repeatedly blocked chart and market data reliability during observation windows.",
+      "affectedAssertions": ["FUNC-003", "FUNC-004"],
+      "quickFixAttempted": "Cleared logs, reloaded page, observed cooldown window, reopened fresh browser session; failures remained."
+    },
+    {
+      "description": "No usable wallet extension/account in the headless environment to complete Aptos wallet connection and reveal balances.",
+      "affectedAssertions": ["FUNC-005"],
+      "quickFixAttempted": "Opened wallet modal, selected Aptos flow, followed Petra install link; connection still unavailable without extension/account provisioning."
+    }
+  ],
+  "summary": "Tested 3 assertions: 0 passed, 0 failed, 3 blocked. FUNC-003 blocked due missing observable WS messages in-session despite socket handshake, FUNC-004 blocked by chart API rate-limiting/data load failure, and FUNC-005 blocked by unavailable wallet extension/credentials in headless environment."
+}

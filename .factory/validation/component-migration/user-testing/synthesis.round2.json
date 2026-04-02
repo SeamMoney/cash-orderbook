@@ -1,0 +1,48 @@
+{
+  "milestone": "component-migration",
+  "round": 2,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 8,
+    "passed": 1,
+    "failed": 3,
+    "blocked": 4
+  },
+  "passedAssertions": [
+    "ABOUT-003"
+  ],
+  "failedAssertions": [
+    {
+      "id": "HEADER-005",
+      "reason": "Condensed sticky header appears but key price information is still missing (observed \"C CASH \u2013\")."
+    },
+    {
+      "id": "ABOUT-004",
+      "reason": "Link pill typography mismatch persists: observed 16px white text instead of 17px neutral2."
+    },
+    {
+      "id": "SWAP-005",
+      "reason": "CTA typography mismatch persists: observed 16px/400 instead of 17px/medium."
+    }
+  ],
+  "blockedAssertions": [
+    {
+      "id": "TXN-002",
+      "blockedBy": "Transactions table remained empty-state (no live data rows) after retry/reload, preventing data-cell typography validation."
+    },
+    {
+      "id": "FUNC-003",
+      "blockedBy": "Could not prove frontend WebSocket message receipt in-session (probe count stayed zero) despite established localhost:3101 TCP connections."
+    },
+    {
+      "id": "FUNC-004",
+      "blockedBy": "Chart rendered and candle polling occurred, but no observable live update/new data during timed observation window."
+    },
+    {
+      "id": "FUNC-005",
+      "blockedBy": "Connected-wallet state was unreachable in headless environment (no wallet extension/credentials), so balances could not be validated."
+    }
+  ],
+  "appliedUpdates": [],
+  "previousRound": ".factory/validation/component-migration/user-testing/synthesis.round1.json"
+}
