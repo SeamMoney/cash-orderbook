@@ -32,6 +32,9 @@ import { createTDPStore } from '~/pages/TokenDetails/context/createTDPStore'
 
 const CASH_GREEN = '#00D54B'
 
+/** Total CASH token supply — all 1 billion tokens minted at genesis, no vesting. */
+const CASH_TOTAL_SUPPLY = 1_000_000_000
+
 /** CASH contract address on Aptos */
 const CASH_CONTRACT_ADDRESS = '0xe66fef668077ab8dc5ea65539b6250d8ca3fc024ea4f16555fca9eaeb73b41d1'
 
@@ -67,6 +70,8 @@ function buildTokenQueryData(market: {
   volume24h: number
   high52w: number | null
   low52w: number | null
+  marketCap: number | null
+  fdv: number | null
 }): GraphQLApi.TokenWebQuery {
   return {
     token: {
@@ -119,8 +124,12 @@ function buildTokenQueryData(market: {
           {
             __typename: 'TokenProjectMarket' as const,
             id: 'cash-proj-market',
-            fullyDilutedValuation: null,
-            marketCap: null,
+            fullyDilutedValuation: market.fdv != null
+              ? { __typename: 'Amount' as const, id: 'cash-fdv', value: market.fdv, currency: GraphQLApi.Currency.Usd }
+              : null,
+            marketCap: market.marketCap != null
+              ? { __typename: 'Amount' as const, id: 'cash-mcap', value: market.marketCap, currency: GraphQLApi.Currency.Usd }
+              : null,
             priceHigh52W: market.high52w != null
               ? { __typename: 'Amount' as const, id: 'cash-proj-h52', value: market.high52w }
               : null,
@@ -303,6 +312,8 @@ export function CashTDPProvider({ children }: CashTDPProviderProps): JSX.Element
         volume24h: tokenData?.volume24h ?? 0,
         high52w: tokenData?.high52w ?? null,
         low52w: tokenData?.low52w ?? null,
+        marketCap: tokenData?.marketCap ?? null,
+        fdv: tokenData?.fdv ?? null,
       }),
     [tokenData],
   )

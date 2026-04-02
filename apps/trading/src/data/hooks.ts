@@ -16,6 +16,9 @@ import {
 } from '~/data/api'
 import { cashWs } from '~/data/ws'
 
+/** Total CASH token supply — all 1 billion tokens minted at genesis, no vesting. */
+const CASH_TOTAL_SUPPLY = 1_000_000_000
+
 // ============================================================
 // useCashTokenData — token metadata + market stats
 // ============================================================
@@ -74,8 +77,8 @@ export function useCashTokenData(): {
             volume24h: market.volume24h,
             pair: market.pair,
             status: market.status,
-            marketCap: null, // Not available from API
-            fdv: null,
+            marketCap: market.lastPrice > 0 ? CASH_TOTAL_SUPPLY * market.lastPrice : null,
+            fdv: market.lastPrice > 0 ? CASH_TOTAL_SUPPLY * market.lastPrice : null,
             high52w,
             low52w,
           })
