@@ -197,6 +197,8 @@ export function Nav({
                 key={tab.id}
                 isActive={activeTab === tab.id}
                 onPress={() => onTabChange?.(tab.id)}
+                // Smooth hover color transition (Tamagui doesn't natively support CSS transitions)
+                style={{ transition: "color 125ms ease-in-out" }}
               >
                 {tab.label}
               </NavTabText>
