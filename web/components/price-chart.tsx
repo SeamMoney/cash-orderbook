@@ -7,6 +7,8 @@ import {
   useCallback,
   type RefObject,
 } from "react";
+import { Text, useTheme } from "@tamagui/core";
+import { Flex } from "@/components/ui/Flex";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCandles, type CandleInterval } from "@/hooks/use-candles";
 import { useMinDuration } from "@/hooks/use-min-duration";
@@ -129,11 +131,14 @@ export function PriceChart({
     applyFlash(flashDirection ?? null);
   }, [flashDirection, applyFlash]);
 
+  // Access theme tokens for dynamic color usage
+  const theme = useTheme();
+
   return (
-    <div>
+    <Flex data-testid="chart-section">
       {/* Price display — above the chart canvas */}
-      <div className="mb-3">
-        <div className="flex items-baseline gap-3">
+      <Flex marginBottom="$spacing12">
+        <Flex row alignItems="baseline" gap="$spacing12">
           {priceLoading ? (
             <>
               <Skeleton className="h-9 w-32 rounded-md" />
@@ -141,111 +146,82 @@ export function PriceChart({
             </>
           ) : (
             <>
-              <span
-                className={`font-sans text-[36px] leading-[40px] font-medium tracking-tight text-white rounded-md px-1 -mx-1 ${flashClass}`}
+              <Text
+                fontFamily="$heading"
+                fontSize={37}
+                lineHeight={40}
+                fontWeight="485"
+                color="$neutral1"
+                className={flashClass}
+                style={{ borderRadius: 6, paddingInline: 4, marginInline: -4 }}
+                data-testid="chart-price-display"
               >
                 {price !== null
                   ? `$${formatBalance(price, price < 1 ? 6 : 2)}`
                   : "$--"}
-              </span>
+              </Text>
               {change24h !== null && !hoverTimestamp ? (
-                <span className={`text-[17px] font-medium ${changeColor}`}>
+                <Text
+                  fontFamily="$body"
+                  fontSize={17}
+                  lineHeight={22.1}
+                  fontWeight="535"
+                  color={isPricePositive ? "$statusSuccess" : "$statusCritical"}
+                  data-testid="chart-change-percentage"
+                >
                   {changePrefix}
                   {change24h.toFixed(2)}%
-                </span>
+                </Text>
               ) : null}
               {hoverTimestamp ? (
-                <span className="text-sm text-muted-foreground">
+                <Text
+                  fontFamily="$body"
+                  fontSize={13}
+                  lineHeight={16}
+                  color="$neutral3"
+                >
                   {hoverTimestamp}
-                </span>
+                </Text>
               ) : null}
             </>
           )}
-        </div>
+        </Flex>
 
         {/* OHLC values when hovering candlestick chart */}
         {hoverOhlc ? (
-          <div className="mt-1 flex items-center gap-3 font-mono text-xs">
-            <span className="text-muted-foreground">
-              O{" "}
-              <span className="text-white">
-                {formatBalance(hoverOhlc.open, hoverOhlc.open < 1 ? 6 : 2)}
-              </span>
-            </span>
-            <span className="text-muted-foreground">
-              H{" "}
-              <span className="text-white">
-                {formatBalance(hoverOhlc.high, hoverOhlc.high < 1 ? 6 : 2)}
-              </span>
-            </span>
-            <span className="text-muted-foreground">
-              L{" "}
-              <span className="text-white">
-                {formatBalance(hoverOhlc.low, hoverOhlc.low < 1 ? 6 : 2)}
-              </span>
-            </span>
-            <span className="text-muted-foreground">
-              C{" "}
-              <span className="text-white">
-                {formatBalance(hoverOhlc.close, hoverOhlc.close < 1 ? 6 : 2)}
-              </span>
-            </span>
-          </div>
+          <Flex row alignItems="center" gap="$spacing12" marginTop="$spacing4">
+            {(["open", "high", "low", "close"] as const).map((key) => (
+              <Text
+                key={key}
+                fontFamily="$monospace"
+                fontSize={13}
+                lineHeight={16}
+                color="$neutral3"
+              >
+                {key[0].toUpperCase()}{" "}
+                <Text
+                  fontFamily="$monospace"
+                  fontSize={13}
+                  lineHeight={16}
+                  color="$neutral1"
+                >
+                  {formatBalance(
+                    hoverOhlc[key],
+                    hoverOhlc[key] < 1 ? 6 : 2
+                  )}
+                </Text>
+              </Text>
+            ))}
+          </Flex>
         ) : null}
-      </div>
+      </Flex>
 
-      {/* Chart type toggle + Time range tabs */}
-      <div className="mb-4 flex items-center justify-between">
-        {/* Chart mode toggle */}
-        <div className="flex items-center gap-1 rounded-lg bg-[#1F1F1F] p-0.5">
-          <button
-            onClick={() => setChartMode("candle")}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-              chartMode === "candle"
-                ? "bg-primary text-black"
-                : "text-white/38 hover:text-muted-foreground cursor-pointer"
-            }`}
-            aria-label="Candlestick chart"
-            aria-pressed={chartMode === "candle"}
-          >
-            Candle
-          </button>
-          <button
-            onClick={() => setChartMode("line")}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-              chartMode === "line"
-                ? "bg-primary text-black"
-                : "text-white/38 hover:text-muted-foreground cursor-pointer"
-            }`}
-            aria-label="Line chart"
-            aria-pressed={chartMode === "line"}
-          >
-            Line
-          </button>
-        </div>
-
-        {/* Time range tabs — clean text style */}
-        <div className="flex items-center gap-1 sm:gap-2">
-          {TIME_RANGES.map((range, idx) => (
-            <button
-              key={range.label}
-              onClick={() => setActiveRange(idx)}
-              className={`px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                idx === activeRange
-                  ? "text-white font-semibold"
-                  : "text-white/38 hover:text-muted-foreground cursor-pointer"
-              }`}
-              aria-label={`Show ${range.label} chart range`}
-              aria-pressed={idx === activeRange}
-            >
-              {range.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Chart area */}
-      <div className="relative h-[356px] w-full overflow-hidden">
+      {/* Chart area — 356px height, transparent bg, no border-radius */}
+      <div
+        className="relative w-full overflow-hidden"
+        style={{ height: 356 }}
+        data-testid="chart-container"
+      >
         {loading ? (
           <ChartSkeleton />
         ) : isEmpty ? (
@@ -266,7 +242,113 @@ export function PriceChart({
           />
         )}
       </div>
-    </div>
+
+      {/* Chart controls — BELOW the chart (matching Uniswap ChartSection layout) */}
+      <Flex
+        row
+        alignItems="center"
+        justifyContent="space-between"
+        marginTop="$spacing16"
+        data-testid="chart-controls"
+      >
+        {/* Chart mode toggle (Candle / Line) */}
+        <Flex
+          row
+          alignItems="center"
+          gap="$spacing4"
+          borderRadius="$rounded8"
+          backgroundColor="$surface2"
+          padding="$spacing2"
+        >
+          <button
+            onClick={() => setChartMode("candle")}
+            style={{
+              borderRadius: 6,
+              paddingInline: 12,
+              paddingBlock: 6,
+              fontSize: 13,
+              lineHeight: "16px",
+              fontWeight: 535,
+              fontFamily: "inherit",
+              border: "none",
+              cursor: "pointer",
+              transition: "color 150ms ease, background-color 150ms ease",
+              backgroundColor:
+                chartMode === "candle"
+                  ? (theme.accent1?.val as string)
+                  : "transparent",
+              color:
+                chartMode === "candle"
+                  ? "#000000"
+                  : (theme.neutral3?.val as string),
+            }}
+            aria-label="Candlestick chart"
+            aria-pressed={chartMode === "candle"}
+          >
+            Candle
+          </button>
+          <button
+            onClick={() => setChartMode("line")}
+            style={{
+              borderRadius: 6,
+              paddingInline: 12,
+              paddingBlock: 6,
+              fontSize: 13,
+              lineHeight: "16px",
+              fontWeight: 535,
+              fontFamily: "inherit",
+              border: "none",
+              cursor: "pointer",
+              transition: "color 150ms ease, background-color 150ms ease",
+              backgroundColor:
+                chartMode === "line"
+                  ? (theme.accent1?.val as string)
+                  : "transparent",
+              color:
+                chartMode === "line"
+                  ? "#000000"
+                  : (theme.neutral3?.val as string),
+            }}
+            aria-label="Line chart"
+            aria-pressed={chartMode === "line"}
+          >
+            Line
+          </button>
+        </Flex>
+
+        {/* Time range tabs — body4 (13px), active: neutral1, inactive: neutral3 */}
+        <Flex row alignItems="center" gap="$spacing4">
+          {TIME_RANGES.map((range, idx) => (
+            <button
+              key={range.label}
+              onClick={() => setActiveRange(idx)}
+              style={{
+                paddingInline: 10,
+                paddingBlock: 6,
+                fontSize: 13,
+                lineHeight: "16px",
+                fontWeight: idx === activeRange ? 535 : 485,
+                fontFamily: "inherit",
+                border: "none",
+                borderRadius: 6,
+                cursor: "pointer",
+                transition: "color 150ms ease",
+                backgroundColor: "transparent",
+                color:
+                  idx === activeRange
+                    ? (theme.neutral1?.val as string)
+                    : (theme.neutral3?.val as string),
+              }}
+              aria-label={`Show ${range.label} chart range`}
+              aria-pressed={idx === activeRange}
+              data-testid={`time-range-${range.label}`}
+            >
+              {range.label}
+            </button>
+          ))}
+        </Flex>
+      </Flex>
+    </Flex>
   );
 }
 
@@ -275,9 +357,18 @@ function ChartSkeleton(): React.ReactElement {
   return (
     <div className="relative h-full w-full">
       <Skeleton className="h-full w-full" />
-      <div className="absolute inset-0 flex items-center justify-center">
-        <p className="text-sm text-text-muted">Loading chart...</p>
-      </div>
+      <Flex
+        centered
+        position="absolute"
+        top={0}
+        right={0}
+        bottom={0}
+        left={0}
+      >
+        <Text fontFamily="$body" fontSize={13} lineHeight={16} color="$neutral3">
+          Loading chart...
+        </Text>
+      </Flex>
     </div>
   );
 }
@@ -289,17 +380,28 @@ function ChartEmptyState({
   error: string | null;
 }): React.ReactElement {
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center rounded-lg border border-dashed border-border bg-background">
-      <div className="mb-2 text-2xl opacity-20">📈</div>
-      <p className="text-sm font-medium text-text-muted">
+    <Flex
+      centered
+      width="100%"
+      height="100%"
+      borderRadius="$rounded8"
+      borderWidth={1}
+      borderStyle="dashed"
+      borderColor="$surface3"
+      backgroundColor="$surface1"
+    >
+      <Text fontSize={24} marginBottom="$spacing8" opacity={0.2}>
+        📈
+      </Text>
+      <Text fontFamily="$body" fontSize={13} lineHeight={16} fontWeight="535" color="$neutral3">
         {error ? "Unable to load chart data" : "No chart data available"}
-      </p>
-      <p className="mt-1 text-xs opacity-30">
+      </Text>
+      <Text fontFamily="$body" fontSize={13} lineHeight={16} color="$neutral3" opacity={0.3} marginTop="$spacing4">
         {error
           ? "Check that the API is running"
           : "Trade data will appear here"}
-      </p>
-    </div>
+      </Text>
+    </Flex>
   );
 }
 
