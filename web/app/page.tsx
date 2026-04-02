@@ -100,8 +100,8 @@ export default function Home(): React.ReactElement {
             {/* Breadcrumb */}
             <Breadcrumb />
 
-            {/* Token Header — logo, name, symbol only */}
-            <TokenHeader />
+            {/* Token Header — logo, name, symbol + sticky condensed header */}
+            <TokenHeader price={displayPrice} />
 
             {/* Price Chart — includes price display above the chart canvas */}
             <PriceChart
