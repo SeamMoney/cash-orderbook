@@ -1,0 +1,73 @@
+{
+  "groupId": "cli-int001",
+  "testedAt": "2026-04-02T22:40:01.254659+00:00",
+  "isolation": {
+    "surface": "cli",
+    "repoRoot": "/Users/maxmohammadi/cash-orderbook",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "assertions": [
+      "INT-001"
+    ]
+  },
+  "toolsUsed": [
+    "cli"
+  ],
+  "assertions": [
+    {
+      "id": "INT-001",
+      "title": "CASH hooks and lib ported, no import errors, VITE config usage",
+      "status": "fail",
+      "commands": [
+        {
+          "command": "python3 scope/env artifact scan for apps/trading/src/cash",
+          "exitCode": 0,
+          "evidenceFile": "core-port/cli-int001/int001-scope-env-check.txt"
+        },
+        {
+          "command": "rg -n \"VITE_\" /Users/maxmohammadi/cash-orderbook/apps/trading/src/cash/lib/config.ts",
+          "exitCode": 0,
+          "evidenceFile": "core-port/cli-int001/int001-env-grep.txt"
+        },
+        {
+          "command": "rg -n \"NEXT_PUBLIC_\" /Users/maxmohammadi/cash-orderbook/apps/trading/src/cash",
+          "exitCode": 1,
+          "evidenceFile": "core-port/cli-int001/int001-env-grep.txt",
+          "note": "Exit code 1 is expected for no matches"
+        },
+        {
+          "command": "pnpm --filter @cash/trading exec tsc --noEmit --pretty false --skipLibCheck --moduleResolution node --module esnext --target ESNext --jsx react-jsx --esModuleInterop --allowSyntheticDefaultImports --resolveJsonModule --lib DOM,DOM.Iterable,ESNext --types vite/client,node /Users/maxmohammadi/cash-orderbook/apps/trading/src/cash/index.ts",
+          "exitCode": 0,
+          "evidenceFile": "core-port/cli-int001/int001-cash-typecheck.txt"
+        }
+      ],
+      "steps": [
+        {
+          "action": "Verify hooks/lib artifacts in apps/trading/src/cash",
+          "expected": "15 hooks and 6 lib files exist per contract",
+          "observed": "14 hooks and 6 lib files found"
+        },
+        {
+          "action": "Verify env var conventions in cash port",
+          "expected": "VITE_* used in config and no NEXT_PUBLIC_* in cash files",
+          "observed": "VITE_API_URL/VITE_WS_URL/VITE_APTOS_NETWORK/VITE_CONTRACT_ADDRESS present in config; NEXT_PUBLIC_* had no matches"
+        },
+        {
+          "action": "TypeScript compile/type check of cash entrypoint imports",
+          "expected": "No import/type errors for apps/trading/src/cash",
+          "observed": "Command completed with EXIT_CODE=0 and no diagnostics"
+        }
+      ],
+      "evidence": {
+        "files": [
+          "core-port/cli-int001/int001-scope-env-check.txt",
+          "core-port/cli-int001/int001-env-grep.txt",
+          "core-port/cli-int001/int001-cash-typecheck.txt"
+        ]
+      },
+      "issues": "Contract requires 15 hooks; scan found 14 hook files under apps/trading/src/cash/hooks, so assertion criteria are not fully met."
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "INT-001 failed: VITE/NEXT_PUBLIC checks and targeted cash typecheck passed, but hook artifact count is 14 instead of the required 15."
+}

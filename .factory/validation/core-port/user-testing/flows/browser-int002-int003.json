@@ -1,0 +1,108 @@
+{
+  "groupId": "browser-int002-int003",
+  "testedAt": "2026-04-02T22:42:02.877017+00:00",
+  "isolation": {
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "surfaceUrl": "http://localhost:3200/cash",
+    "browserSession": "validator-int002-int003",
+    "mode": "read-only UI interactions on localhost:3200"
+  },
+  "toolsUsed": [
+    "agent-browser",
+    "curl"
+  ],
+  "assertions": [
+    {
+      "id": "INT-002",
+      "title": "Aptos wallet selector/connect button behavior",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Open /cash and click navbar Connect",
+          "expected": "Aptos wallet selector modal opens",
+          "observed": "Wallet selector modal opened from navbar Connect button"
+        },
+        {
+          "action": "Inspect wallet modal options",
+          "expected": "Aptos wallets (Petra/Nightly/Backpack) and keyless options (Google/Apple) are visible",
+          "observed": "Modal showed Petra, Nightly, Backpack plus Continue with Google and Continue with Apple"
+        },
+        {
+          "action": "Attempt keyless continuation",
+          "expected": "Wallet/account connect flow can proceed and eventually show connected state",
+          "observed": "Continue with Google opened Google Accounts OAuth in a new tab; end-to-end account completion was not possible in this headless validator context (no test account/extension auth completion)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-port/browser-int002-int003/INT-002-wallet-selector-modal.png"
+        ],
+        "consoleErrors": "agent-browser errors reported 'Failed to fetch' (3x); console also showed unrelated external RPC/CORS warnings from Uniswap web3 providers",
+        "network": "N/A for modal visibility assertion"
+      },
+      "issues": "Could not validate post-connect truncated Aptos address state headlessly due external wallet/account authentication limitations. Pre-connect UX states were verified."
+    },
+    {
+      "id": "INT-003",
+      "title": "CASH TDP page populated data",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Load /cash and inspect token header/price",
+          "expected": "CASH name/symbol and API-backed price are visible",
+          "observed": "Header displayed CASH/CAS with visible live price ($0.0966)"
+        },
+        {
+          "action": "Verify chart rendering",
+          "expected": "Chart area renders candle data",
+          "observed": "Chart rendered in viewport; DOM inspection found 7 visible canvases (sample canvas ~610x328), consistent with rendered chart area"
+        },
+        {
+          "action": "Verify stats population",
+          "expected": "Volume and 52W high/low populated",
+          "observed": "Stats showed 1 day volume $142.35K, 52W high $0.2751, 52W low $0.0449"
+        },
+        {
+          "action": "Verify about/contract/links",
+          "expected": "Description, contract address pill, explorer/website links visible",
+          "observed": "About text visible; contract pill 0xe66f...41d1 visible; Aptos Explorer and Website links present (Twitter also present)"
+        },
+        {
+          "action": "Verify transactions/trades section",
+          "expected": "CASH trades shown or valid empty-state",
+          "observed": "Transactions table populated with multiple Buy/Sell CASH trades (not empty)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-port/browser-int002-int003/INT-003-cash-tdp-populated-viewport.png",
+          "core-port/browser-int002-int003/INT-003-cash-tdp-populated-full.png",
+          "core-port/browser-int002-int003/INT-003-about-links-transactions.png"
+        ],
+        "consoleErrors": "agent-browser errors reported 'Failed to fetch' (3x); console included recurring external RPC 403 and CORS warnings unrelated to local CASH API rendering",
+        "network": "Browser-context fetch checks: GET /cash-api/market -> 200, GET /cash-api/candles?interval=1d -> 200, GET /cash-api/trades?limit=5 -> 200"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "agent-browser network request log returned no captured requests in this session, so API status validation was collected via in-page fetch checks instead",
+      "resolved": true,
+      "resolution": "Executed browser-context fetch() checks for /cash-api/market, /cash-api/candles?interval=1d, /cash-api/trades?limit=5 and recorded returned HTTP 200 statuses",
+      "affectedAssertions": [
+        "INT-003"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "End-to-end wallet/account authentication could not be completed headlessly for post-connect address verification",
+      "affectedAssertions": [
+        "INT-002"
+      ],
+      "quickFixAttempted": "Validated modal options and attempted Continue with Google flow, which opened Google OAuth tab but could not be completed within isolated headless validator context"
+    }
+  ],
+  "summary": "Tested 2 assertions: INT-003 passed with populated CASH TDP data; INT-002 pre-connect wallet selector behavior passed but full post-connect state is blocked by headless auth limitations."
+}

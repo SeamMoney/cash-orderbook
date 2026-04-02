@@ -28,6 +28,7 @@
 - `GET /health` can also be rate-limited during validation; prefer a port-listener healthcheck for API readiness (`lsof -iTCP:3100 -sTCP:LISTEN`)
 - WebSocket service startup command is `APTOS_NETWORK=testnet node api/dist/ws.js` (not `api/dist/ws-server.js`)
 - API service should be started with `APTOS_NETWORK=testnet` for stable testnet behavior
+- agent-browser network request capture may be empty in some runs; for local API verification, execute in-page `fetch()` checks and record HTTP status codes
 - Transaction table may be empty if no recent trades — functional assertions should account for empty state
 - Wallet connection requires browser extension or Aptos Connect — headless testing may show "Connect Wallet" state only
 - When validating nav hover states, use exact-text targeting for `Explore` to avoid collisions with `Explorer`.
