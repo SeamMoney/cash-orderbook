@@ -50,7 +50,7 @@ importers:
         version: 4.12.9
       ws:
         specifier: ^8.18.0
-        version: 8.20.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+        version: 8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       zod:
         specifier: ^3.24.0
         version: 3.25.76
@@ -76,12 +76,33 @@ importers:
       '@apollo/client':
         specifier: 3.11.10
         version: 3.11.10(@types/react@19.0.10)(graphql@16.6.0)(react-dom@19.0.3)(react@19.0.3)(subscriptions-transport-ws@0.11.0)
+      '@aptos-labs/derived-wallet-ethereum':
+        specifier: ^0.9.1
+        version: 0.9.1(@aptos-labs/ts-sdk@6.3.1)(@wallet-standard/core@1.1.1)(typescript@5.8.3)(zod@4.3.6)
+      '@aptos-labs/derived-wallet-solana':
+        specifier: ^0.12.2
+        version: 0.12.2(@aptos-labs/ts-sdk@6.3.1)(@wallet-standard/core@1.1.1)(bs58@6.0.0)(typescript@5.8.3)
+      '@aptos-labs/ts-sdk':
+        specifier: ^6.3.1
+        version: 6.3.1(got@11.8.6)
+      '@aptos-labs/wallet-adapter-core':
+        specifier: ^8.5.1
+        version: 8.5.1(@aptos-labs/ts-sdk@6.3.1)(@telegram-apps/bridge@1.9.2)(@wallet-standard/core@1.1.1)
+      '@aptos-labs/wallet-adapter-react':
+        specifier: ^8.3.3
+        version: 8.3.3(@aptos-labs/ts-sdk@6.3.1)(@telegram-apps/bridge@1.9.2)(@types/react@19.0.10)(@wallet-standard/core@1.1.1)(react@19.0.3)
       '@binance/w3w-wagmi-connector-v2':
         specifier: 1.2.5
         version: 1.2.5(viem@2.30.5)(wagmi@2.15.5)
       '@bufbuild/protobuf':
         specifier: 1.10.0
         version: 1.10.0
+      '@cash/orderbook-sdk':
+        specifier: workspace:^
+        version: link:../../sdk
+      '@cash/shared':
+        specifier: workspace:^
+        version: link:../../shared
       '@cash/uni-api':
         specifier: workspace:^
         version: link:../../packages/uni-api
@@ -313,6 +334,9 @@ importers:
       cids:
         specifier: 1.1.6
         version: 1.1.6
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
       d3:
         specifier: 7.6.1
         version: 7.6.1
@@ -439,6 +463,9 @@ importers:
       styled-components:
         specifier: 6.1.19
         version: 6.1.19(react-dom@19.0.3)(react@19.0.3)
+      tailwind-merge:
+        specifier: ^3.5.0
+        version: 3.5.0
       tiny-invariant:
         specifier: 1.3.1
         version: 1.3.1
@@ -1833,7 +1860,7 @@ importers:
         version: link:../shared
       ws:
         specifier: ^8.18.0
-        version: 8.20.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+        version: 8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     devDependencies:
       '@types/ws':
         specifier: ^8.5.0
@@ -2252,6 +2279,26 @@ packages:
       - '@wallet-standard/core'
     dev: false
 
+  /@aptos-labs/derived-wallet-ethereum@0.9.1(@aptos-labs/ts-sdk@6.3.1)(@wallet-standard/core@1.1.1)(typescript@5.8.3)(zod@4.3.6):
+    resolution: {integrity: sha512-zoA4GGzi8xAbVMAb/NQbhCmXtb3NCXva1WbjTJ0GOWIOg+ixgeEuC/vx0xYNSdjMwmZ6bQ7CxQWEUf07Z/gpTA==}
+    peerDependencies:
+      '@aptos-labs/ts-sdk': ^5.1.1
+    dependencies:
+      '@aptos-labs/derived-wallet-base': 0.11.0(@aptos-labs/ts-sdk@6.3.1)(@wallet-standard/core@1.1.1)
+      '@aptos-labs/ts-sdk': 6.3.1(got@11.8.6)
+      '@aptos-labs/wallet-standard': 0.5.2(@aptos-labs/ts-sdk@6.3.1)(@wallet-standard/core@1.1.1)
+      '@wallet-standard/app': 1.1.0
+      ethers: 6.16.0
+      mipd: 0.0.7(typescript@5.8.3)
+      viem: 2.30.5(typescript@5.8.3)(zod@4.3.6)
+    transitivePeerDependencies:
+      - '@wallet-standard/core'
+      - bufferutil
+      - typescript
+      - utf-8-validate
+      - zod
+    dev: false
+
   /@aptos-labs/derived-wallet-ethereum@0.9.1(@aptos-labs/ts-sdk@6.3.1)(@wallet-standard/core@1.1.1)(typescript@5.9.3):
     resolution: {integrity: sha512-zoA4GGzi8xAbVMAb/NQbhCmXtb3NCXva1WbjTJ0GOWIOg+ixgeEuC/vx0xYNSdjMwmZ6bQ7CxQWEUf07Z/gpTA==}
     peerDependencies:
@@ -2270,6 +2317,29 @@ packages:
       - typescript
       - utf-8-validate
       - zod
+    dev: false
+
+  /@aptos-labs/derived-wallet-solana@0.12.2(@aptos-labs/ts-sdk@6.3.1)(@wallet-standard/core@1.1.1)(bs58@6.0.0)(typescript@5.8.3):
+    resolution: {integrity: sha512-BNnNeEVNO6TcvzHTxgf/ywMoT6DbUUarM/p+DQnwhHZYt8T7hXhvqc0MNGpdTGPvCK9WS4hLNdhqJmbIl2jTBQ==}
+    peerDependencies:
+      '@aptos-labs/ts-sdk': ^5.1.1
+    dependencies:
+      '@aptos-labs/derived-wallet-base': 0.11.0(@aptos-labs/ts-sdk@6.3.1)(@wallet-standard/core@1.1.1)
+      '@aptos-labs/ts-sdk': 6.3.1(got@11.8.6)
+      '@aptos-labs/wallet-standard': 0.5.2(@aptos-labs/ts-sdk@6.3.1)(@wallet-standard/core@1.1.1)
+      '@solana/wallet-adapter-base': 0.9.27(@solana/web3.js@1.98.4)
+      '@solana/wallet-standard-util': 1.1.2
+      '@solana/wallet-standard-wallet-adapter-base': 1.1.4(@solana/web3.js@1.98.4)(bs58@6.0.0)
+      '@solana/web3.js': 1.98.4(typescript@5.8.3)
+      '@wallet-standard/app': 1.1.0
+      tweetnacl: 1.0.3
+    transitivePeerDependencies:
+      - '@wallet-standard/core'
+      - bs58
+      - bufferutil
+      - encoding
+      - typescript
+      - utf-8-validate
     dev: false
 
   /@aptos-labs/derived-wallet-solana@0.12.2(@aptos-labs/ts-sdk@6.3.1)(@wallet-standard/core@1.1.1)(bs58@6.0.0)(typescript@5.9.3):
@@ -2352,6 +2422,22 @@ packages:
       eventemitter3: 5.0.4
     transitivePeerDependencies:
       - '@telegram-apps/bridge'
+      - '@wallet-standard/core'
+      - debug
+    dev: false
+
+  /@aptos-labs/wallet-adapter-react@8.3.3(@aptos-labs/ts-sdk@6.3.1)(@telegram-apps/bridge@1.9.2)(@types/react@19.0.10)(@wallet-standard/core@1.1.1)(react@19.0.3):
+    resolution: {integrity: sha512-92e0R4EbYX2NFA+OatXcTzLdHbRvq+Yt0ATCU5uerM64UGUkuWnsd6nlIZpV0nDBaI/n0sRs6AKZw3/V+09zxA==}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
+    dependencies:
+      '@aptos-labs/wallet-adapter-core': 8.5.1(@aptos-labs/ts-sdk@6.3.1)(@telegram-apps/bridge@1.9.2)(@wallet-standard/core@1.1.1)
+      '@radix-ui/react-slot': 1.2.4(@types/react@19.0.10)(react@19.0.3)
+      react: 19.0.3
+    transitivePeerDependencies:
+      - '@aptos-labs/ts-sdk'
+      - '@telegram-apps/bridge'
+      - '@types/react'
       - '@wallet-standard/core'
       - debug
     dev: false
@@ -4616,7 +4702,7 @@ packages:
     dependencies:
       '@binance/w3w-types': 1.1.4
       '@binance/w3w-utils': 1.1.4
-      ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -6940,7 +7026,7 @@ packages:
       terminal-link: 2.1.1
       toqr: 0.1.1
       wrap-ansi: 7.0.0
-      ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       zod: 3.25.76
     transitivePeerDependencies:
       - '@expo/dom-webview'
@@ -7026,7 +7112,7 @@ packages:
       terminal-link: 2.1.1
       toqr: 0.1.1
       wrap-ansi: 7.0.0
-      ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       zod: 3.25.76
     transitivePeerDependencies:
       - '@expo/dom-webview'
@@ -8382,7 +8468,7 @@ packages:
       isomorphic-ws: 5.0.0(ws@8.20.0)
       tslib: 2.8.1
       value-or-promise: 1.0.12
-      ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - '@types/node'
       - bufferutil
@@ -10893,6 +10979,19 @@ packages:
     resolution: {integrity: sha512-JTF99U/6XIjCBo0wqkU5sK10glYe27MRRsfwoiq5zzOEZLHU3A3KCMa5X/azekYRCJ0HlwI0crAXS/5dEHTzDg==}
     dev: false
 
+  /@radix-ui/react-compose-refs@1.1.2(@types/react@19.0.10)(react@19.0.3):
+    resolution: {integrity: sha512-z4eqJvfiNnFMHIIvXP3CY57y2WJs5g2v3X0zm9mEJkrkNv4rDxu+sg9Jh8EkXyeqBkB7SOcboo9dMVqhyrACIg==}
+    peerDependencies:
+      '@types/react': '*'
+      react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+    dependencies:
+      '@types/react': 19.0.10
+      react: 19.0.3
+    dev: false
+
   /@radix-ui/react-compose-refs@1.1.2(@types/react@19.2.14)(react@19.2.4):
     resolution: {integrity: sha512-z4eqJvfiNnFMHIIvXP3CY57y2WJs5g2v3X0zm9mEJkrkNv4rDxu+sg9Jh8EkXyeqBkB7SOcboo9dMVqhyrACIg==}
     peerDependencies:
@@ -11099,6 +11198,20 @@ packages:
       '@radix-ui/react-compose-refs': 1.1.2(@types/react@19.2.14)(react@19.2.4)
       '@types/react': 19.2.14
       react: 19.2.4
+    dev: false
+
+  /@radix-ui/react-slot@1.2.4(@types/react@19.0.10)(react@19.0.3):
+    resolution: {integrity: sha512-Jl+bCv8HxKnlTLVrcDE8zTMJ09R9/ukw4qBs/oZClOfoQk/cOTbDn+NceXfV7j09YPVQUryJPHurafcSg6EVKA==}
+    peerDependencies:
+      '@types/react': '*'
+      react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+    dependencies:
+      '@radix-ui/react-compose-refs': 1.1.2(@types/react@19.0.10)(react@19.0.3)
+      '@types/react': 19.0.10
+      react: 19.0.3
     dev: false
 
   /@radix-ui/react-slot@1.2.4(@types/react@19.2.14)(react@19.2.4):
@@ -12880,8 +12993,8 @@ packages:
   /@scure/bip32@1.6.2:
     resolution: {integrity: sha512-t96EPDMbtGgtb7onKKqxRLfE5g05k7uHnHRM2xdE6BP/ZmxaLtPek4J4KfVn/90IQNrU1IOAqMgiDtUdtbe3nw==}
     dependencies:
-      '@noble/curves': 1.8.1
-      '@noble/hashes': 1.7.1
+      '@noble/curves': 1.8.2
+      '@noble/hashes': 1.7.2
       '@scure/base': 1.2.6
     dev: false
 
@@ -12909,7 +13022,7 @@ packages:
   /@scure/bip39@1.5.4:
     resolution: {integrity: sha512-TFM4ni0vKvCfBpohoh+/lY05i9gRbSwXWngAsF4CABQxoaOHijxuaZ2R6cStDQ5CHtHO9aGJTr4ksVJASRRyMA==}
     dependencies:
-      '@noble/hashes': 1.7.1
+      '@noble/hashes': 1.7.2
       '@scure/base': 1.2.6
     dev: false
 
@@ -13747,6 +13860,16 @@ packages:
       buffer: 6.0.3
     dev: false
 
+  /@solana/codecs-core@2.3.0(typescript@5.8.3):
+    resolution: {integrity: sha512-oG+VZzN6YhBHIoSKgS5ESM9VIGzhWjEHEGNPSibiDTxFhsFWxNaz8LbMDPjBUE69r9wmdGLkrQ+wVPbnJcZPvw==}
+    engines: {node: '>=20.18.0'}
+    peerDependencies:
+      typescript: '>=5.3.3'
+    dependencies:
+      '@solana/errors': 2.3.0(typescript@5.8.3)
+      typescript: 5.8.3
+    dev: false
+
   /@solana/codecs-core@2.3.0(typescript@5.9.3):
     resolution: {integrity: sha512-oG+VZzN6YhBHIoSKgS5ESM9VIGzhWjEHEGNPSibiDTxFhsFWxNaz8LbMDPjBUE69r9wmdGLkrQ+wVPbnJcZPvw==}
     engines: {node: '>=20.18.0'}
@@ -13792,6 +13915,17 @@ packages:
       '@solana/codecs-core': 5.5.1(typescript@5.8.3)
       '@solana/codecs-numbers': 5.5.1(typescript@5.8.3)
       '@solana/errors': 5.5.1(typescript@5.8.3)
+      typescript: 5.8.3
+    dev: false
+
+  /@solana/codecs-numbers@2.3.0(typescript@5.8.3):
+    resolution: {integrity: sha512-jFvvwKJKffvG7Iz9dmN51OGB7JBcy2CJ6Xf3NqD/VP90xak66m/Lg48T01u5IQ/hc15mChVHiBm+HHuOFDUrQg==}
+    engines: {node: '>=20.18.0'}
+    peerDependencies:
+      typescript: '>=5.3.3'
+    dependencies:
+      '@solana/codecs-core': 2.3.0(typescript@5.8.3)
+      '@solana/errors': 2.3.0(typescript@5.8.3)
       typescript: 5.8.3
     dev: false
 
@@ -13881,6 +14015,18 @@ packages:
       typescript: 5.8.3
     transitivePeerDependencies:
       - fastestsmallesttextencoderdecoder
+    dev: false
+
+  /@solana/errors@2.3.0(typescript@5.8.3):
+    resolution: {integrity: sha512-66RI9MAbwYV0UtP7kGcTBVLxJgUxoZGm8Fbc0ah+lGiAw17Gugco6+9GrJCV83VyF2mDWyYnYM9qdI3yjgpnaQ==}
+    engines: {node: '>=20.18.0'}
+    hasBin: true
+    peerDependencies:
+      typescript: '>=5.3.3'
+    dependencies:
+      chalk: 5.6.2
+      commander: 14.0.3
+      typescript: 5.8.3
     dev: false
 
   /@solana/errors@2.3.0(typescript@5.9.3):
@@ -14228,7 +14374,7 @@ packages:
       '@solana/rpc-subscriptions-spec': 5.5.1(typescript@5.8.3)
       '@solana/subscribable': 5.5.1(typescript@5.8.3)
       typescript: 5.8.3
-      ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -14504,7 +14650,7 @@ packages:
       '@solana/web3.js': ^1.98.0
     dependencies:
       '@solana/wallet-standard-features': 1.3.0
-      '@solana/web3.js': 1.98.4(typescript@5.9.3)
+      '@solana/web3.js': 1.98.4(typescript@5.8.3)
       '@wallet-standard/base': 1.1.0
       '@wallet-standard/features': 1.1.0
       eventemitter3: 5.0.4
@@ -14593,7 +14739,7 @@ packages:
       '@solana/wallet-standard-chains': 1.1.1
       '@solana/wallet-standard-features': 1.3.0
       '@solana/wallet-standard-util': 1.1.2
-      '@solana/web3.js': 1.98.4(typescript@5.9.3)
+      '@solana/web3.js': 1.98.4(typescript@5.8.3)
       '@wallet-standard/app': 1.1.0
       '@wallet-standard/base': 1.1.0
       '@wallet-standard/features': 1.1.0
@@ -14639,6 +14785,31 @@ packages:
     transitivePeerDependencies:
       - bufferutil
       - encoding
+      - utf-8-validate
+    dev: false
+
+  /@solana/web3.js@1.98.4(typescript@5.8.3):
+    resolution: {integrity: sha512-vv9lfnvjUsRiq//+j5pBdXig0IQdtzA0BRZ3bXEP4KaIyF1CcaydWqgyzQgfZMNIsWNWmG+AUHwPy4AHOD6gpw==}
+    dependencies:
+      '@babel/runtime': 7.29.2
+      '@noble/curves': 1.9.7
+      '@noble/hashes': 1.8.0
+      '@solana/buffer-layout': 4.0.1
+      '@solana/codecs-numbers': 2.3.0(typescript@5.8.3)
+      agentkeepalive: 4.6.0
+      bn.js: 5.2.3
+      borsh: 0.7.0
+      bs58: 4.0.1
+      buffer: 6.0.3
+      fast-stable-stringify: 1.0.0
+      jayson: 4.3.0
+      node-fetch: 2.7.0
+      rpc-websockets: 9.3.7
+      superstruct: 2.0.2
+    transitivePeerDependencies:
+      - bufferutil
+      - encoding
+      - typescript
       - utf-8-validate
     dev: false
 
@@ -14977,7 +15148,7 @@ packages:
       recast: 0.23.11
       semver: 7.7.4
       util: 0.12.5
-      ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -30881,7 +31052,7 @@ packages:
     peerDependencies:
       ws: '*'
     dependencies:
-      ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
 
   /isows@1.0.6(ws@8.18.0):
     resolution: {integrity: sha512-lPHCayd40oW98/I0uvgaHKWCSvkzY27LjWLbtzOm64yQ+G3Q5npjjbdppU65iZXkK1Zt+kH9pfegli0AYfwYYw==}
@@ -32353,7 +32524,7 @@ packages:
       whatwg-encoding: 2.0.0
       whatwg-mimetype: 3.0.0
       whatwg-url: 11.0.0
-      ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       xml-name-validator: 4.0.0
     transitivePeerDependencies:
       - bufferutil
@@ -41698,7 +41869,6 @@ packages:
     requiresBuild: true
     dependencies:
       node-gyp-build: 4.8.4
-    dev: false
 
   /utf-8-validate@6.0.6:
     resolution: {integrity: sha512-q3l3P9UtEEiAHcsgsqTgf9PPjctrDWoIXW3NpOHFdRDbLvu4DLIcxHangJ4RLrWkBcKjmcs/6NkerI8T/rE4LA==}
@@ -41706,6 +41876,7 @@ packages:
     requiresBuild: true
     dependencies:
       node-gyp-build: 4.8.4
+    dev: false
 
   /utif@2.0.1:
     resolution: {integrity: sha512-Z/S1fNKCicQTf375lIP9G8Sa1H/phcysstNrrSdZKj1f9g58J4NMgb5IgiEZN9/nLMPDwF0W7hdOe9Qq2IYoLg==}
@@ -43074,7 +43245,7 @@ packages:
       spdy: 4.0.2
       webpack: 5.90.0(@swc/core@1.5.7)(esbuild@0.27.4)
       webpack-dev-middleware: 5.3.4(webpack@5.90.0)
-      ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - bufferutil
       - debug
@@ -43706,7 +43877,6 @@ packages:
     dependencies:
       bufferutil: 4.1.0
       utf-8-validate: 5.0.10
-    dev: false
 
   /ws@8.20.0(bufferutil@4.1.0)(utf-8-validate@6.0.6):
     resolution: {integrity: sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA==}
@@ -43722,6 +43892,7 @@ packages:
     dependencies:
       bufferutil: 4.1.0
       utf-8-validate: 6.0.6
+    dev: false
 
   /wsl-utils@0.1.0:
     resolution: {integrity: sha512-h3Fbisa2nKGPxCpm89Hk33lBLsnaGBvctQopaBSOW/uIs6FTe1ATyAnKFJrzVs9vpGdsTe73WF3V4lIsk4Gacw==}
