@@ -188,7 +188,7 @@ const commonTheme = {
   chain_7777777: colors.neutral1_light,
   promotional: colors.magenta300,
 
-  brandedGradient: 'linear-gradient(139.57deg, #FF79C9 4.35%, #FFB8E2 96.44%);',
+  brandedGradient: 'linear-gradient(139.57deg, #00D54B 4.35%, #7AEEA2 96.44%);',
   promotionalGradient: colors.accent1_light,
 }
 
