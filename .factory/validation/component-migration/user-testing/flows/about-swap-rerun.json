@@ -1,0 +1,31 @@
+{
+  "groupId": "about-swap-rerun",
+  "surface": "web",
+  "assertions": [
+    {
+      "id": "ABOUT-004",
+      "status": "pass",
+      "reason": "Link pill container styles match (background rgb(31, 31, 31), border-radius 20px) and pill text styles match on rendered span (font-size 17px, color rgba(255, 255, 255, 0.65), font-weight 485).",
+      "evidence": [
+        "component-migration/about-swap-rerun/ABOUT-004-link-pills.png",
+        "component-migration/about-swap-rerun/ABOUT-004-link-pills-annotated.png",
+        "console-errors:none"
+      ]
+    },
+    {
+      "id": "SWAP-005",
+      "status": "pass",
+      "reason": "CTA container styles match (border-radius 20px, min-height 56px) and rendered label span matches typography target (font-size 17px, font-weight 485/medium).",
+      "evidence": [
+        "component-migration/about-swap-rerun/SWAP-005-cta.png",
+        "component-migration/about-swap-rerun/SWAP-005-cta-annotated.png",
+        "console-errors:none"
+      ]
+    }
+  ],
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "frictions": [],
+  "blockers": []
+}

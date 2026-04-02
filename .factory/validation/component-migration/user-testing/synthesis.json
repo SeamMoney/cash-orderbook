@@ -1,25 +1,19 @@
 {
   "milestone": "component-migration",
-  "round": 4,
-  "status": "fail",
+  "round": 5,
+  "status": "pass",
   "assertionsSummary": {
     "total": 2,
-    "passed": 0,
-    "failed": 2,
+    "passed": 2,
+    "failed": 0,
     "blocked": 0
   },
-  "passedAssertions": [],
-  "failedAssertions": [
-    {
-      "id": "ABOUT-004",
-      "reason": "Typography/color mismatch persists on link pills: expected 17px neutral2 text, observed 16px white text."
-    },
-    {
-      "id": "SWAP-005",
-      "reason": "CTA typography mismatch persists: expected 17px/500, observed 16px/400."
-    }
+  "passedAssertions": [
+    "ABOUT-004",
+    "SWAP-005"
   ],
+  "failedAssertions": [],
   "blockedAssertions": [],
   "appliedUpdates": [],
-  "previousRound": ".factory/validation/component-migration/user-testing/synthesis.round3.json"
+  "previousRound": ".factory/validation/component-migration/user-testing/synthesis.round4.json"
 }
