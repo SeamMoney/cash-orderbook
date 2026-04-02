@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { styled, Text, useMedia } from "@tamagui/core";
+import { AnimatePresence, motion } from "framer-motion";
 import { Search, Menu, X } from "lucide-react";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { ConnectButton } from "@/components/wallet/connect-button";
 import { WalletSelector } from "@/components/wallet/wallet-selector";
+import { Flex } from "@/components/ui/Flex";
 
 export type NavTab = "trade" | "explore";
 
@@ -19,12 +21,138 @@ const NAV_TABS: { id: NavTab; label: string }[] = [
   { id: "explore", label: "Explore" },
 ];
 
+/* ─── Styled Tamagui Components ─────────────────────────────────────────────── */
+
+/** Nav container: 72px height, full viewport width, surface1 bg, horizontal padding */
+const NavContainer = styled(Flex, {
+  tag: "header",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  width: "100%",
+  height: 72,
+  paddingHorizontal: "$spacing12",
+  backgroundColor: "$surface1",
+});
+
+/** Nav tab text with active/inactive color states */
+const NavTabText = styled(Text, {
+  fontFamily: "$body",
+  fontSize: 15,
+  lineHeight: 19.5,
+  cursor: "pointer",
+  paddingHorizontal: "$spacing8",
+  paddingVertical: "$spacing6",
+  color: "$neutral2",
+
+  variants: {
+    isActive: {
+      true: {
+        color: "$neutral1",
+        fontWeight: "$medium",
+      },
+      false: {
+        color: "$neutral2",
+      },
+    },
+  } as const,
+
+  defaultVariants: {
+    isActive: false,
+  },
+
+  hoverStyle: {
+    color: "$neutral1",
+  },
+});
+
+/** Search bar: surface2 bg, 280px width, 40px height, pill shaped */
+const SearchBarContainer = styled(Flex, {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: "$spacing8",
+  backgroundColor: "$surface2",
+  width: 280,
+  height: 40,
+  borderRadius: "$roundedFull",
+  paddingHorizontal: "$spacing16",
+  borderWidth: 1,
+  borderColor: "transparent",
+  cursor: "pointer",
+
+  hoverStyle: {
+    backgroundColor: "$surface2Hovered",
+  },
+});
+
+/** Logo text: ~20px, white, medium weight */
+const LogoText = styled(Text, {
+  fontFamily: "$body",
+  fontSize: 20,
+  fontWeight: "$medium",
+  color: "$neutral1",
+  letterSpacing: -0.5,
+});
+
+/** Ghost text button for "Log In" */
+const GhostButton = styled(Text, {
+  tag: "button",
+  fontFamily: "$body",
+  fontSize: 15,
+  fontWeight: "$medium",
+  color: "$neutral2",
+  cursor: "pointer",
+  paddingHorizontal: "$spacing12",
+  paddingVertical: "$spacing6",
+
+  hoverStyle: {
+    color: "$neutral1",
+  },
+});
+
+/** Accent button container for "Sign Up" */
+const AccentButton = styled(Flex, {
+  tag: "button",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "$accent1",
+  borderRadius: "$roundedFull",
+  paddingHorizontal: "$spacing16",
+  paddingVertical: "$spacing6",
+  cursor: "pointer",
+
+  hoverStyle: {
+    backgroundColor: "$accent1Hovered",
+  },
+});
+
+/** Hamburger toggle button */
+const HamburgerButton = styled(Flex, {
+  tag: "button",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 44,
+  height: 44,
+  borderRadius: "$rounded12",
+  cursor: "pointer",
+  backgroundColor: "transparent",
+
+  hoverStyle: {
+    backgroundColor: "$surface2",
+  },
+});
+
+/* ─── Nav Component ─────────────────────────────────────────────────────────── */
+
 /**
- * Nav — sticky top navigation bar.
+ * Nav — sticky top navigation bar using Tamagui primitives.
  * Logo "CASH" left, Trade/Explore tabs center, wallet actions right.
- * When disconnected: shows "Log In" + "Sign Up" buttons (polymarket style).
- * When connected: shows truncated address with green pulse dot and optional badge.
- * On mobile (<768px): hamburger menu that expands to show tabs + wallet actions.
+ * Matches Uniswap's NavBar: surface1 bg, 72px height, full width.
+ *
+ * Responsive behavior:
+ * - md breakpoint (≤640px): hides tabs + wallet, shows hamburger
+ * - lg breakpoint (≤768px): hides search bar
  */
 export function Nav({
   activeTab = "trade",
@@ -32,7 +160,13 @@ export function Nav({
 }: NavProps): React.ReactElement {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectorOpen, setSelectorOpen] = useState(false);
-  const { connected, account, wallet } = useWallet();
+  const { connected, account } = useWallet();
+  const media = useMedia();
+
+  // md = maxWidth 640px — when true, we're on mobile
+  const isMobile = media.md;
+  // lg = maxWidth 768px — when true, hide search bar
+  const isTablet = media.lg;
 
   const handleTabChange = useCallback(
     (tab: NavTab): void => {
@@ -44,143 +178,176 @@ export function Nav({
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-background">
-        <div className="mx-auto flex h-[72px] items-center justify-between px-3">
-          {/* Left: Logo */}
-          <div className="flex items-center gap-6">
-            <span className="text-xl font-bold tracking-tight text-white">
-              CASH
-            </span>
-          </div>
+      <NavContainer
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 50,
+        }}
+      >
+        {/* Left: Logo */}
+        <Flex row alignItems="center" gap="$spacing12">
+          <LogoText>CASH</LogoText>
+        </Flex>
 
-          {/* Center: Navigation Tabs (hidden on mobile) */}
-          <nav className="hidden md:flex items-center gap-3">
+        {/* Center: Navigation Tabs — hidden on mobile (≤640px) */}
+        {!isMobile && (
+          <Flex row alignItems="center" gap="$spacing12">
             {NAV_TABS.map((tab) => (
-              <button
+              <NavTabText
                 key={tab.id}
-                onClick={() => onTabChange?.(tab.id)}
-                className={`px-4 py-1.5 text-[15px] font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? "text-white"
-                    : "text-white/65 hover:text-white"
-                }`}
+                isActive={activeTab === tab.id}
+                onPress={() => onTabChange?.(tab.id)}
               >
                 {tab.label}
-              </button>
+              </NavTabText>
             ))}
-          </nav>
+          </Flex>
+        )}
 
-          {/* Right: Search + Wallet (desktop) + Hamburger (mobile) */}
-          <div className="flex items-center gap-3">
-            {/* Search placeholder — hidden on mobile and tablet */}
-            <div className="hidden lg:flex items-center gap-2 rounded-full bg-[#1F1F1F] border border-transparent hover:border-white/10 px-3 h-10 text-sm text-text-muted w-[280px] cursor-pointer transition-colors">
-              <Search className="h-3.5 w-3.5" />
-              <span>Search tokens</span>
-            </div>
+        {/* Right: Search + Wallet */}
+        <Flex row alignItems="center" gap="$spacing12">
+          {/* Search bar — hidden below lg (≤768px) */}
+          {!isTablet && (
+            <SearchBarContainer>
+              <Search size={14} color="rgba(255,255,255,0.38)" />
+              <Text
+                fontFamily="$body"
+                fontSize={15}
+                color="$neutral3"
+              >
+                Search tokens
+              </Text>
+            </SearchBarContainer>
+          )}
 
-            {/* Wallet area — hidden on mobile, shown in mobile menu instead */}
-            <div className="hidden md:flex items-center gap-2">
+          {/* Wallet area — hidden on mobile */}
+          {!isMobile && (
+            <Flex row alignItems="center" gap="$spacing8">
               {connected && account ? (
                 <ConnectButton />
               ) : (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setSelectorOpen(true)}
-                    className="text-white/65 hover:text-white text-sm font-medium transition-colors px-3 py-1.5"
-                  >
+                <Flex row alignItems="center" gap="$spacing8">
+                  <GhostButton onPress={() => setSelectorOpen(true)}>
                     Log In
-                  </button>
-                  <button
-                    onClick={() => setSelectorOpen(true)}
-                    className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm rounded-full transition-all"
-                  >
-                    Sign Up
-                  </button>
-                </div>
+                  </GhostButton>
+                  <AccentButton onPress={() => setSelectorOpen(true)}>
+                    <Text
+                      fontFamily="$button"
+                      fontSize={15}
+                      fontWeight="$medium"
+                      color="$white"
+                    >
+                      Sign Up
+                    </Text>
+                  </AccentButton>
+                </Flex>
               )}
-            </div>
+            </Flex>
+          )}
 
-            {/* Hamburger menu toggle — mobile only */}
-            <button
-              onClick={() => setMobileMenuOpen((prev) => !prev)}
-              className="flex md:hidden items-center justify-center h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl text-text-secondary hover:text-white hover:bg-surface-hover transition-colors"
+          {/* Hamburger — mobile only (≤640px) */}
+          {isMobile && (
+            <HamburgerButton
+              onPress={() => setMobileMenuOpen((prev) => !prev)}
               aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-              aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? (
-                <X className="h-5 w-5" />
+                <X size={20} color="rgba(255,255,255,0.65)" />
               ) : (
-                <Menu className="h-5 w-5" />
+                <Menu size={20} color="rgba(255,255,255,0.65)" />
               )}
-            </button>
-          </div>
-        </div>
+            </HamburgerButton>
+          )}
+        </Flex>
+      </NavContainer>
 
-        {/* Mobile Menu Drawer */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-              className="md:hidden overflow-hidden border-t border-border bg-background/95 backdrop-blur-md"
-            >
-              <div className="px-4 py-4 space-y-3">
-                {/* Navigation tabs */}
-                <nav className="flex flex-col gap-1">
-                  {NAV_TABS.map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => handleTabChange(tab.id)}
-                      className={`flex items-center rounded-xl px-4 py-3 min-h-[44px] text-sm font-medium transition-colors ${
-                        activeTab === tab.id
-                          ? "bg-secondary text-white"
-                          : "text-muted-foreground hover:text-white hover:bg-surface-hover"
-                      }`}
+      {/* Mobile Menu Drawer */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            style={{
+              overflow: "hidden",
+              position: "sticky",
+              top: 72,
+              zIndex: 49,
+              borderTop: "1px solid rgba(255,255,255,0.12)",
+              background: "#131313",
+            }}
+          >
+            <Flex padding="$spacing16" gap="$spacing12">
+              {/* Navigation tabs */}
+              {NAV_TABS.map((tab) => (
+                <Flex
+                  key={tab.id}
+                  row
+                  alignItems="center"
+                  borderRadius="$rounded12"
+                  paddingHorizontal="$spacing16"
+                  paddingVertical="$spacing12"
+                  backgroundColor={
+                    activeTab === tab.id ? "$surface2" : "transparent"
+                  }
+                  cursor="pointer"
+                  hoverStyle={{ backgroundColor: "$surface2" }}
+                  onPress={() => handleTabChange(tab.id)}
+                >
+                  <Text
+                    fontFamily="$body"
+                    fontSize={15}
+                    fontWeight="$medium"
+                    color={activeTab === tab.id ? "$neutral1" : "$neutral2"}
+                  >
+                    {tab.label}
+                  </Text>
+                </Flex>
+              ))}
+
+              {/* Divider */}
+              <Flex height={1} backgroundColor="$surface3" width="100%" />
+
+              {/* Wallet actions — mobile */}
+              <Flex row alignItems="center">
+                {connected && account ? (
+                  <ConnectButton />
+                ) : (
+                  <Flex row alignItems="center" gap="$spacing8">
+                    <GhostButton
+                      onPress={() => {
+                        setSelectorOpen(true);
+                        setMobileMenuOpen(false);
+                      }}
                     >
-                      {tab.label}
-                    </button>
-                  ))}
-                </nav>
-
-                {/* Divider */}
-                <div className="border-t border-border" />
-
-                {/* Wallet actions — mobile (44px touch target) */}
-                <div className="flex items-center [&_button]:min-h-[44px]">
-                  {connected && account ? (
-                    <ConnectButton />
-                  ) : (
-                    <div className="flex items-center gap-2 w-full">
-                      <button
-                        onClick={() => {
-                          setSelectorOpen(true);
-                          setMobileMenuOpen(false);
-                        }}
-                        className="text-white/65 hover:text-white text-sm font-medium transition-colors px-3 py-2"
-                      >
-                        Log In
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectorOpen(true);
-                          setMobileMenuOpen(false);
-                        }}
-                        className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm rounded-full transition-all"
+                      Log In
+                    </GhostButton>
+                    <AccentButton
+                      onPress={() => {
+                        setSelectorOpen(true);
+                        setMobileMenuOpen(false);
+                      }}
+                    >
+                      <Text
+                        fontFamily="$button"
+                        fontSize={15}
+                        fontWeight="$medium"
+                        color="$white"
                       >
                         Sign Up
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </header>
+                      </Text>
+                    </AccentButton>
+                  </Flex>
+                )}
+              </Flex>
+            </Flex>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Wallet Selector Modal — shared between Log In and Sign Up buttons */}
+      {/* Wallet Selector Modal */}
       <WalletSelector
         isOpen={selectorOpen}
         onClose={() => setSelectorOpen(false)}
