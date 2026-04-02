@@ -41,6 +41,7 @@ const PositionPage = lazy(() => import('~/pages/Positions/PositionPage'))
 const V2PositionPage = lazy(() => import('~/pages/Positions/V2PositionPage'))
 const PoolDetails = lazy(() => import('~/pages/PoolDetails'))
 const TokenDetails = lazy(() => import('~/pages/TokenDetails/TokenDetailsPage'))
+const CashTokenDetailPage = lazy(() => import('~/pages/CashTDP'))
 const ExtensionPasskeyAuthPopUp = lazy(() => import('~/pages/ExtensionPasskeyAuthPopUp'))
 const PasskeyManagement = lazy(() => import('~/pages/PasskeyManagement'))
 const ExtensionUninstall = lazy(() => import('~/pages/ExtensionUninstall/ExtensionUninstall'))
@@ -153,6 +154,17 @@ export const routes: RouteDefinition[] = [
     getElement: () => (
       <Suspense fallback={null}>
         <TokenDetails />
+      </Suspense>
+    ),
+  }),
+  // CASH Token Detail Page — uses our REST/WS API instead of GraphQL
+  createRouteDefinition({
+    path: '/cash',
+    getTitle: () => 'CASH — Token Details',
+    getDescription: () => 'CASH token detail page with real-time orderbook data',
+    getElement: () => (
+      <Suspense fallback={null}>
+        <CashTokenDetailPage />
       </Suspense>
     ),
   }),

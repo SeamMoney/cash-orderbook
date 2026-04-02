@@ -522,6 +522,19 @@ export default defineConfig(({ mode }) => {
           secure: true,
           rewrite: (path) => path.replace(/^\/config/, '/v1/statsig-proxy'),
         },
+        // CASH orderbook REST API proxy
+        '/cash-api': {
+          target: 'http://localhost:3100',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/cash-api/, ''),
+        },
+        // CASH orderbook WebSocket proxy
+        '/cash-ws': {
+          target: 'ws://localhost:3101',
+          ws: true,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/cash-ws/, ''),
+        },
         // Uniswap GraphQL proxy handled by custom middleware plugin (graphqlProxyPlugin below).
       },
     },
