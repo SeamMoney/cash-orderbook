@@ -1,0 +1,38 @@
+{
+  "featureId": "fix-tamagui-foundation-scrutiny",
+  "reviewedAt": "2026-04-02T00:21:45Z",
+  "commitId": "1d39bb4931bb6fe9c422184d66f92c92f96d920e",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The fix successfully installs `@tamagui/cli`, switches search hover to border hover, and removes hardcoded navbar/breadcrumb color literals, but it does not meet the stated breakpoint contract at exactly 1024px.",
+    "issues": [
+      {
+        "file": "web/components/nav.tsx",
+        "line": 168,
+        "severity": "blocking",
+        "description": "Breakpoint logic uses `const isCollapsed = media.xl;` while `xl` is configured as `maxWidth: 1024` (`web/tamagui.config.ts:331`), so collapse remains active at 1024px. The fix feature contract requires collapse at `<1024px` and full desktop nav at `1024px` (`features.json:420,428`)."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Breakpoint semantics are not consistently documented for mission features vs Tamagui media behavior, which caused an off-by-one interpretation at 1024px.",
+      "evidence": "Feature contract says `<1024px` collapse and `1024px` desktop (`features.json:420,428`), while implementation used `media.xl` (`web/components/nav.tsx:168`) and Tamagui defines `xl` as `maxWidth: 1024` (`web/tamagui.config.ts:331`)."
+    },
+    {
+      "area": "skills",
+      "observation": "The Tamagui worker skill's mandatory TDD step is misaligned for CSS/responsive/dependency-only fixes and is still being flagged by workers.",
+      "evidence": "Skill requires `Write Tests First (TDD)` (`.factory/skills/tamagui-frontend-worker/SKILL.md:32`), while this handoff reports no tests added and requests updating that guidance for this class of change (`...3664a673...json:57,64`)."
+    },
+    {
+      "area": "skills",
+      "observation": "Agent-browser usage guidance is too vague; workers spent multiple attempts discovering the correct viewport command syntax.",
+      "evidence": "Transcript skeleton shows repeated failed commands (`Unknown command: viewport`) before succeeding with `set viewport` (`/tmp/fix_tamagui_scrutiny_transcript_skeleton.md:731,739,770`)."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/tamagui-foundation/scrutiny/reviews/tamagui-setup-and-theme.json; .factory/validation/tamagui-foundation/scrutiny/reviews/navbar-tamagui-migration.json",
+  "summary": "Fail: dependency and styling/token cleanup items are fixed, but the navbar breakpoint is still incorrect at exactly 1024px versus the fix contract, so prior blocking behavior is not fully resolved."
+}

@@ -1,0 +1,69 @@
+{
+  "milestone": "tamagui-foundation",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "pnpm -r test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm -r typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm -r lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 3,
+    "passed": 1,
+    "failed": 2,
+    "failedFeatures": [
+      "tamagui-setup-and-theme",
+      "navbar-tamagui-migration"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "tamagui-setup-and-theme",
+      "severity": "blocking",
+      "description": "Feature required installing @tamagui/cli, but web/package.json does not include it."
+    },
+    {
+      "featureId": "navbar-tamagui-migration",
+      "severity": "blocking",
+      "description": "Navbar collapse/hamburger behavior is implemented at md (<=640px) instead of required xl breakpoint."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "library",
+      "description": "Added .factory/library/tamagui-typescript-gotchas.md capturing validated Tamagui TypeScript constraints (sticky wrapper and useMedia preference).",
+      "sourceFeature": "tdp-layout-skeleton"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "skill:tamagui-frontend-worker",
+      "suggestion": "Make the mandatory TDD step conditional for config/layout-only features and allow a visual/computed-style-first verification path when no practical component test harness exists.",
+      "evidence": "All three reviews flagged repeated TDD deviations for this milestone; two reviewer observations explicitly cite mismatch between mandatory TDD instruction and actual frontend workflow.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Document that @typescript-eslint/no-empty-interface is unavailable in this lint setup.",
+      "reason": "ambiguous (single-session evidence from generated lint attempt; not independently reproduced during this scrutiny run)"
+    },
+    {
+      "observation": "Add separate guidance update for missing web component test harness.",
+      "reason": "duplicate (covered by the broader TDD-conditional skill guidance recommendation)"
+    }
+  ],
+  "previousRound": null
+}

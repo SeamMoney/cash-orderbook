@@ -1,6 +1,6 @@
 {
   "milestone": "tamagui-foundation",
-  "round": 1,
+  "round": 2,
   "status": "fail",
   "validatorsRun": {
     "test": {
@@ -20,50 +20,41 @@
     }
   },
   "reviewsSummary": {
-    "total": 3,
-    "passed": 1,
-    "failed": 2,
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
     "failedFeatures": [
-      "tamagui-setup-and-theme",
-      "navbar-tamagui-migration"
+      "fix-tamagui-foundation-scrutiny"
     ]
   },
   "blockingIssues": [
     {
-      "featureId": "tamagui-setup-and-theme",
+      "featureId": "fix-tamagui-foundation-scrutiny",
       "severity": "blocking",
-      "description": "Feature required installing @tamagui/cli, but web/package.json does not include it."
-    },
-    {
-      "featureId": "navbar-tamagui-migration",
-      "severity": "blocking",
-      "description": "Navbar collapse/hamburger behavior is implemented at md (<=640px) instead of required xl breakpoint."
+      "description": "Navbar collapse uses `media.xl` where `xl` is `maxWidth: 1024`, so collapsed mode remains active at 1024px. Feature contract requires collapse only for <1024px and full desktop nav at 1024px."
     }
   ],
-  "appliedUpdates": [
-    {
-      "target": "library",
-      "description": "Added .factory/library/tamagui-typescript-gotchas.md capturing validated Tamagui TypeScript constraints (sticky wrapper and useMedia preference).",
-      "sourceFeature": "tdp-layout-skeleton"
-    }
-  ],
+  "appliedUpdates": [],
   "suggestedGuidanceUpdates": [
     {
-      "target": "skill:tamagui-frontend-worker",
-      "suggestion": "Make the mandatory TDD step conditional for config/layout-only features and allow a visual/computed-style-first verification path when no practical component test harness exists.",
-      "evidence": "All three reviews flagged repeated TDD deviations for this milestone; two reviewer observations explicitly cite mismatch between mandatory TDD instruction and actual frontend workflow.",
+      "target": "AGENTS.md",
+      "suggestion": "When specifying responsive breakpoints in feature contracts, explicitly state inclusive/exclusive boundary semantics (e.g., '<1024' vs '<=1024') and align with framework media-query behavior.",
+      "evidence": "This re-run failed due to an off-by-one mismatch between feature contract expectation (<1024 collapsed) and Tamagui `maxWidth: 1024` semantics used in implementation.",
       "isSystemic": true
-    }
-  ],
-  "rejectedObservations": [
-    {
-      "observation": "Document that @typescript-eslint/no-empty-interface is unavailable in this lint setup.",
-      "reason": "ambiguous (single-session evidence from generated lint attempt; not independently reproduced during this scrutiny run)"
     },
     {
-      "observation": "Add separate guidance update for missing web component test harness.",
-      "reason": "duplicate (covered by the broader TDD-conditional skill guidance recommendation)"
+      "target": "skill:tamagui-frontend-worker",
+      "suggestion": "Make the mandatory TDD step conditional for CSS/responsive/dependency-only changes and provide a visual/computed-style-first validation path for those cases.",
+      "evidence": "The same mismatch was observed again in this re-run review after being raised in round 1; workers continue reporting TDD-procedure misfit for non-functional styling/config-only fixes.",
+      "isSystemic": true
+    },
+    {
+      "target": "skill:tamagui-frontend-worker",
+      "suggestion": "Add explicit agent-browser command examples for viewport changes (e.g., `set viewport <w> <h>`) to avoid trial-and-error during visual validation.",
+      "evidence": "Review transcript skeleton for this fix shows repeated failed viewport commands before discovering correct syntax.",
+      "isSystemic": false
     }
   ],
-  "previousRound": null
+  "rejectedObservations": [],
+  "previousRound": ".factory/validation/tamagui-foundation/scrutiny/synthesis.round1.json"
 }
