@@ -42,6 +42,17 @@ User Browser → apps/trading (Vite SPA, port 3200)
               api/ws.js (port 3101) → Real-time orderbook/trades
 ```
 
+## CASH-Specific Code in apps/trading/
+
+All CASH-specific code lives in `apps/trading/src/cash/`:
+- `lib/` — Pure logic: swap-quote.ts, panora.ts, sdk.ts, config.ts, utils.ts
+- `hooks/` — 15 React hooks for REST/WS data (balances, depth, trades, candles, etc.)
+- `providers/` — AptosWalletProvider, CashSwapProvider
+- `data/` — historical-candles.json
+
+The CashTDPProvider (in `src/pages/CashTDP/`) maps REST API data into the Uniswap TDP Zustand store shape.
+
 ## Key Paths
 - Uniswap source reference: /Users/maxmohammadi/uniswap-frontend/
+- Legacy CASH frontend (to port FROM): /Users/maxmohammadi/cash-orderbook/web/
 - CASH API with dev seed: APTOS_NETWORK=testnet node api/dist/index.js
