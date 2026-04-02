@@ -1,0 +1,73 @@
+{
+  "milestone": "core-port",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": false,
+      "command": "pnpm -C \"/Users/maxmohammadi/cash-orderbook\" -r test",
+      "exitCode": 1,
+      "failureSummary": "Workspace test run failed in apps/trading with 277 failures due unresolved import '@universe/gating' in src/setupTests.ts."
+    },
+    "typecheck": {
+      "passed": false,
+      "command": "pnpm -C \"/Users/maxmohammadi/cash-orderbook\" -r typecheck",
+      "exitCode": 1,
+      "failureSummary": "Workspace typecheck failed in web due React type incompatibilities in swap token selector and wallet provider components."
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm -C \"/Users/maxmohammadi/cash-orderbook\" -r lint",
+      "exitCode": 0
+    }
+  },
+  "supplementalValidation": [
+    {
+      "command": "pnpm -C \"/Users/maxmohammadi/cash-orderbook\" --filter @cash/api --filter @cash/orderbook-sdk --filter @cash/shared --filter @cash/scripts test",
+      "exitCode": 0,
+      "observation": "Non-regression test subset passed: api 159 tests, sdk 33 tests, scripts 7 tests."
+    },
+    {
+      "command": "pnpm -C \"/Users/maxmohammadi/cash-orderbook\" --filter @cash/trading --filter @cash/api --filter @cash/orderbook-sdk --filter @cash/shared --filter @cash/scripts typecheck",
+      "exitCode": 1,
+      "observation": "apps/trading typecheck failed with existing upstream dependency/type graph issues (TS6305 and missing module declarations)."
+    },
+    {
+      "command": "pnpm -C \"/Users/maxmohammadi/cash-orderbook\" --filter @cash/trading --filter @cash/api --filter @cash/orderbook-sdk --filter @cash/shared --filter @cash/scripts lint",
+      "exitCode": 0,
+      "observation": "Filtered lint completed successfully for selected packages."
+    },
+    {
+      "command": "pnpm -C \"/Users/maxmohammadi/cash-orderbook\" -r build",
+      "exitCode": 1,
+      "observation": "Build attempt failed in web at Next.js typecheck step with same React type incompatibility."
+    }
+  ],
+  "reviewsSummary": {
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [
+    {
+      "featureId": "milestone-validation",
+      "severity": "blocking",
+      "description": "Cannot proceed to scrutiny feature reviews because required workspace validators are failing before review stage."
+    },
+    {
+      "featureId": "apps-trading-test-harness",
+      "severity": "blocking",
+      "description": "apps/trading tests fail due unresolved '@universe/gating' import, causing 277 suite failures."
+    },
+    {
+      "featureId": "web-typecheck",
+      "severity": "blocking",
+      "description": "web package fails typecheck/build from React type mismatch in token selector and wallet provider, blocking full workspace validation."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [],
+  "rejectedObservations": [],
+  "previousRound": null
+}
