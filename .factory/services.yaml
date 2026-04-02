@@ -1,9 +1,9 @@
 commands:
   install: pnpm install
-  typecheck: pnpm -r typecheck
-  build: pnpm -r build
-  test: pnpm -r test
-  lint: pnpm -r lint
+  typecheck: pnpm --filter @cash/api --filter @cash/orderbook-sdk --filter @cash/shared --filter @cash/scripts typecheck
+  build: pnpm --filter @cash/api --filter @cash/orderbook-sdk --filter @cash/shared --filter @cash/scripts build
+  test: pnpm --filter @cash/api --filter @cash/orderbook-sdk --filter @cash/shared --filter @cash/scripts test
+  lint: pnpm --filter @cash/api --filter @cash/orderbook-sdk --filter @cash/shared --filter @cash/scripts lint
   web-build: cd web && pnpm build
   web-dev: cd web && PORT=3103 pnpm dev
 
