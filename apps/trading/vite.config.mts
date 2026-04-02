@@ -285,6 +285,39 @@ export default defineConfig(({ mode }) => {
     },
 
     plugins: [
+      // Proxy /graphql requests to Uniswap's GraphQL API, stripping browser-specific
+      // headers that trigger Cloudflare bot detection (Sec-Fetch-*, etc.).
+      {
+        name: 'uniswap-graphql-proxy',
+        configureServer(server: ViteDevServer) {
+          server.middlewares.use('/graphql', async (req, res) => {
+            const chunks: Buffer[] = []
+            req.on('data', (chunk: Buffer) => chunks.push(chunk))
+            req.on('end', async () => {
+              try {
+                const body = Buffer.concat(chunks).toString()
+                const upstream = await fetch('https://beta.gateway.uniswap.org/v1/graphql', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Origin': 'https://app.uniswap.org',
+                  },
+                  body,
+                })
+                const data = await upstream.text()
+                res.writeHead(upstream.status, {
+                  'Content-Type': 'application/json',
+                  'Access-Control-Allow-Origin': '*',
+                })
+                res.end(data)
+              } catch (err) {
+                res.writeHead(502, { 'Content-Type': 'application/json' })
+                res.end(JSON.stringify({ error: 'GraphQL proxy error', message: String(err) }))
+              }
+            })
+          })
+        },
+      },
       // Fix JSBI ESM interop issue:
       // Rollup's interop wrapper checks for __esModule and passes through if present.
       // JSBI's pure ESM build doesn't have __esModule, so Rollup creates a proxy wrapper
@@ -489,7 +522,7 @@ export default defineConfig(({ mode }) => {
           secure: true,
           rewrite: (path) => path.replace(/^\/config/, '/v1/statsig-proxy'),
         },
-        // Entry gateway proxy disabled for CASH
+        // Uniswap GraphQL proxy handled by custom middleware plugin (graphqlProxyPlugin below).
       },
     },
 

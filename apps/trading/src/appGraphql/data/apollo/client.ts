@@ -8,7 +8,11 @@ if (!API_URL) {
   throw new Error('AWS API ENDPOINT MISSING FROM ENVIRONMENT')
 }
 
-const httpLink = new HttpLink({ uri: API_URL })
+// In development, use the Vite proxy to avoid CORS issues with the Uniswap GraphQL API.
+// The proxy at /graphql forwards to https://beta.gateway.uniswap.org/v1/graphql.
+const graphqlUri = import.meta.env.DEV ? '/graphql' : API_URL
+
+const httpLink = new HttpLink({ uri: graphqlUri })
 const datadogLink = getDatadogApolloLink()
 const retryLink = getRetryLink()
 
