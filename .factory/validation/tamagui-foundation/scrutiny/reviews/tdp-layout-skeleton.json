@@ -1,0 +1,33 @@
+{
+  "featureId": "tdp-layout-skeleton",
+  "reviewedAt": "2026-04-02T00:08:49Z",
+  "commitId": "cf8168c",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The feature implementation matches the requested Tamagui layout skeleton behavior (desktop two-column layout, responsive stacking, breadcrumb chevron separator, and desktop right-panel swap placement) while preserving existing data hook wiring. One non-blocking theming consistency issue was identified.",
+    "issues": [
+      {
+        "file": "web/components/layout/Breadcrumb.tsx",
+        "line": 35,
+        "severity": "non_blocking",
+        "description": "Chevron color is hardcoded as \"rgba(255,255,255,0.38)\" instead of using a theme token (e.g., $neutral3), which weakens theme consistency and conflicts with mission guidance to use tokens for styling values."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The tamagui-frontend-worker skill's mandatory 'Write Tests First (TDD)' step does not fit purely structural/layout-only migrations; the worker had to deviate and rely on computed-style visual checks.",
+      "evidence": "Handoff skillFeedback.deviations includes step 'Write Tests First (TDD)' with justification that this feature is structural layout work verified via agent-browser measurements."
+    },
+    {
+      "area": "knowledge",
+      "observation": "Tamagui View typing does not support CSS position: sticky in this setup, leading to a plain div wrapper workaround for sticky swap placement; this limitation should be captured in shared guidance.",
+      "evidence": "web/app/page.tsx:133 uses <div style={{ position: \"sticky\", top: 72 }}> and handoff.discoveredIssues explicitly documents the Tamagui sticky typing limitation."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review completed for tdp-layout-skeleton (commit cf8168c). The feature is functionally complete for its scope and passes scrutiny with one non-blocking theming-token issue plus two shared-state observations for skill/knowledge documentation."
+}

@@ -1,0 +1,33 @@
+{
+  "featureId": "tamagui-setup-and-theme",
+  "reviewedAt": "2026-04-02T00:07:53Z",
+  "commitId": "48fccdc5d582f50bc552cb53467c27c46d7fd509",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The Tamagui config/provider wiring is present and matches most requested behavior, but one explicit requirement from the feature spec was not implemented.",
+    "issues": [
+      {
+        "file": "web/package.json",
+        "line": 25,
+        "severity": "blocking",
+        "description": "Feature step 1 requires installing `@tamagui/cli` (for Turbopack support), but the committed dependencies include only `@tamagui/core` and `@tamagui/react-native-media-driver`; `@tamagui/cli` is missing."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The skill procedure's mandatory TDD step does not fit infrastructure/config-only features (like Tamagui setup), causing predictable deviation.",
+      "evidence": "Handoff `skillFeedback.deviations` explicitly reports skipping Step 2 (Write Tests First) as not applicable for config/provider wiring and suggests updating the skill guidance."
+    },
+    {
+      "area": "knowledge",
+      "observation": "Repo lint environment does not support some newer `@typescript-eslint` rule names, which can mislead workers during generated-code cleanup.",
+      "evidence": "Transcript skeleton shows lint failure for `@typescript-eslint/no-empty-interface` being undefined, and worker confirmed `web/.eslintrc.json` only extends `next/core-web-vitals` on ESLint 8."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review failed due to a blocking spec mismatch: `@tamagui/cli` was required but not installed. Theme tokens, provider wiring, and layout integration were otherwise implemented."
+}

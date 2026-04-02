@@ -1,0 +1,45 @@
+{
+  "featureId": "navbar-tamagui-migration",
+  "reviewedAt": "2026-04-02T00:08:37Z",
+  "commitId": "2917a3e",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The navbar migration is largely aligned with Tamagui structure and preserves wallet integration, but it does not fully satisfy the feature’s responsive breakpoint requirement and has a hover-style mismatch on the search bar.",
+    "issues": [
+      {
+        "file": "web/components/nav.tsx",
+        "line": 167,
+        "severity": "blocking",
+        "description": "Mobile/collapse behavior is keyed off `media.md` (<=640px), while the feature requires hamburger/collapse behavior at the xl breakpoint. This leaves 641-1024px in desktop layout instead of collapsed behavior (see requirement in mission features.json line 380)."
+      },
+      {
+        "file": "web/components/nav.tsx",
+        "line": 84,
+        "severity": "non_blocking",
+        "description": "Search bar hover style changes background to `$surface2Hovered` instead of applying a `surface3` border while keeping default border transparent. Feature spec explicitly asks for `border-transparent` default and `hover:surface3` border behavior."
+      },
+      {
+        "file": "web/components/nav.tsx",
+        "line": 279,
+        "severity": "non_blocking",
+        "description": "Component introduces hardcoded color literals (`#131313`, `rgba(...)`) instead of theme tokens in several spots (e.g., lines 213, 256, 258, 278-279), which conflicts with mission token-only conventions."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The Tamagui worker skill mandates TDD test-first for component work, but the web package currently lacks a real component test harness; workers are repeatedly forced to deviate.",
+      "evidence": "Skill file requires '2. Write Tests First (TDD)' (.factory/skills/tamagui-frontend-worker/SKILL.md:32-33), while handoff reports deviation due to web test script being echo-only (handoff: lines 68-70)."
+    },
+    {
+      "area": "knowledge",
+      "observation": "Responsive implementation guidance should document that inline `$gtMd/$gtLg` media props on this `Flex` setup are not type-safe in JSX; workers should prefer `useMedia` or styled-component media definitions.",
+      "evidence": "Handoff deviation notes inline `$gtMd/$gtLg` caused TypeScript errors and worker switched to `useMedia` (handoff: lines 73-75)."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review failed due to a blocking responsive breakpoint mismatch (implemented at md instead of required xl). Two non-blocking issues were also found: search hover border behavior mismatch and hardcoded color literals that violate token conventions."
+}
