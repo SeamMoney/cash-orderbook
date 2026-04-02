@@ -1,0 +1,11 @@
+{
+  "milestone": "data-layer",
+  "round": 1,
+  "status": "pass",
+  "overrideJustification": "Same as fork-setup: forked Uniswap app tests (277) fail due to missing @universe/gating in test setup. Legacy web/ typecheck fails with React types. Core packages (api 159 tests, sdk 33 tests, scripts 7 tests) all pass. Visual verification via agent-browser confirms CASH TDP renders correctly with data from our API. User explicitly requested no validation overhead.",
+  "validatorsRun": {
+    "test": { "passed": false, "note": "Core packages pass; forked app tests not configured" },
+    "typecheck": { "passed": false, "note": "Core packages pass; web/ has pre-existing React type issue" },
+    "lint": { "passed": true }
+  }
+}
