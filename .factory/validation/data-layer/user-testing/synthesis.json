@@ -1,0 +1,26 @@
+{
+  "milestone": "data-layer",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "FORK-003",
+    "FORK-004",
+    "FORK-005"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Documented data-layer CASH validation route (/cash) and noted that /explore/tokens/aptos/CASH currently redirects to /explore token-not-found flow.",
+      "source": "flow-report"
+    }
+  ],
+  "previousRound": null
+}

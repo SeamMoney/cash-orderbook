@@ -31,6 +31,7 @@
 - Transaction table may be empty if no recent trades — functional assertions should account for empty state
 - Wallet connection requires browser extension or Aptos Connect — headless testing may show "Connect Wallet" state only
 - When validating nav hover states, use exact-text targeting for `Explore` to avoid collisions with `Explorer`.
+- CASH data-layer TDP route is `http://localhost:3200/cash`; `/explore/tokens/aptos/CASH` currently redirects to `/explore` with a token-not-found modal.
 
 ## Flow Validator Guidance: web
 

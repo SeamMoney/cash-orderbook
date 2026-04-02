@@ -1,0 +1,95 @@
+{
+  "groupId": "browser-cash-tdp",
+  "testedAt": "2026-04-02T11:11:40.913251+00:00",
+  "isolation": {
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "appUrl": "http://localhost:3200",
+    "apiUrl": "http://localhost:3100",
+    "assignedAssertions": [
+      "FORK-003",
+      "FORK-005"
+    ],
+    "browserSession": "79476079-cash-tdp-v1"
+  },
+  "toolsUsed": [
+    "agent-browser",
+    "curl"
+  ],
+  "assertions": [
+    {
+      "id": "FORK-003",
+      "title": "TDP renders CASH orderbook data",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Navigate to http://localhost:3200/cash",
+          "expected": "CASH token detail route renders with CASH price and chart",
+          "observed": "Route rendered CASH header (CASH/CASH), price ($0.1000/$0.0932), and green price chart"
+        },
+        {
+          "action": "Inspect stats and transactions sections",
+          "expected": "Stats and trades show CASH market data or documented empty state",
+          "observed": "Stats rendered (1 day volume $142.35K, 52W high/low, price) and transactions table populated with buy/sell trades"
+        },
+        {
+          "action": "Check network requests and API endpoints",
+          "expected": "TDP data sourced from local API",
+          "observed": "Browser requested /cash-api/market, /cash-api/candles, /cash-api/trades; direct readonly checks to localhost:3100 returned 200 for /market, /candles?interval=5m, /trades?limit=50"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "data-layer/browser-cash-tdp/FORK-003-cash-tdp-main.png",
+          "data-layer/browser-cash-tdp/FORK-003-cash-tdp-full.png",
+          "data-layer/browser-cash-tdp/FORK-003-cash-tdp-transactions.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /cash-api/market, /cash-api/candles?interval=5m, /cash-api/trades?limit=50 observed in browser; curl http://localhost:3100/market -> 200, /candles?interval=5m -> 200, /trades?limit=50 -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "FORK-005",
+      "title": "CASH branding applied",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Read document title on CASH route",
+          "expected": "Page title includes CASH",
+          "observed": "Title was 'CASH \u2014 Token Details'"
+        },
+        {
+          "action": "Inspect visible branding text on page",
+          "expected": "Visible branding is CASH, not Uniswap",
+          "observed": "Visible page content shows CASH labels (Tokens \u203a CASH, CASH/CASH, About CASH) and body text check returned hasUniswap=false"
+        },
+        {
+          "action": "Inspect accent color styling",
+          "expected": "Green accent (#00D54B) used where applicable",
+          "observed": "Connect button computed background was rgb(0, 213, 75) (#00D54B); chart line also rendered in green"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "data-layer/browser-cash-tdp/FORK-005-cash-branding.png"
+        ],
+        "consoleErrors": "none",
+        "network": "Branding assertion does not require additional API calls beyond page render"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Route ambiguity: /explore/tokens/aptos/CASH redirected to /explore and showed a 'Token not found' modal. CASH data-layer TDP is implemented at /cash.",
+      "resolved": true,
+      "resolution": "Validated assertions on the implemented CASH-specific route /cash and captured evidence there.",
+      "affectedAssertions": [
+        "FORK-003",
+        "FORK-005"
+      ]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 2 assertions: 2 passed, 0 failed, 0 blocked. CASH data-layer TDP and CASH branding requirements were satisfied on /cash."
+}
