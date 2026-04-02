@@ -1,0 +1,70 @@
+{
+  "groupId": "cross-001",
+  "milestone": "visual-polish",
+  "testedAt": "2026-04-02T03:44:18Z",
+  "isolation": {
+    "appUrl": "http://localhost:3102",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "mode": "single-validator run",
+    "assignedAssertionIds": ["CROSS-001"]
+  },
+  "toolsUsed": ["agent-browser"],
+  "status": "pass",
+  "reason": "At desktop viewport 1440x900, the left-panel sections appear in required vertical order (Token header → Price display → Chart → Stats → About → Transactions), and the swap widget is present in the right panel.",
+  "assertionResults": [
+    {
+      "id": "CROSS-001",
+      "title": "Full page renders all sections in correct order",
+      "status": "pass",
+      "reason": "DOM position evidence confirms strictly increasing Y positions for all required left-panel sections, and the right panel contains a visible swap widget.",
+      "observations": [
+        "Measured Y positions (top): tokenHeader=181, priceDisplay=248, chart=482, stats=728, about=971, transactions=1223.",
+        "Right panel evidence: swap tab at left=929 and Connect Wallet CTA at left=929 in a 1440px-wide viewport (right-column placement).",
+        "Chart section rendered with fallback message ('Unable to load chart data') due API rate limiting, but required section presence/order remained intact."
+      ],
+      "steps": [
+        {
+          "action": "Open http://localhost:3102 and set viewport to 1440x900",
+          "expected": "Desktop two-column layout with full token detail page",
+          "observed": "Page rendered with left content column and right swap widget column"
+        },
+        {
+          "action": "Capture screenshots (viewport, full-page, annotated)",
+          "expected": "Visual proof of section order and right-panel swap widget",
+          "observed": "All required sections visible in order on full-page capture; swap widget visible in right panel"
+        },
+        {
+          "action": "Run DOM geometry extraction for required section anchors",
+          "expected": "Monotonic top positions matching required order",
+          "observed": "Order check returned inOrder=true with strictly increasing top coordinates"
+        },
+        {
+          "action": "Check browser console errors",
+          "expected": "No blocking errors for layout assertion",
+          "observed": "Repeated 429 Too Many Requests logs (72 lines), causing chart data fallback only"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/evidence/visual-polish/cross-001/CROSS-001-desktop-viewport.png",
+          "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/evidence/visual-polish/cross-001/CROSS-001-desktop-fullpage.png",
+          "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/evidence/visual-polish/cross-001/CROSS-001-desktop-annotated.png"
+        ],
+        "dom": [
+          "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/evidence/visual-polish/cross-001/CROSS-001-dom-order.json"
+        ],
+        "console": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/evidence/visual-polish/cross-001/CROSS-001-console.log"
+      }
+    }
+  ],
+  "frictions": [
+    {
+      "description": "API responses were rate-limited (HTTP 429), producing repeated browser console errors and chart-data fallback messaging during validation.",
+      "resolved": false,
+      "resolution": "No disruptive infra changes attempted per isolation rules; continued with layout/order validation using rendered UI and DOM geometry evidence.",
+      "affectedAssertions": ["CROSS-001"]
+    }
+  ],
+  "blockers": [],
+  "summary": "CROSS-001 passed: required left-panel section order is correct and swap widget is present in right panel at desktop viewport. Non-blocking friction: repeated API 429 console errors affected chart data loading only."
+}
