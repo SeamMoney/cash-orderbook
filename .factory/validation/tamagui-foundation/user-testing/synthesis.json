@@ -1,49 +1,19 @@
 {
   "milestone": "tamagui-foundation",
-  "round": 1,
-  "status": "fail",
+  "round": 2,
+  "status": "pass",
   "assertionsSummary": {
-    "total": 14,
-    "passed": 12,
-    "failed": 2,
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
     "blocked": 0
   },
   "passedAssertions": [
-    "CROSS-002",
-    "CROSS-003",
-    "FOUNDATION-001",
-    "FOUNDATION-002",
-    "FOUNDATION-003",
-    "FOUNDATION-004",
-    "FOUNDATION-006",
-    "FOUNDATION-007",
-    "HEADER-004",
-    "NAV-001",
-    "NAV-003",
-    "NAV-004"
+    "FOUNDATION-005",
+    "NAV-002"
   ],
-  "failedAssertions": [
-    {
-      "id": "FOUNDATION-005",
-      "reason": "At 768×1024 layout stacks correctly and has no overflow, but horizontal padding is 20px per side instead of required 16px."
-    },
-    {
-      "id": "NAV-002",
-      "reason": "Nav tab fonts/colors are correct and hover changes color, but hover transition is not smooth because computed transition-duration is 0s."
-    }
-  ],
+  "failedAssertions": [],
   "blockedAssertions": [],
-  "appliedUpdates": [
-    {
-      "target": "services.yaml",
-      "description": "Updated API healthcheck to port-listener check because /health was intermittently rate-limited (429) during validation setup.",
-      "source": "setup"
-    },
-    {
-      "target": "user-testing.md",
-      "description": "Added testing notes for /health rate-limit behavior and exact-text selector guidance for validating the Explore nav item.",
-      "source": "flow-report"
-    }
-  ],
-  "previousRound": null
+  "appliedUpdates": [],
+  "previousRound": ".factory/validation/tamagui-foundation/user-testing/synthesis.round1.json"
 }

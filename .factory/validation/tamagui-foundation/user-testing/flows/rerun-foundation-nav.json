@@ -1,0 +1,83 @@
+{
+  "groupId": "rerun-foundation-nav",
+  "testedAt": "2026-04-02T00:52:07Z",
+  "isolation": {
+    "surface": "web",
+    "appUrl": "http://localhost:3102",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "notes": "Single validator browser session; no shared mutable test data used"
+  },
+  "toolsUsed": ["agent-browser"],
+  "assertions": [
+    {
+      "id": "FOUNDATION-005",
+      "title": "Layout skeleton stacks on mobile",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Open http://localhost:3102 and set viewport to 768x1024",
+          "expected": "Mobile breakpoint behavior (<1024px)",
+          "observed": "Viewport set to 768x1024 and page rendered"
+        },
+        {
+          "action": "Capture mobile layout screenshot",
+          "expected": "Single-column stacked layout with swap widget inline",
+          "observed": "Single-column layout shown; swap widget content appears inline below primary content"
+        },
+        {
+          "action": "Extract computed layout/overflow metrics",
+          "expected": "Horizontal padding 20px and no horizontal overflow",
+          "observed": "Layout container computed padding-left/right = 20px; flex-direction = column; document clientWidth=768 and scrollWidth=768"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "tamagui-foundation/rerun-foundation-nav/FOUNDATION-005-mobile-layout-768x1024.png"
+        ],
+        "consoleErrors": "none",
+        "network": "UI-only assertion; navigation to http://localhost:3102 succeeded"
+      },
+      "issues": null
+    },
+    {
+      "id": "NAV-002",
+      "title": "Nav tabs use correct font size and colors",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Set viewport to 1440x900 and reload page",
+          "expected": "Desktop nav tabs visible",
+          "observed": "Trade and Explore tabs rendered in navbar"
+        },
+        {
+          "action": "Read computed styles for Trade (active) and Explore (inactive)",
+          "expected": "Font size matches reference; active=neutral1; inactive=neutral2",
+          "observed": "Both tabs font-size=15px; Trade color=rgb(255, 255, 255); Explore color=rgba(255, 255, 255, 0.65)"
+        },
+        {
+          "action": "Hover Explore tab and inspect transition",
+          "expected": "Smooth transition with transition-duration > 0s",
+          "observed": "Explore transition-property=color, transition-duration=0.125s (ease-in-out); hover color changes to rgb(255, 255, 255)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "tamagui-foundation/rerun-foundation-nav/NAV-002-nav-tabs-hover.png"
+        ],
+        "consoleErrors": "none",
+        "network": "UI-only assertion; no API/network dependency required for this style check"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "agent-browser network request log returned no captured entries during this visual rerun",
+      "resolved": true,
+      "resolution": "Used direct computed-style/layout inspection and screenshots as primary evidence for UI assertions",
+      "affectedAssertions": ["FOUNDATION-005", "NAV-002"]
+    }
+  ],
+  "blockers": [],
+  "summary": "Retested 2 assertions: 2 passed (FOUNDATION-005, NAV-002)."
+}
