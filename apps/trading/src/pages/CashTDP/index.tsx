@@ -1,79 +1,76 @@
 /**
- * CASH Token Detail Page — renders token data from our REST/WS API
- * instead of Uniswap's GraphQL backend.
+ * CASH Token Detail Page — renders the real Uniswap TDP layout components
+ * with CASH data provided by CashTDPProvider.
  *
  * Route: /cash
  */
 
+import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { Helmet } from 'react-helmet-async/lib/index'
 import { Flex, Text } from 'ui/src'
-import { useCashTokenData, useCashTrades } from '~/data/hooks'
-import { CashChartSection } from '~/pages/CashTDP/CashChart'
-import { CashHeader } from '~/pages/CashTDP/CashHeader'
-import { CashStatsSection } from '~/pages/CashTDP/CashStats'
-import { CashTransactionsTable } from '~/pages/CashTDP/CashTransactions'
-import { SwapSkeleton } from '~/components/swap/SwapSkeleton'
+import { CashTDPProvider } from '~/pages/CashTDP/CashTDPProvider'
+import { TokenDetailsContent } from '~/pages/TokenDetails/components/TokenDetails'
+
+// ---------------------------------------------------------------------------
+// Error boundary — catches EVM-specific crashes (wagmi, provider context, etc.)
+// and renders a graceful fallback instead of a white screen.
+// ---------------------------------------------------------------------------
+
+interface ErrorBoundaryProps {
+  fallback: ReactNode
+  children: ReactNode
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean
+}
+
+class TDPErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError(): ErrorBoundaryState {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo): void {
+    // eslint-disable-next-line no-console
+    console.warn('[CashTDP] Component error caught by boundary:', error.message, info.componentStack)
+  }
+
+  render(): ReactNode {
+    if (this.state.hasError) {
+      return this.props.fallback
+    }
+    return this.props.children
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Page component
+// ---------------------------------------------------------------------------
 
 export default function CashTokenDetailPage() {
-  const { data: tokenData, loading: tokenLoading } = useCashTokenData()
-  const { trades, loading: tradesLoading } = useCashTrades(50)
-
   return (
     <>
       <Helmet>
         <title>CASH — Token Details</title>
       </Helmet>
-
-      {/* Breadcrumb */}
-      <div style={{ width: '100%', padding: '48px 40px 0' }}>
-        <Text variant="body3" color="$neutral2">
-          Tokens › CASH
-        </Text>
-      </div>
-
-      {/* Header */}
-      <div style={{ width: '100%', padding: '16px 40px 0' }}>
-        <CashHeader price={tokenData?.price ?? null} loading={tokenLoading} />
-      </div>
-
-      {/* Main two-column layout */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'row',
-          justifyContent: 'center',
-          width: '100%',
-          gap: 80,
-          marginTop: 32,
-          padding: '0 40px 48px',
-        }}
-      >
-        {/* Left Panel */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 40, minWidth: 0 }}>
-          {/* Chart */}
-          <CashChartSection />
-
-          {/* Stats */}
-          <CashStatsSection tokenData={tokenData} loading={tokenLoading} />
-
-          {/* About */}
-          <Flex gap="$gap16">
-            <Text variant="heading3">About CASH</Text>
-            <Text variant="body2" color="$neutral2">
-              CASH is a spot trading token on the Aptos blockchain. It powers the CASH Central Limit Order Book (CLOB),
-              providing decentralized price discovery and settlement for digital assets.
+      <TDPErrorBoundary
+        fallback={
+          <Flex alignItems="center" justifyContent="center" py="$spacing40" px="$spacing20">
+            <Text variant="heading3" color="$neutral2">
+              Unable to load CASH token details. Please refresh.
             </Text>
           </Flex>
-
-          {/* Transactions */}
-          <CashTransactionsTable trades={trades} loading={tradesLoading} />
-        </div>
-
-        {/* Right Panel — Swap Widget */}
-        <div style={{ width: 360, flexShrink: 0 }}>
-          <SwapSkeleton />
-        </div>
-      </div>
+        }
+      >
+        <CashTDPProvider>
+          <TokenDetailsContent isCompact={false} />
+        </CashTDPProvider>
+      </TDPErrorBoundary>
     </>
   )
 }
