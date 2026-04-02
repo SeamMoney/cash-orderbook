@@ -939,6 +939,7 @@ export function SwapWidget(): React.ReactElement {
                 lineHeight={19.55}
                 fontWeight="485"
                 color={swapCta.disabled ? "$neutral3" : "$neutral1"}
+                style={{ fontSize: 17, fontWeight: 485 }}
               >
                 {swapCta.label}
               </Text>
@@ -1141,6 +1142,7 @@ export function SwapWidget(): React.ReactElement {
                 lineHeight={19.55}
                 fontWeight="485"
                 color={limitCta.disabled ? "$neutral3" : "$neutral1"}
+                style={{ fontSize: 17, fontWeight: 485 }}
               >
                 {limitCta.label}
               </Text>

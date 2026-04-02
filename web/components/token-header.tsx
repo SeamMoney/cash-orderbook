@@ -125,7 +125,7 @@ export function TokenHeader({ price }: TokenHeaderProps): React.ReactElement {
               color="$neutral2"
               style={{ transition: HEADER_TRANSITION }}
             >
-              {price != null ? `$${price.toFixed(4)}` : "–"}
+              {`$${(price ?? 0).toFixed(4)}`}
             </Text>
           </Flex>
         </Flex>

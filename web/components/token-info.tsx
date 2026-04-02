@@ -100,6 +100,7 @@ function LinkPill({
         color={success ? "$statusSuccess" : "$neutral2"}
         hoverStyle={{ color: "$neutral1" }}
         data-testid="pill-text"
+        style={{ fontSize: 17, fontWeight: 485, color: success ? 'rgb(33, 201, 94)' : 'rgba(255, 255, 255, 0.65)' }}
       >
         {label}
       </Text>
