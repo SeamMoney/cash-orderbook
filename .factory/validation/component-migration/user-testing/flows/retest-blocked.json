@@ -1,0 +1,125 @@
+{
+  "milestone": "component-migration",
+  "groupId": "retest-blocked",
+  "surface": "web",
+  "testedAt": "2026-04-02T02:07:42.413148+00:00",
+  "appUrl": "http://localhost:3102",
+  "assertions": [
+    {
+      "id": "ABOUT-003",
+      "status": "blocked",
+      "reason": "Precondition for truncation was not met on this page: About text length was 146 chars and no \"Show more\" control rendered, so 300-char truncation behavior could not be exercised.",
+      "evidence": [
+        "component-migration/retest-blocked/ABOUT-003-before.png",
+        "component-migration/retest-blocked/ABOUT-003-details.json",
+        "component-migration/retest-blocked/ABOUT-003-console.txt"
+      ]
+    },
+    {
+      "id": "TXN-002",
+      "status": "blocked",
+      "reason": "Transactions stayed in empty-state only (no non-colspan data rows), so table data-cell body4/13px typography could not be validated from live rows.",
+      "evidence": [
+        "component-migration/retest-blocked/TXN-002-table.png",
+        "component-migration/retest-blocked/TXN-002-details.json",
+        "component-migration/retest-blocked/TXN-002-network.json",
+        "component-migration/retest-blocked/TXN-002-console.txt"
+      ]
+    },
+    {
+      "id": "FUNC-002",
+      "status": "pass",
+      "reason": "Connect Wallet flow opens successfully with Aptos wallet options and install paths visible (Petra/Nightly/Backpack), and no browser console errors were emitted during modal interactions.",
+      "evidence": [
+        "component-migration/retest-blocked/FUNC-002-wallet-modal.png",
+        "component-migration/retest-blocked/FUNC-002-wallet-modal-aptos.png",
+        "component-migration/retest-blocked/FUNC-002-wallet-details.json",
+        "component-migration/retest-blocked/FUNC-002-console.txt"
+      ]
+    },
+    {
+      "id": "FUNC-003",
+      "status": "blocked",
+      "reason": "WebSocket connection/message flow could not be confirmed in this run: no ws://localhost:3101 entries were observable in captured network/eval evidence, while repeated API 429s were flooding runtime logs.",
+      "evidence": [
+        "component-migration/retest-blocked/FUNC-003-ws-state.png",
+        "component-migration/retest-blocked/FUNC-003-network.json",
+        "component-migration/retest-blocked/FUNC-003-network-3101.json",
+        "component-migration/retest-blocked/FUNC-003-ws-eval.json",
+        "component-migration/retest-blocked/FUNC-003-console.log"
+      ]
+    },
+    {
+      "id": "FUNC-004",
+      "status": "blocked",
+      "reason": "Chart live-update verification remained blocked: chart area stayed in \"Unable to load chart data\" error state at initial and later checkpoints under sustained API 429 conditions.",
+      "evidence": [
+        "component-migration/retest-blocked/FUNC-004-chart-initial.png",
+        "component-migration/retest-blocked/FUNC-004-chart-later.png",
+        "component-migration/retest-blocked/FUNC-004-chart-initial.json",
+        "component-migration/retest-blocked/FUNC-004-chart-later.json",
+        "component-migration/retest-blocked/FUNC-004-candles-network.json",
+        "component-migration/retest-blocked/FUNC-004-console.txt"
+      ]
+    },
+    {
+      "id": "FUNC-005",
+      "status": "blocked",
+      "reason": "Balance visibility with a connected wallet could not be validated because no wallet was connected in this isolated headless environment (modal showed install/connect options only).",
+      "evidence": [
+        "component-migration/retest-blocked/FUNC-005-disconnected-state.png",
+        "component-migration/retest-blocked/FUNC-005-wallet-modal.png",
+        "component-migration/retest-blocked/FUNC-005-balance-details.json",
+        "component-migration/retest-blocked/FUNC-005-console.txt"
+      ]
+    }
+  ],
+  "frictions": [
+    {
+      "description": "High-frequency API 429 responses spammed runtime logs during retest windows.",
+      "resolved": false,
+      "resolution": "Used fresh page loads and waited between checks; 429 noise persisted.",
+      "affectedAssertions": [
+        "TXN-002",
+        "FUNC-003",
+        "FUNC-004"
+      ]
+    },
+    {
+      "description": "WebSocket validation visibility was limited from this headless capture path (no ws entries observed in collected request output).",
+      "resolved": false,
+      "resolution": "Captured additional eval/network artifacts and explicit 3101 filter output.",
+      "affectedAssertions": [
+        "FUNC-003"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Data-plane instability (many 429 Too Many Requests responses from localhost:3100) prevented stable realtime/chart validation.",
+      "affectedAssertions": [
+        "FUNC-003",
+        "FUNC-004"
+      ],
+      "quickFixAttempted": "Retried with fresh page loads and additional wait windows; error state persisted."
+    },
+    {
+      "description": "No wallet extension/credential available in isolated headless session to complete an authenticated wallet connection.",
+      "affectedAssertions": [
+        "FUNC-005"
+      ],
+      "quickFixAttempted": "Opened wallet modal and checked provider/install options; connection could not be completed in-session."
+    },
+    {
+      "description": "Required preconditions were absent for specific UI assertions (short About text; no live transaction rows).",
+      "affectedAssertions": [
+        "ABOUT-003",
+        "TXN-002"
+      ],
+      "quickFixAttempted": "Reloaded and waited for live data; conditions did not change."
+    }
+  ],
+  "toolsUsed": [
+    "agent-browser"
+  ]
+}

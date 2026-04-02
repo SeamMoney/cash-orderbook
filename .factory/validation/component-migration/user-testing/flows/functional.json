@@ -1,0 +1,95 @@
+{
+  "milestone": "component-migration",
+  "groupId": "functional",
+  "surface": "web",
+  "testedAt": "2026-04-02T01:59:40Z",
+  "assertions": [
+    {
+      "id": "FUNC-001",
+      "status": "pass",
+      "reason": "Quote behavior is preserved in pre-submit state: entering 10 USD1 populated receive quote (~1,123.865884 CASH), displayed USD equivalents, and kept CTA in safe disconnected state (Connect Wallet). No irreversible on-chain action executed.",
+      "evidence": [
+        "component-migration/functional/FUNC-001-quote-after-input.png",
+        "component-migration/functional/FUNC-001-quote-network.json"
+      ]
+    },
+    {
+      "id": "FUNC-002",
+      "status": "blocked",
+      "reason": "Wallet modal opens and shows Aptos wallet choices, but full connection could not be completed in isolated headless session because no wallet extension/credentials were available.",
+      "evidence": [
+        "component-migration/functional/FUNC-002-wallet-modal.png",
+        "component-migration/functional/FUNC-005-wallet-options-no-extension.png"
+      ]
+    },
+    {
+      "id": "FUNC-003",
+      "status": "blocked",
+      "reason": "WebSocket real-time validation is blocked by infrastructure: repeated connection failures to ws://localhost:3101 (ERR_CONNECTION_REFUSED) with additional API 429 noise. Retried via page reload; failures persisted.",
+      "evidence": [
+        "component-migration/functional/FUNC-003-ws-state.png",
+        "component-migration/functional/FUNC-003-console-retry.log",
+        "component-migration/functional/FUNC-003-network-resources.json"
+      ]
+    },
+    {
+      "id": "FUNC-004",
+      "status": "blocked",
+      "reason": "Chart update verification is blocked by unstable data plane during run (intermittent chart error state and heavy API 429 responses). Candle fetches were observed, but live-update correctness could not be confirmed under these conditions.",
+      "evidence": [
+        "component-migration/functional/FUNC-004-chart-update-check.png",
+        "component-migration/functional/FUNC-004-chart-error-state.png",
+        "component-migration/functional/FUNC-004-chart-network.json"
+      ]
+    },
+    {
+      "id": "FUNC-005",
+      "status": "blocked",
+      "reason": "Balance display with connected wallet could not be validated because wallet connection could not be completed in isolated headless session (no installed Aptos wallet/credentials). Disconnected-state visibility is preserved (no balance text shown, Connect Wallet visible).",
+      "evidence": [
+        "component-migration/functional/FUNC-005-balance-visibility.png",
+        "component-migration/functional/FUNC-005-wallet-options-no-extension.png"
+      ]
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Frequent API rate-limit responses (429) during normal page polling created noisy console output and intermittent UI degradation during validation.",
+      "resolved": false,
+      "resolution": "Spaced interactions and retried with one page reload only.",
+      "affectedAssertions": [
+        "FUNC-003",
+        "FUNC-004"
+      ]
+    },
+    {
+      "description": "WebSocket endpoint ws://localhost:3101 consistently refused connections in this run.",
+      "resolved": false,
+      "resolution": "Retried non-disruptively by reload; did not restart shared services per mission constraints.",
+      "affectedAssertions": [
+        "FUNC-003",
+        "FUNC-004"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Realtime backend channel unavailable: ws://localhost:3101 returned ERR_CONNECTION_REFUSED on retry.",
+      "affectedAssertions": [
+        "FUNC-003",
+        "FUNC-004"],
+      "quickFixAttempted": "Reloaded the app and re-checked console/network; failures persisted."
+    },
+    {
+      "description": "No wallet extension/credentials available in isolated headless environment to complete an Aptos wallet connection.",
+      "affectedAssertions": [
+        "FUNC-002",
+        "FUNC-005"
+      ],
+      "quickFixAttempted": "Opened wallet modal and checked available providers/install links; connection not possible without external wallet/account."
+    }
+  ],
+  "toolsUsed": [
+    "agent-browser"
+  ]
+}

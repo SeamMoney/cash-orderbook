@@ -1,0 +1,92 @@
+{
+  "milestone": "component-migration",
+  "groupId": "about4-txn-swap-core",
+  "surface": "web",
+  "testedAt": "2026-04-02T01:52:24.892405+00:00",
+  "appUrl": "http://localhost:3102",
+  "assertions": [
+    {
+      "id": "ABOUT-004",
+      "status": "fail",
+      "reason": "Link pills match surface2 background (rgb(31,31,31)) and rounded20 (20px), but computed text style is font-size 16px and color rgb(255,255,255), not required 17px and rgba(255,255,255,0.65).",
+      "evidence": [
+        "component-migration/about4-txn-swap-core/ABOUT-004-link-pills.png",
+        "component-migration/about4-txn-swap-core/computed-styles.json",
+        "component-migration/about4-txn-swap-core/console-errors.txt"
+      ]
+    },
+    {
+      "id": "TXN-001",
+      "status": "pass",
+      "reason": "Transactions section heading computed styles are font-size 25px and color rgb(255,255,255), matching heading3 + neutral1 requirement.",
+      "evidence": [
+        "component-migration/about4-txn-swap-core/TXN-001-transactions-title.png",
+        "component-migration/about4-txn-swap-core/computed-styles.json",
+        "component-migration/about4-txn-swap-core/console-errors.txt"
+      ]
+    },
+    {
+      "id": "TXN-002",
+      "status": "blocked",
+      "reason": "Transactions table is in empty-state (no non-colspan data cells rendered), so body4 13px data-cell typography cannot be validated through live rows.",
+      "evidence": [
+        "component-migration/about4-txn-swap-core/TXN-002-transactions-cells.png",
+        "component-migration/about4-txn-swap-core/computed-styles.json",
+        "component-migration/about4-txn-swap-core/network-requests.txt"
+      ]
+    },
+    {
+      "id": "TXN-003",
+      "status": "pass",
+      "reason": "Column header text nodes (Time/Type/Price/Amount/Wallet) compute to color rgba(255,255,255,0.65), matching neutral2.",
+      "evidence": [
+        "component-migration/about4-txn-swap-core/TXN-003-transactions-headers.png",
+        "component-migration/about4-txn-swap-core/computed-styles.json",
+        "component-migration/about4-txn-swap-core/console-errors.txt"
+      ]
+    },
+    {
+      "id": "SWAP-001",
+      "status": "pass",
+      "reason": "Swap widget container computed width is 360px at desktop viewport.",
+      "evidence": [
+        "component-migration/about4-txn-swap-core/SWAP-001-widget-width.png",
+        "component-migration/about4-txn-swap-core/computed-styles.json",
+        "component-migration/about4-txn-swap-core/console-errors.txt"
+      ]
+    },
+    {
+      "id": "SWAP-002",
+      "status": "pass",
+      "reason": "Swap container styles match: background rgb(19,19,19), border 1px solid rgba(255,255,255,0.12), border-radius 16px, padding 8px.",
+      "evidence": [
+        "component-migration/about4-txn-swap-core/SWAP-002-widget-container.png",
+        "component-migration/about4-txn-swap-core/computed-styles.json",
+        "component-migration/about4-txn-swap-core/console-errors.txt"
+      ]
+    },
+    {
+      "id": "SWAP-003",
+      "status": "pass",
+      "reason": "Both input sections (You pay / You receive) compute to background rgb(31,31,31), min-height 120px, border-radius 16px.",
+      "evidence": [
+        "component-migration/about4-txn-swap-core/SWAP-003-input-sections.png",
+        "component-migration/about4-txn-swap-core/computed-styles.json",
+        "component-migration/about4-txn-swap-core/console-errors.txt"
+      ]
+    }
+  ],
+  "frictions": [],
+  "blockers": [
+    {
+      "description": "No live transaction rows available during session; transactions panel rendered empty state only.",
+      "affectedAssertions": [
+        "TXN-002"
+      ],
+      "quickFixAttempted": "Reloaded page and allowed market/trade API polling; table remained empty-state."
+    }
+  ],
+  "toolsUsed": [
+    "agent-browser"
+  ]
+}

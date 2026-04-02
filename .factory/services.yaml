@@ -9,14 +9,14 @@ commands:
 
 services:
   api:
-    start: NETWORK=testnet node api/dist/index.js &
+    start: APTOS_NETWORK=testnet node api/dist/index.js &
     stop: lsof -ti :3100 | xargs kill 2>/dev/null || true
     healthcheck: "lsof -iTCP:3100 -sTCP:LISTEN | grep -q node"
     port: 3100
     depends_on: []
 
   websocket:
-    start: NETWORK=testnet node api/dist/ws-server.js &
+    start: APTOS_NETWORK=testnet node api/dist/ws.js &
     stop: lsof -ti :3101 | xargs kill 2>/dev/null || true
     healthcheck: "lsof -iTCP:3101 -sTCP:LISTEN | grep -q node"
     port: 3101

@@ -1,0 +1,58 @@
+{
+  "milestone": "component-migration",
+  "groupId": "swap-advanced",
+  "surface": "web",
+  "testedAt": "2026-04-02T01:52:28.626783+00:00",
+  "isolation": {
+    "appUrl": "http://localhost:3102",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "browserSession": "swap-advanced-79476079"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "SWAP-004",
+      "status": "pass",
+      "reason": "Arrow control matches expected dimensions and overlap styling.",
+      "evidence": [
+        "component-migration/swap-advanced/SWAP-004-arrow-button-annotated.png",
+        "computed: width=40px, height=40px, border-radius=12px, border-top=4px solid rgb(19, 19, 19), margin-top=-18px",
+        "consoleErrors: none"
+      ]
+    },
+    {
+      "id": "SWAP-005",
+      "status": "fail",
+      "reason": "CTA button min-height and radius match, but typography does not: font-size is 16px (expected 17px) and font-weight is 400 (expected medium).",
+      "evidence": [
+        "component-migration/swap-advanced/SWAP-005-cta-button-annotated.png",
+        "computed: text='Connect Wallet', min-height=56px, border-radius=20px, font-size=16px, font-weight=400",
+        "consoleErrors: none"
+      ]
+    },
+    {
+      "id": "SWAP-006",
+      "status": "pass",
+      "reason": "Segmented swap tabs are present and active/inactive styling is distinct.",
+      "evidence": [
+        "component-migration/swap-advanced/SWAP-006-segmented-tabs-annotated.png",
+        "computed: tabs present=['swap','limit']; active 'swap' has highlighted child background rgba(255,255,255,0.08); inactive 'limit' text color rgba(255,255,255,0.65)",
+        "consoleErrors: none"
+      ]
+    },
+    {
+      "id": "SWAP-007",
+      "status": "pass",
+      "reason": "Token selector pills are fully rounded as required.",
+      "evidence": [
+        "component-migration/swap-advanced/SWAP-007-token-pills-annotated.png",
+        "computed: USD1 pill border-radius=999999px; CASH pill border-radius=999999px",
+        "consoleErrors: none"
+      ]
+    }
+  ],
+  "frictions": [],
+  "blockers": []
+}

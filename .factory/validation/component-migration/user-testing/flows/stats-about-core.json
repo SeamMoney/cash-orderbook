@@ -1,0 +1,122 @@
+{
+  "milestone": "component-migration",
+  "groupId": "stats-about-core",
+  "surface": "web",
+  "testedAt": "2026-04-02T01:51:42Z",
+  "assertions": [
+    {
+      "id": "STATS-001",
+      "status": "pass",
+      "reason": "\"Stats\" heading matches heading3 typography.",
+      "evidence": [
+        "screenshot: component-migration/stats-about-core/STATS-section.png",
+        "computed: Stats heading font-size=25px, line-height=30px, color=rgb(255, 255, 255)",
+        "consoleErrors: none"
+      ]
+    },
+    {
+      "id": "STATS-002",
+      "status": "pass",
+      "reason": "Stats container uses a two-column flex-wrap layout with ~50% width items.",
+      "evidence": [
+        "screenshot: component-migration/stats-about-core/STATS-section.png",
+        "computed: container display=flex, flex-wrap=wrap, width=680px",
+        "computed: each stat item width=330px (~48.5% of container)"
+      ]
+    },
+    {
+      "id": "STATS-003",
+      "status": "pass",
+      "reason": "Stat labels use body3 size and neutral2 color.",
+      "evidence": [
+        "screenshot: component-migration/stats-about-core/STATS-section.png",
+        "computed: label \"Market cap\" font-size=15px, color=rgba(255, 255, 255, 0.65)",
+        "computed: all four label nodes match 15px + rgba(255, 255, 255, 0.65)"
+      ]
+    },
+    {
+      "id": "STATS-004",
+      "status": "pass",
+      "reason": "Stat values use heading3 sizing and neutral1 color.",
+      "evidence": [
+        "screenshot: component-migration/stats-about-core/STATS-section.png",
+        "computed: value text font-size=25px, line-height=30px, color=rgb(255, 255, 255)",
+        "computed: all four stat value nodes match heading3 style"
+      ]
+    },
+    {
+      "id": "STATS-005",
+      "status": "pass",
+      "reason": "Stat rows use surface3 1px solid bottom borders.",
+      "evidence": [
+        "screenshot: component-migration/stats-about-core/STATS-section.png",
+        "computed: item border-bottom=1px solid rgba(255, 255, 255, 0.12)",
+        "computed: border-bottom-color=rgba(255, 255, 255, 0.12) on each stat row"
+      ]
+    },
+    {
+      "id": "ABOUT-001",
+      "status": "pass",
+      "reason": "\"About\" section title matches heading3 typography.",
+      "evidence": [
+        "screenshot: component-migration/stats-about-core/ABOUT-section.png",
+        "computed: About heading font-size=25px, line-height=30px, color=rgb(255, 255, 255)",
+        "consoleErrors: none"
+      ]
+    },
+    {
+      "id": "ABOUT-002",
+      "status": "pass",
+      "reason": "Description body text matches body1 size and white color.",
+      "evidence": [
+        "screenshot: component-migration/stats-about-core/ABOUT-section.png",
+        "computed: description tag=SPAN, font-size=19px, line-height=24px, color=rgb(255, 255, 255)",
+        "observed text: \"CASH is a token on the Aptos blockchain powering the CASH Orderbook...\""
+      ]
+    },
+    {
+      "id": "ABOUT-003",
+      "status": "blocked",
+      "reason": "Could not validate truncation toggle because current About text length is 146 chars (<300), so no \"Show more/Show less\" control is rendered in read-only surface testing.",
+      "evidence": [
+        "screenshot: component-migration/stats-about-core/ABOUT-section.png",
+        "computed: description textLength=146",
+        "observed: showMorePresent=false"
+      ]
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Chart area displayed \"Unable to load chart data\" during page validation; this did not block stats/about typography checks.",
+      "resolved": true,
+      "resolution": "Continued with read-only typography/layout checks that do not depend on chart data.",
+      "affectedAssertions": [
+        "STATS-001",
+        "STATS-002",
+        "STATS-003",
+        "STATS-004",
+        "STATS-005",
+        "ABOUT-001",
+        "ABOUT-002",
+        "ABOUT-003"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "ABOUT-003 precondition not met in current fixture data: description never exceeds 300 characters, so truncation UI cannot be exercised.",
+      "affectedAssertions": [
+        "ABOUT-003"
+      ],
+      "quickFixAttempted": "Searched for a Show more/Show less control and measured About text length via computed DOM inspection; control absent because textLength=146."
+    }
+  ],
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "network": [
+    "GET https://api.testnet.aptoslabs.com/v1 (fetch)",
+    "GET https://api.testnet.aptoslabs.com/v1 (fetch)",
+    "GET https://api.testnet.aptoslabs.com/v1 (fetch)"
+  ]
+}

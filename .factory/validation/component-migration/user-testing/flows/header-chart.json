@@ -1,0 +1,108 @@
+{
+  "milestone": "component-migration",
+  "groupId": "header-chart",
+  "surface": "web",
+  "testedAt": "2026-04-02T01:53:53Z",
+  "assertions": [
+    {
+      "id": "HEADER-001",
+      "status": "pass",
+      "reason": "Token logo container computes to 56px × 56px.",
+      "evidence": [
+        "screenshot: component-migration/header-chart/header-chart-top.png",
+        "computed: logo width=56px, height=56px (circular 'C' badge next to token name)",
+        "console: repeated 429 resource errors present during session"
+      ]
+    },
+    {
+      "id": "HEADER-002",
+      "status": "pass",
+      "reason": "Token name typography matches heading3.",
+      "evidence": [
+        "screenshot: component-migration/header-chart/header-chart-top.png",
+        "computed: CASH h1 font-size=25px, line-height=30px",
+        "console: repeated 429 resource errors present during session"
+      ]
+    },
+    {
+      "id": "HEADER-003",
+      "status": "pass",
+      "reason": "Token symbol typography and color match spec.",
+      "evidence": [
+        "screenshot: component-migration/header-chart/header-chart-top.png",
+        "computed: $CASH font-size=17px, color=rgba(255, 255, 255, 0.65)",
+        "console: repeated 429 resource errors present during session"
+      ]
+    },
+    {
+      "id": "HEADER-005",
+      "status": "fail",
+      "reason": "After scrolling ~500px, fixed condensed header appears and original header scrolls out, but condensed header text is only 'CCASH' and does not include a price/key price info.",
+      "evidence": [
+        "screenshot: component-migration/header-chart/header-sticky-scroll500.png",
+        "computed: token header top before scroll=~180.5, after scroll=~-311.4 (out of view), condensed header position=fixed at top≈72px",
+        "computed: condensed header text='CCASH', containsPrice=false",
+        "console: repeated 429 resource errors present during session"
+      ]
+    },
+    {
+      "id": "CHART-001",
+      "status": "pass",
+      "reason": "Chart container height is exactly 356px.",
+      "evidence": [
+        "screenshot: component-migration/header-chart/chart-controls.png",
+        "computed: chart container height=356px",
+        "console: repeated 429 resource errors present during session"
+      ]
+    },
+    {
+      "id": "CHART-002",
+      "status": "pass",
+      "reason": "Chart controls render below the chart and follow it in DOM order.",
+      "evidence": [
+        "screenshot: component-migration/header-chart/chart-controls.png",
+        "computed: chartBottom≈655.2, controlsMinY≈673.2 (below chart)",
+        "dom: chart container precedes first range control in document order",
+        "console: repeated 429 resource errors present during session"
+      ]
+    },
+    {
+      "id": "CHART-003",
+      "status": "pass",
+      "reason": "Time range selector active/inactive styles match expected colors.",
+      "evidence": [
+        "screenshot: component-migration/header-chart/chart-controls.png",
+        "computed: active=1D color rgb(255, 255, 255); inactive=1H color rgba(255, 255, 255, 0.38)",
+        "console: repeated 429 resource errors present during session"
+      ]
+    },
+    {
+      "id": "CHART-004",
+      "status": "pass",
+      "reason": "Main price typography uses heading2 scale.",
+      "evidence": [
+        "screenshot: component-migration/header-chart/chart-controls.png",
+        "computed: main price text '$--' font-size=37px (within ±2px tolerance)",
+        "console: repeated 429 resource errors present during session"
+      ]
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Frequent browser console errors: 'Failed to load resource: the server responded with a status of 429 (Too Many Requests)' while validating.",
+      "resolved": false,
+      "resolution": "Reduced interactions to minimal reload/scroll/style checks and continued read-only validation.",
+      "affectedAssertions": [
+        "HEADER-005",
+        "CHART-001",
+        "CHART-002",
+        "CHART-003",
+        "CHART-004"
+      ]
+    }
+  ],
+  "blockers": [],
+  "toolsUsed": [
+    "agent-browser"
+  ]
+}

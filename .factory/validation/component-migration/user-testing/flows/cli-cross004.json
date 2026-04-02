@@ -1,0 +1,43 @@
+{
+  "milestone": "component-migration",
+  "groupId": "cli-cross004",
+  "surface": "cli",
+  "testedAt": "2026-04-02T01:55:58Z",
+  "assertions": [
+    {
+      "id": "CROSS-004",
+      "status": "pass",
+      "reason": "All required validators were executed sequentially and each exited with code 0 (typecheck, test, lint, build). Lint reported warnings only and no errors.",
+      "evidence": [
+        "component-migration/cli-cross004/validator-commands.log"
+      ]
+    }
+  ],
+  "commandsRun": [
+    {
+      "command": "pnpm -r typecheck",
+      "exitCode": 0,
+      "observation": "Completed across workspace packages with no type errors."
+    },
+    {
+      "command": "pnpm -r test",
+      "exitCode": 0,
+      "observation": "All workspace tests passed (api 159, sdk 33, scripts 7; shared/web reported test: ok)."
+    },
+    {
+      "command": "pnpm -r lint",
+      "exitCode": 0,
+      "observation": "Completed with 0 errors and 4 warnings in web package (react-hooks/exhaustive-deps and three no-img-element warnings)."
+    },
+    {
+      "command": "pnpm -r build",
+      "exitCode": 0,
+      "observation": "All packages built successfully; Next.js web build compiled and generated static pages successfully."
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "toolsUsed": [
+    "Execute"
+  ]
+}

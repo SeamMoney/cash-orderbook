@@ -25,6 +25,8 @@
 - Use production build (`next start`) not dev server for visual testing — dev server has CSS rendering issues in headless mode
 - API returns 429 under heavy polling — space out requests or use single-request checks
 - `GET /health` can also be rate-limited during validation; prefer a port-listener healthcheck for API readiness (`lsof -iTCP:3100 -sTCP:LISTEN`)
+- WebSocket service startup command is `APTOS_NETWORK=testnet node api/dist/ws.js` (not `api/dist/ws-server.js`)
+- API service should be started with `APTOS_NETWORK=testnet` for stable testnet behavior
 - Transaction table may be empty if no recent trades — functional assertions should account for empty state
 - Wallet connection requires browser extension or Aptos Connect — headless testing may show "Connect Wallet" state only
 - When validating nav hover states, use exact-text targeting for `Explore` to avoid collisions with `Explorer`.
@@ -32,8 +34,16 @@
 ## Flow Validator Guidance: web
 
 - Surface URL: `http://localhost:3102`.
-- Validation scope for this milestone is visual/layout/theme assertions plus wallet modal visibility; no swap execution or data mutation flows are required.
+- Validation scope for `component-migration` includes visual/layout/theme assertions and functional-read checks (`FUNC-*`) such as quote rendering, wallet modal visibility, WebSocket connectivity, chart render/update, and balance visibility when available.
+- Do not execute irreversible on-chain actions in headless validation. It is sufficient to verify pre-submit UX states (quote output, CTA state, wallet modal open, WS stream presence).
 - Each flow validator must use its own browser session name and must not reuse another validator's session.
 - Allowed interactions: navigation, viewport resizing, scrolling, opening menus/modals, computed-style reads, screenshots.
 - Avoid actions that can cause cross-validator interference (for example repeatedly triggering heavy refresh loops that can cause API 429 noise).
-- Keep evidence isolated per group under `{missionDir}/evidence/tamagui-foundation/<group-id>/`.
+- Keep evidence isolated per group under `{missionDir}/evidence/component-migration/<group-id>/`.
+
+## Flow Validator Guidance: cli
+
+- Surface: repository shell at `/Users/maxmohammadi/cash-orderbook`.
+- Scope: `CROSS-004` command assertions only (`pnpm -r typecheck`, `pnpm -r test`, `pnpm -r lint`, `pnpm -r build`).
+- Run commands sequentially in one validator to avoid workspace cache contention and noisy duplicate installs.
+- Preserve command output in the flow report with exit codes and key summary lines (errors, pass counts, build success).
