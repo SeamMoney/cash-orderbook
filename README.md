@@ -24,7 +24,7 @@ scripts/     Deployment, integration tests, and utility scripts
 | Smart Contracts  | Move on Aptos (FungibleAsset standard)                   |
 | SDK              | TypeScript, @aptos-labs/ts-sdk                           |
 | API              | Hono, WebSocket (ws), Zod                                |
-| Frontend         | Next.js 16, React 19, Tailwind CSS 4, Framer Motion     |
+| Frontend         | Next.js 16, React 19, Tamagui v1.136.1 (Spore design system), Framer Motion |
 | Charting         | lightweight-charts v5 (CandlestickSeries, Line toggle)  |
 | Swap Routing     | Panora API (non-USD1 pairs), direct orderbook (USD1)     |
 | Price Data       | GeckoTerminal API via LiquidSwap (181 daily candles)     |
@@ -137,6 +137,19 @@ Performance benchmark: the CLOB achieves 0.5% slippage on a $1000 fill vs 4-37% 
 - **Typography**: Geist Sans for UI, Geist Mono for prices and amounts
 - **Motion**: Framer Motion transitions, CSS keyframe animations for live data
 - **Components**: shadcn/ui base, Radix primitives, Lucide icons
+
+### Design System (Tamagui + Spore)
+
+The frontend uses **Tamagui v1.136.1** with Uniswap's Spore dark theme, replacing Tailwind CSS as the primary styling system. The layout matches the Uniswap Token Detail Page (TDP):
+
+- **Two-column layout**: 1200px max-width, 80px gap, 360px right panel for the swap widget
+- **Sticky navbar**: 72px height, responsive collapse at 1024px breakpoint
+- **Sticky condensed header**: appears on scroll with token info and key stats
+- **Content sections**: chart with controls below, stats grid, About section with truncation, Transactions table
+- **Swap widget**: Uniswap-style token selectors with segmented Buy/Sell tabs
+- **Responsive**: single-column stacking below 1024px
+
+Key design tokens: `surface1=#131313`, `accent1=#00D54B` (CASH green), Geist Sans/Mono fonts. Remaining Tailwind utilities are used alongside Tamagui where needed.
 
 ## License
 
