@@ -1,0 +1,77 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "alwaysStrict": true,
+    "composite": true,
+    "declarationMap": false,
+    "downlevelIteration": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "module": "esnext",
+    "moduleResolution": "node",
+    "noEmit": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": false,
+    "resolveJsonModule": true,
+    "noErrorTruncation": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "target": "ESNext",
+    "types": ["chrome", "vitest/globals"],
+    "useUnknownInCatchVariables": false,
+    "paths": {
+      "~/*": ["./src/*"],
+      "ui/src/*": ["../../packages/uni-ui/src/*"],
+      "utilities/src/*": ["../../packages/uni-utilities/src/*"],
+      "uniswap/src/*": ["../../packages/uni-uniswap/src/*"]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "src/**/*.json",
+    ".storybook/preview.tsx",
+    ".storybook/main.ts",
+    "vite.config.mts",
+    "scripts/*",
+    "vite/*"
+  ],
+  "exclude": ["scripts/build-vercel.ts"],
+  "references": [
+    {
+      "path": "../../packages/uni-utilities"
+    },
+    {
+      "path": "../../packages/uni-websocket"
+    },
+    {
+      "path": "../../packages/uni-prices"
+    },
+    {
+      "path": "../../packages/uni-sessions"
+    },
+    {
+      "path": "../../packages/uni-notifications"
+    },
+    {
+      "path": "../../packages/uni-gating"
+    },
+    {
+      "path": "../../packages/uni-ui"
+    },
+    {
+      "path": "../../packages/uni-api"
+    },
+    {
+      "path": "../../packages/uni-uniswap"
+    }
+  ]
+}
