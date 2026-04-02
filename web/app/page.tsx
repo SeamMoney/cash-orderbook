@@ -120,11 +120,11 @@ export default function Home(): React.ReactElement {
             {/* Swap Widget — shown inline on mobile only */}
             {isMobile && <SwapWidget />}
 
+            {/* Token Info (About/Description) — before Transactions per Uniswap TDP order */}
+            <TokenInfo />
+
             {/* Transactions Table */}
             <TransactionsTable trades={trades} loading={tradesLoading} />
-
-            {/* Token Info */}
-            <TokenInfo />
           </LeftPanel>
 
           {/* Right Panel — Sticky Swap Widget (desktop only) */}
