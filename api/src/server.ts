@@ -15,6 +15,7 @@ import { ordersRoute } from "./routes/orders.js";
 import { candlesRoute } from "./routes/candles.js";
 import { marketRoute } from "./routes/market.js";
 import { balancesRoute } from "./routes/balances.js";
+import { devSeedRoute } from "./routes/dev-seed.js";
 import { rateLimit } from "./middleware/rate-limit.js";
 import type { RateLimitOptions } from "./middleware/rate-limit.js";
 
@@ -55,6 +56,11 @@ export function createApp(options: CreateAppOptions = {}): {
   app.route("/", candlesRoute(state));
   app.route("/", marketRoute(state));
   app.route("/", balancesRoute(state));
+
+  // Dev-only seed endpoint (never available in production)
+  if (process.env.NODE_ENV !== "production") {
+    app.route("/", devSeedRoute(state));
+  }
 
   // 404 handler for unknown routes
   app.notFound((c) => {

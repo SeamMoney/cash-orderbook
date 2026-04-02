@@ -58,8 +58,12 @@ function main(): void {
     });
   }
 
-  // Create the Hono app
-  const { app } = createApp({ state });
+  // Create the Hono app (disable rate limiting in local development)
+  const isDev = process.env.NODE_ENV !== "production";
+  const { app } = createApp({
+    state,
+    rateLimitOptions: isDev ? { maxRequests: 10_000, windowMs: 10_000 } : undefined,
+  });
 
   // Create and start the event indexer
   const indexer = new EventIndexer(
@@ -74,11 +78,22 @@ function main(): void {
   indexer.start();
 
   // Start HTTP server
-  serve({ fetch: app.fetch, port }, (info) => {
+  serve({ fetch: app.fetch, port }, async (info) => {
     console.log(`[API] CASH Orderbook REST API v${API_VERSION} listening on port ${info.port}`);
     console.log(`[API] Network: ${network}`);
     console.log(`[API] Contract address: ${contractAddress}`);
     console.log(`[API] Indexer polling every ${process.env.POLL_INTERVAL_MS ?? "2000"}ms`);
+
+    // Auto-seed mock data in dev mode so charts/trades/stats are populated immediately
+    if (isDev) {
+      try {
+        const res = await fetch(`http://localhost:${info.port}/dev/seed`, { method: "POST" });
+        const data = await res.json() as { seeded: boolean; trades: number; candles: number };
+        console.log(`[API] Dev seed complete — ${data.trades} trades, ${data.candles} candles injected`);
+      } catch (err) {
+        console.warn("[API] Dev seed failed (non-critical):", err);
+      }
+    }
   });
 
   // Graceful shutdown
