@@ -933,16 +933,17 @@ export function SwapWidget(): React.ReactElement {
                   color={theme.neutral3?.val as string}
                 />
               )}
-              <Text
-                fontFamily="$button"
-                fontSize={17}
-                lineHeight={19.55}
-                fontWeight="485"
-                color={swapCta.disabled ? "$neutral3" : "$neutral1"}
-                style={{ fontSize: 17, fontWeight: 485 }}
+              <span
+                style={{
+                  fontFamily: 'var(--font-geist-sans), sans-serif',
+                  fontSize: 17,
+                  lineHeight: '19.55px',
+                  fontWeight: 485,
+                  color: swapCta.disabled ? 'rgba(255, 255, 255, 0.38)' : '#FFFFFF',
+                }}
               >
                 {swapCta.label}
-              </Text>
+              </span>
             </SwapCTAButton>
 
             {/* Price Details (expandable) — below CTA */}
@@ -1136,16 +1137,17 @@ export function SwapWidget(): React.ReactElement {
                   color={theme.neutral3?.val as string}
                 />
               )}
-              <Text
-                fontFamily="$button"
-                fontSize={17}
-                lineHeight={19.55}
-                fontWeight="485"
-                color={limitCta.disabled ? "$neutral3" : "$neutral1"}
-                style={{ fontSize: 17, fontWeight: 485 }}
+              <span
+                style={{
+                  fontFamily: 'var(--font-geist-sans), sans-serif',
+                  fontSize: 17,
+                  lineHeight: '19.55px',
+                  fontWeight: 485,
+                  color: limitCta.disabled ? 'rgba(255, 255, 255, 0.38)' : '#FFFFFF',
+                }}
               >
                 {limitCta.label}
-              </Text>
+              </span>
             </SwapCTAButton>
           </motion.div>
         )}

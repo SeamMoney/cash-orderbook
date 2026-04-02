@@ -92,18 +92,18 @@ function LinkPill({
       {...linkProps}
     >
       {icon}
-      <Text
-        fontFamily="$body"
-        fontSize={17}
-        lineHeight={22.1}
-        fontWeight="485"
-        color={success ? "$statusSuccess" : "$neutral2"}
-        hoverStyle={{ color: "$neutral1" }}
+      <span
         data-testid="pill-text"
-        style={{ fontSize: 17, fontWeight: 485, color: success ? 'rgb(33, 201, 94)' : 'rgba(255, 255, 255, 0.65)' }}
+        style={{
+          fontFamily: 'var(--font-geist-sans), sans-serif',
+          fontSize: 17,
+          lineHeight: '22.1px',
+          fontWeight: 485,
+          color: success ? 'rgb(33, 201, 94)' : 'rgba(255, 255, 255, 0.65)',
+        }}
       >
         {label}
-      </Text>
+      </span>
     </Flex>
   );
 }
