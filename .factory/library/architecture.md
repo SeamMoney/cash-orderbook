@@ -1,63 +1,47 @@
-# Architecture
+# Architecture — CASH Orderbook with Uniswap Fork
 
-## System Overview
+## Overview
 
-CASH Orderbook is a Central Limit Order Book on Aptos blockchain with a full-stack trading infrastructure.
+The CASH orderbook is being extended with a forked Uniswap web frontend. The fork provides the exact Uniswap Token Detail Page UI while our existing API/WebSocket backend provides the data.
+
+## Components
+
+### Backend (existing, unchanged)
+- **api/** — Hono REST API on port 3100. Endpoints: /health, /depth, /trades, /candles, /market, /balances, /orders
+- **api/ws.js** — WebSocket server on port 3101. Channels: orderbook, trades
+- **sdk/** — TypeScript SDK for Aptos contract interaction
+- **shared/** — Shared types and constants
+
+### Frontend (new fork)
+- **apps/trading/** — Forked Uniswap web app (Vite SPA on port 3200)
+  - Uses React Router v7, Tamagui, Apollo Client
+  - TDP (Token Detail Page) is the primary view
+  - Data layer being replaced: GraphQL → our REST/WS API
+
+### Uniswap Packages (new, copied from Uniswap monorepo)
+- **packages/uni-ui/** — Tamagui component library (Flex, Text, icons, theme)
+- **packages/uni-uniswap/** — Shared logic (chains, tokens, data hooks)
+- **packages/uni-api/** — GraphQL types and client
+- **packages/uni-utilities/** — Formatters, env detection
+- **packages/uni-gating/** — Feature flags (stubbed)
+- **packages/uni-sessions/** — Session management
+- **packages/uni-notifications/** — Notifications
+- **packages/uni-prices/** — Price context
+- **packages/uni-websocket/** — WebSocket abstraction
+
+### Legacy Frontend (existing, will be deprecated)
+- **web/** — Next.js app on port 3102 (current Tamagui-based implementation)
+
+## Data Flow
 
 ```
-contracts/    Move smart contracts (orderbook core, matching engine)
-sdk/          TypeScript SDK for contract interaction (@cash/orderbook-sdk)
-api/          REST API (port 3100) + WebSocket server (port 3101) — Hono
-web/          Trading dashboard — Next.js 16, React 19, Tailwind CSS + Tamagui
-shared/       Shared types, constants, ABIs (@cash/shared)
-scripts/      Deployment and utility scripts
+User Browser → apps/trading (Vite SPA, port 3200)
+                  ↓ REST calls
+              api/ (Hono, port 3100) → Aptos blockchain
+                  ↓ WebSocket
+              api/ws.js (port 3101) → Real-time orderbook/trades
 ```
 
-## Frontend Architecture (web/)
-
-### Current State (migrating to Tamagui)
-- **Framework:** Next.js 16 with app router and Turbopack
-- **Styling:** Tailwind CSS v4 + Tamagui (coexisting during migration)
-- **Fonts:** Geist Sans (maps to Uniswap's Basel Grotesk weight 485/535)
-- **State:** React hooks + context (no Redux/Zustand)
-- **Wallet:** @aptos-labs/wallet-adapter-react with Aptos Connect, cross-chain support
-
-### Target State (Uniswap TDP exact match)
-- All UI components use Tamagui primitives (Flex, Text, styled)
-- Theme uses Uniswap's Spore design system tokens
-- Layout matches Uniswap Token Detail Page exactly
-- All existing trading functionality preserved
-
-### Data Flow
-```
-Aptos Blockchain → API indexer → REST API (3100) → Frontend hooks
-                                → WebSocket (3101) → Real-time hooks
-Frontend → Wallet adapter → signAndSubmitTransaction → Aptos
-```
-
-### Key Frontend Hooks (web/hooks/)
-- `use-websocket`: Core WS connection to port 3101 with auto-reconnect
-- `use-realtime-orderbook`: Real-time depth via WS + REST fallback
-- `use-realtime-trades`: Live trade feed via WS + REST fallback
-- `use-realtime-price`: Latest price from WS trades channel
-- `use-depth`: REST polling depth for swap quote calculation
-- `use-market`: Market data (pair info, lastPrice, volume24h)
-- `use-balances`: Wallet balance polling + WS push updates
-- `use-candles`: OHLCV candle data for charts
-- `use-account-subscription`: Per-account WS balance updates
-
-### Key Frontend Libs (web/lib/)
-- `config.ts`: API_BASE, WS_URL, CONTRACT_ADDRESS from env
-- `sdk.ts`: buildPlaceOrderPayload for on-chain orders
-- `swap-quote.ts`: Orderbook depth walk for swap pricing
-- `panora.ts`: Panora DEX aggregator for non-CASH/USD1 pairs
-
-## API Architecture (api/)
-- Hono HTTP framework on port 3100
-- Endpoints: /depth, /market, /trades, /candles, /balances/:address, /orders/:address
-- Event indexer: polls Aptos for on-chain events, updates state
-
-## WebSocket Architecture (api/)
-- ws library on port 3101
-- Channels: orderbook (depth), trades, account:{address}
-- Subscribe protocol: `{ subscribe: "channelName" }`
+## Key Paths
+- Uniswap source reference: /Users/maxmohammadi/uniswap-frontend/
+- CASH API with dev seed: APTOS_NETWORK=testnet node api/dist/index.js
