@@ -10,6 +10,7 @@
  */
 
 import { FeatureFlags, useFeatureFlag } from '@universe/gating'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Flex, useIsTouchDevice, useMedia } from 'ui/src'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
@@ -49,6 +50,17 @@ export function CashTokenDetailsContent({ isCompact }: { isCompact: boolean }) {
     currency: s.currency!,
   }))
   const tokenQueryData = tokenQuery.data?.token
+
+  // Build aggregated data from the TDP store's tokenQueryData so StatsSection shows
+  // Market cap, FDV, 52W High/Low from the CASH REST API instead of dashes.
+  // This bypasses the MultichainTokenUx feature flag which is always false in our stub.
+  const cashAggregatedData = useMemo(
+    () =>
+      tokenQueryData
+        ? { market: tokenQueryData.market, project: tokenQueryData.project }
+        : undefined,
+    [tokenQueryData],
+  )
   const pageChainBalance = multiChainMap[currencyChain]?.balance
 
   const { direction: scrollDirection } = useScroll()
@@ -95,7 +107,7 @@ export function CashTokenDetailsContent({ isCompact }: { isCompact: boolean }) {
             </Flex>
           )}
 
-          <StatsSection tokenQueryData={tokenQueryData} />
+          <StatsSection tokenQueryData={tokenQueryData} forceAggregatedData={cashAggregatedData} />
 
           {/* CASH override: use Aptos-aware description with Aptos Explorer links */}
           <CashTokenDescription />

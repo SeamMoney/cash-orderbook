@@ -2,7 +2,10 @@ import { FeatureFlags, useFeatureFlag } from '@universe/gating'
 import { ReactNode, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Flex, FlexProps, Text } from 'ui/src'
-import { useTokenMarketStats } from 'uniswap/src/features/dataApi/tokenDetails/useTokenDetailsData'
+import {
+  useTokenMarketStats,
+  type TokenMarketStatsAggregatedInput,
+} from 'uniswap/src/features/dataApi/tokenDetails/useTokenDetailsData'
 import { useTokenSpotPrice } from 'uniswap/src/features/dataApi/tokenDetails/useTokenSpotPriceWrapper'
 import { useLocalizationContext } from 'uniswap/src/features/language/LocalizationContext'
 import { TestID } from 'uniswap/src/test/fixtures/testIDs'
@@ -87,8 +90,11 @@ function Stat({
 
 type StatsSectionProps = {
   tokenQueryData: TokenQueryData
+  /** When provided, bypasses the MultichainTokenUx feature flag and always passes this data to useTokenMarketStats.
+   *  Used by CashTokenDetailsContent to inject CASH market stats from the REST API. */
+  forceAggregatedData?: TokenMarketStatsAggregatedInput | null
 }
-export function StatsSection({ tokenQueryData }: StatsSectionProps) {
+export function StatsSection({ tokenQueryData, forceAggregatedData }: StatsSectionProps) {
   const { t } = useTranslation()
   const isMultichainTokenUx = useFeatureFlag(FeatureFlags.MultichainTokenUx)
   const currency = useTDPStore((s) => s.currency)!
@@ -100,12 +106,15 @@ export function StatsSection({ tokenQueryData }: StatsSectionProps) {
   const spotPrice = useTokenSpotPrice(currencyIdValue)
 
   // When multichain token UX is on, TokenWebQuery returns aggregated market/project data — pass it so the hook uses it for stats.
+  // The forceAggregatedData prop overrides the feature flag — used by the CASH TDP which always has aggregated data from the REST API.
   const aggregatedInput = useMemo(
     () =>
-      isMultichainTokenUx && tokenQueryData
-        ? { market: tokenQueryData.market, project: tokenQueryData.project }
-        : undefined,
-    [isMultichainTokenUx, tokenQueryData],
+      forceAggregatedData !== undefined
+        ? forceAggregatedData
+        : isMultichainTokenUx && tokenQueryData
+          ? { market: tokenQueryData.market, project: tokenQueryData.project }
+          : undefined,
+    [forceAggregatedData, isMultichainTokenUx, tokenQueryData],
   )
   const stats = useTokenMarketStats(currencyIdValue, {
     currentPriceOverride: spotPrice,
