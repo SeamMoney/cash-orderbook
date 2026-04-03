@@ -446,16 +446,6 @@ export function Chart<TParamType extends ChartDataParams<TDataType>, TDataType e
     },
   })
 
-  // Update hover coordinates on crosshair data changes
-  useEffect(() => {
-    if (chartModelRef.current) {
-      const coords = chartModelRef.current.getHoverCoordinates()
-      setHoverCoordinates(coords)
-    } else if (!crosshairData) {
-      setHoverCoordinates(null)
-    }
-  }, [crosshairData])
-
   const touchMoveHandler = disableChartTouchPanning ? (e: TouchEvent<HTMLElement>) => e.stopPropagation() : undefined
   return (
     <Flex

@@ -9,7 +9,7 @@ import { useCurrencyInfo } from 'uniswap/src/features/tokens/useCurrencyInfo'
 import { buildCurrencyId } from 'uniswap/src/utils/currencyId'
 import { DetailsHeaderContainer } from '~/components/Explore/stickyHeader/DetailsHeaderContainer'
 import { MobileBottomBar, TDPActionTabs } from '~/components/NavBar/MobileBottomBar'
-import { ScrollDirection, useScroll } from '~/hooks/useScroll'
+import { ScrollDirection } from '~/hooks/useScroll'
 import { ActivitySection } from '~/pages/TokenDetails/components/activity/ActivitySection'
 import { BalanceSummary, PageChainBalanceSummary } from '~/pages/TokenDetails/components/balances/BalanceSummary'
 import { ChartSection } from '~/pages/TokenDetails/components/chart/ChartSection'
@@ -22,6 +22,38 @@ import { LeftPanel, RightPanel, TokenDetailsLayout } from '~/pages/TokenDetails/
 import { TDPSwapComponent } from '~/pages/TokenDetails/components/swap/TDPSwapComponent'
 import { TokenCarousel } from '~/pages/TokenDetails/components/TokenCarousel/TokenCarousel'
 import { useTDPStore } from '~/pages/TokenDetails/context/useTDPStore'
+import { useEffect, useRef, useState } from 'react'
+
+/**
+ * Tracks only scroll direction changes — never fires a state update on every scroll
+ * pixel. Replaces useScroll() which updates height state every frame and causes the
+ * entire TokenDetailsContent tree to re-render during scrolling.
+ */
+function useScrollDirection(): ScrollDirection | undefined {
+  const [direction, setDirection] = useState<ScrollDirection | undefined>()
+  const lastYRef = useRef(window.scrollY)
+  const rafRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    const onScroll = () => {
+      if (rafRef.current !== null) return
+      rafRef.current = requestAnimationFrame(() => {
+        const scrollY = window.scrollY
+        const newDir = scrollY > lastYRef.current ? ScrollDirection.DOWN : ScrollDirection.UP
+        lastYRef.current = scrollY
+        rafRef.current = null
+        setDirection((prev) => (prev !== newDir ? newDir : prev))
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+    }
+  }, [])
+
+  return direction
+}
 
 export function TokenDetailsContent({ isCompact }: { isCompact: boolean }) {
   const media = useMedia()
@@ -38,7 +70,7 @@ export function TokenDetailsContent({ isCompact }: { isCompact: boolean }) {
   const tokenQueryData = tokenQuery.data?.token
   const pageChainBalance = multiChainMap[currencyChain]?.balance
 
-  const { direction: scrollDirection } = useScroll()
+  const scrollDirection = useScrollDirection()
 
   const chainId = fromGraphQLChain(currencyChain) ?? UniverseChainId.Mainnet
   const currencyInfo = useCurrencyInfo(
