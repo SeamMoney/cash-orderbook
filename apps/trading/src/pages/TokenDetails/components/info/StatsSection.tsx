@@ -1,11 +1,7 @@
-import { FeatureFlags, useFeatureFlag } from '@universe/gating'
 import { ReactNode, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Flex, FlexProps, Text } from 'ui/src'
-import {
-  useTokenMarketStats,
-  type TokenMarketStatsAggregatedInput,
-} from 'uniswap/src/features/dataApi/tokenDetails/useTokenDetailsData'
+import { useTokenMarketStats } from 'uniswap/src/features/dataApi/tokenDetails/useTokenDetailsData'
 import { useTokenSpotPrice } from 'uniswap/src/features/dataApi/tokenDetails/useTokenSpotPriceWrapper'
 import { useLocalizationContext } from 'uniswap/src/features/language/LocalizationContext'
 import { TestID } from 'uniswap/src/test/fixtures/testIDs'
@@ -90,31 +86,23 @@ function Stat({
 
 type StatsSectionProps = {
   tokenQueryData: TokenQueryData
-  /** When provided, bypasses the MultichainTokenUx feature flag and always passes this data to useTokenMarketStats.
-   *  Used by CashTokenDetailsContent to inject CASH market stats from the REST API. */
-  forceAggregatedData?: TokenMarketStatsAggregatedInput | null
 }
-export function StatsSection({ tokenQueryData, forceAggregatedData }: StatsSectionProps) {
+export function StatsSection({ tokenQueryData }: StatsSectionProps) {
   const { t } = useTranslation()
-  const isMultichainTokenUx = useFeatureFlag(FeatureFlags.MultichainTokenUx)
   const currency = useTDPStore((s) => s.currency)!
 
-  // Construct currencyId for shared hooks
   const currencyIdValue = useMemo(() => currencyId(currency), [currency])
 
-  // Live price from centralized provider (feature-flag aware via TokenPriceContext)
   const spotPrice = useTokenSpotPrice(currencyIdValue)
 
-  // When multichain token UX is on, TokenWebQuery returns aggregated market/project data — pass it so the hook uses it for stats.
-  // The forceAggregatedData prop overrides the feature flag — used by the CASH TDP which always has aggregated data from the REST API.
+  // Always pass aggregated data from tokenQueryData so stats (market cap, FDV, 52W)
+  // render for both regular tokens and CASH (which injects data via CashTDPProvider).
   const aggregatedInput = useMemo(
     () =>
-      forceAggregatedData !== undefined
-        ? forceAggregatedData
-        : isMultichainTokenUx && tokenQueryData
-          ? { market: tokenQueryData.market, project: tokenQueryData.project }
-          : undefined,
-    [forceAggregatedData, isMultichainTokenUx, tokenQueryData],
+      tokenQueryData
+        ? { market: tokenQueryData.market, project: tokenQueryData.project }
+        : undefined,
+    [tokenQueryData],
   )
   const stats = useTokenMarketStats(currencyIdValue, {
     currentPriceOverride: spotPrice,

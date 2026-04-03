@@ -1,15 +1,22 @@
 /**
- * CASH Token Detail Page — renders the real Uniswap TDP layout components
- * with CASH data provided by CashTDPProvider.
+ * CASH Token Detail Page — renders the REAL Uniswap TokenDetailsPage layout
+ * with CASH data injected via CashTDPProvider.
  *
  * Route: /cash
+ *
+ * This page is visually identical to /explore/tokens/ethereum/NATIVE — the only
+ * difference is the data source (CASH REST/WS API instead of GraphQL).
  */
 
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { Helmet } from 'react-helmet-async/lib/index'
 import { Flex, Text } from 'ui/src'
+import { useScroll } from '~/hooks/useScroll'
+import { useScrollCompact } from '~/hooks/useScrollCompact'
+import { TokenDetailsPageSkeleton } from '~/pages/TokenDetails/components/skeleton/Skeleton'
+import { TokenDetailsContent } from '~/pages/TokenDetails/components/TokenDetails'
 import { CashTDPProvider } from '~/pages/CashTDP/CashTDPProvider'
-import { CashTokenDetailsContent } from '~/pages/CashTDP/CashTokenDetailsContent'
+import { useTDPStore } from '~/pages/TokenDetails/context/useTDPStore'
 
 // ---------------------------------------------------------------------------
 // Error boundary — catches EVM-specific crashes (wagmi, provider context, etc.)
@@ -49,6 +56,25 @@ class TDPErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState>
 }
 
 // ---------------------------------------------------------------------------
+// Inner content — reads from TDP store for loading state
+// ---------------------------------------------------------------------------
+
+function CashTDPContent() {
+  const { height: scrollY } = useScroll()
+  const isCompact = useScrollCompact({ scrollY, thresholdCompact: 100, thresholdExpanded: 60 })
+  const { currency, tokenQuery } = useTDPStore((s) => ({
+    currency: s.currency,
+    tokenQuery: s.tokenQuery,
+  }))
+
+  if (tokenQuery.loading || !currency) {
+    return <TokenDetailsPageSkeleton isCompact={isCompact} />
+  }
+
+  return <TokenDetailsContent isCompact={isCompact} />
+}
+
+// ---------------------------------------------------------------------------
 // Page component
 // ---------------------------------------------------------------------------
 
@@ -68,7 +94,7 @@ export default function CashTokenDetailPage() {
         }
       >
         <CashTDPProvider>
-          <CashTokenDetailsContent isCompact={false} />
+          <CashTDPContent />
         </CashTDPProvider>
       </TDPErrorBoundary>
     </>
