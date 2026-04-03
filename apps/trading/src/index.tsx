@@ -16,6 +16,7 @@ import { LocalizationContextProvider } from 'uniswap/src/features/language/Local
 import { TokenPriceProvider } from 'uniswap/src/features/prices/TokenPriceContext'
 import i18n from 'uniswap/src/i18n'
 import { apolloClient } from '~/appGraphql/data/apollo/client'
+import { TokenBalancesProvider } from '~/appGraphql/data/apollo/TokenBalancesProvider'
 import { QueryClientPersistProvider } from '~/components/PersistQueryClient'
 import { createWeb3Provider, WalletCapabilitiesEffects } from '~/components/Web3Provider/createWeb3Provider'
 import { WebUniswapProvider } from '~/components/Web3Provider/WebUniswapContext'
@@ -52,7 +53,11 @@ function Updaters() {
 const Web3Provider = createWeb3Provider({ wagmiConfig })
 
 function GraphqlProviders({ children }: { children: React.ReactNode }) {
-  return <ApolloProvider client={apolloClient}>{children}</ApolloProvider>
+  return (
+    <ApolloProvider client={apolloClient}>
+      <TokenBalancesProvider>{children}</TokenBalancesProvider>
+    </ApolloProvider>
+  )
 }
 
 // Stub StatsigProvider: just render children without Statsig SDK

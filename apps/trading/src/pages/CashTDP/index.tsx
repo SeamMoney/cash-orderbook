@@ -16,7 +16,7 @@ import { useScroll } from '~/hooks/useScroll'
 import { useScrollCompact } from '~/hooks/useScrollCompact'
 import { CASH_TOKEN_OPTIONS, USD1_CURRENCY } from '~/pages/CashTDP/cashTokenList'
 import { CashTDPProvider } from '~/pages/CashTDP/CashTDPProvider'
-import { CashTokenDetailsContent } from '~/pages/CashTDP/CashTokenDetailsContent'
+import { TokenDetailsContent } from '~/pages/TokenDetails/components/TokenDetails'
 import { TokenDetailsPageSkeleton } from '~/pages/TokenDetails/components/skeleton/Skeleton'
 import { useTDPStore } from '~/pages/TokenDetails/context/useTDPStore'
 
@@ -73,7 +73,7 @@ function CashTDPContent() {
     return <TokenDetailsPageSkeleton isCompact={isCompact} />
   }
 
-  return <CashTokenDetailsContent isCompact={isCompact} />
+  return <TokenDetailsContent isCompact={isCompact} />
 }
 
 // ---------------------------------------------------------------------------

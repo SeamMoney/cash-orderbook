@@ -30,7 +30,7 @@ export function getRetryLink(): RetryLink {
       jitter: true,
     },
     attempts: {
-      max: 3,
+      max: 1,
       retryIf: (error, operation) => {
         if (!RETRY_OPERATIONS.has(operation.operationName)) {
           return false
