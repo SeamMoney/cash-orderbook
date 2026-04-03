@@ -49,9 +49,11 @@ export function useCashTokenData(): {
   useEffect(() => {
     let cancelled = false
 
+    let hasLoaded = false
     async function load(): Promise<void> {
+      const isFirstFetch = !hasLoaded
       try {
-        setLoading(true)
+        if (isFirstFetch) setLoading(true)
         const market = await fetchMarket()
 
         // Also fetch 1d candles to derive 52w high/low
@@ -83,13 +85,14 @@ export function useCashTokenData(): {
             low52w,
           })
           setError(null)
+          hasLoaded = true
         }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err : new Error(String(err)))
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && isFirstFetch) {
           setLoading(false)
         }
       }
@@ -97,7 +100,7 @@ export function useCashTokenData(): {
 
     void load()
 
-    // Poll every 10 seconds for fresh market data
+    // Poll every 10 seconds for fresh market data (silent background refresh, no loading flash)
     const interval = setInterval(() => void load(), 10_000)
 
     return () => {

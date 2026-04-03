@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { GraphQLApi } from '@universe/api'
-import { PropsWithChildren, useCallback, useEffect, useMemo, useState } from 'react'
+import { PropsWithChildren, useCallback, useEffect, useMemo } from 'react'
 import { useEnabledChains } from 'uniswap/src/features/chains/hooks/useEnabledChains'
 // biome-ignore lint/style/noRestrictedImports: This import is needed for fetching portfolio value modifiers despite being restricted
 import { usePortfolioValueModifiers } from 'uniswap/src/features/dataApi/balances/balances'
@@ -95,15 +95,5 @@ function TokenBalancesProviderInternal({ children }: PropsWithChildren) {
 }
 
 export function TokenBalancesProvider({ children }: PropsWithChildren) {
-  const [initialized, setInitialized] = useState(false)
-
-  useEffect(() => {
-    setInitialized(true)
-  }, [])
-
-  if (!initialized) {
-    return null
-  }
-
   return <TokenBalancesProviderInternal>{children}</TokenBalancesProviderInternal>
 }

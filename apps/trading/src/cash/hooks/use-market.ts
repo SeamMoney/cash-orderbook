@@ -28,6 +28,7 @@ export function useMarket(pollIntervalMs = 5000): {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
+  const hasDataRef = useRef(false);
 
   const fetchMarket = useCallback(async (): Promise<void> => {
     try {
@@ -37,12 +38,13 @@ export function useMarket(pollIntervalMs = 5000): {
 
       if (mountedRef.current) {
         setMarket(data);
+        hasDataRef.current = true;
         setError(null);
       }
     } catch {
       if (mountedRef.current) {
-        // In dev mode, fall back to mock market data
-        if (import.meta.env.DEV && !market) {
+        // In dev mode, fall back to mock market data (only if no real data yet)
+        if (import.meta.env.DEV && !hasDataRef.current) {
           setMarket({
             pairId: 0,
             pair: "CASH/USDC",
@@ -55,6 +57,7 @@ export function useMarket(pollIntervalMs = 5000): {
             lastPrice: 0.25,
             volume24h: 142_350.75,
           });
+          hasDataRef.current = true;
           setError(null);
         } else {
           setError("Failed to fetch market data");
@@ -65,7 +68,7 @@ export function useMarket(pollIntervalMs = 5000): {
         setLoading(false);
       }
     }
-  }, [market]);
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
