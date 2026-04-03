@@ -1,0 +1,15 @@
+{
+  "featureId": "fix-stats-section-cash-data",
+  "reviewedAt": "2026-04-03T05:46:00Z",
+  "commitId": "19cf5f3",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix correctly introduces an optional StatsSection override (`forceAggregatedData`) and wires CASH TokenDetails to always pass aggregated market/project data from the TDP store. This directly addresses the feature-flag gating root cause and preserves existing behavior for non-CASH call sites.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed worker transcript skeleton and commit 19cf5f3. Implementation matches the feature requirements: Market cap, FDV, and 52W highs/lows are now sourced from CASH aggregated data while volume behavior remains intact. No correctness, security, maintainability, or regression issues were identified in scope."
+}
