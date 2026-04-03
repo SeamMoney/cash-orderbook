@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { MAX_NUMBER_OF_TOKENS } from 'uniswap/src/components/CurrencyInputPanel/DefaultTokenOptions/constants'
 import { TokenOptionItem } from 'uniswap/src/components/CurrencyInputPanel/DefaultTokenOptions/TokenOptions/TokenOptionItem/TokenOptionItem'
+import { useCashTokenOverride } from 'uniswap/src/components/TokenSelector/CashTokenOverrideContext'
 import { useCommonTokensOptionsWithFallback } from 'uniswap/src/components/TokenSelector/hooks/useCommonTokensOptionsWithFallback'
 import { useActiveAddresses } from 'uniswap/src/features/accounts/store/hooks'
 import type { CurrencyInfo } from 'uniswap/src/features/dataApi/types'
@@ -35,7 +36,19 @@ const useCommonTokensOptionsInfo = (): {
 }
 
 export const TokenOptions = ({ currencyField }: { currencyField: CurrencyField }): JSX.Element => {
-  const { allCurrencyInfos, numberOfCommonTokenOptions } = useCommonTokensOptionsInfo()
+  const { allCurrencyInfos: defaultCurrencyInfos, numberOfCommonTokenOptions: defaultCount } =
+    useCommonTokensOptionsInfo()
+  const cashOverride = useCashTokenOverride()
+
+  // When cash override is active, use our stablecoin tokens instead of EVM defaults
+  const allCurrencyInfos = useMemo(() => {
+    if (cashOverride.enabled && cashOverride.tokens.length > 0) {
+      return cashOverride.tokens.slice(0, MAX_NUMBER_OF_TOKENS).map(({ currencyInfo }) => currencyInfo)
+    }
+    return defaultCurrencyInfos
+  }, [cashOverride.enabled, cashOverride.tokens, defaultCurrencyInfos])
+
+  const numberOfCommonTokenOptions = cashOverride.enabled ? cashOverride.tokens.length : defaultCount
 
   return (
     <>

@@ -7,6 +7,7 @@ import { FontSizeOptions } from 'ui/src/hooks/useDynamicFontSizing'
 import { fonts, spacing } from 'ui/src/theme'
 import { AmountInput } from 'uniswap/src/components/AmountInput/AmountInput'
 import { DefaultTokenOptions } from 'uniswap/src/components/CurrencyInputPanel/DefaultTokenOptions/DefaultTokenOptions'
+import { useCashTokenOverride } from 'uniswap/src/components/TokenSelector/CashTokenOverrideContext'
 import {
   MIN_INPUT_FONT_SIZE,
   useCurrencyInputFontSize,
@@ -88,6 +89,7 @@ export const CurrencyInputPanelInput = memo(
       } = props
 
       const colors = useSporeColors()
+      const cashOverride = useCashTokenOverride()
       const { symbol: fiatCurrencySymbol } = useAppFiatCurrencyInfo()
 
       const { value, color } = indicativeQuoteTextDisplay
@@ -211,7 +213,7 @@ export const CurrencyInputPanelInput = memo(
                 )}
               </Flex>
             ) : showDefaultTokenOptions && !isWebAppDesktop ? (
-              <DefaultTokenOptions currencyField={CurrencyField.OUTPUT} />
+              <DefaultTokenOptions currencyField={cashOverride.enabled ? CurrencyField.INPUT : CurrencyField.OUTPUT} />
             ) : (
               <TouchableArea onPress={onShowTokenSelector}>
                 <Text

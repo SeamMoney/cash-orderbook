@@ -1,5 +1,6 @@
 import { GqlResult, GraphQLApi } from '@universe/api'
 import { useMemo } from 'react'
+import { useCashTokenOverride } from 'uniswap/src/components/TokenSelector/CashTokenOverrideContext'
 import { getCommonBase } from 'uniswap/src/constants/routing'
 import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import { CurrencyInfo } from 'uniswap/src/features/dataApi/types'
@@ -67,8 +68,21 @@ export function useCurrencyInfo(
   _currencyId?: string,
   options?: { refetch?: boolean; skip?: boolean },
 ): Maybe<CurrencyInfo> {
-  const { currencyInfo } = useCurrencyInfoQuery(_currencyId, options)
-  return currencyInfo
+  const cashOverride = useCashTokenOverride()
+
+  const cashMatch = useMemo(() => {
+    if (!cashOverride.enabled || !_currencyId) {
+      return undefined
+    }
+    return cashOverride.tokens.find((t) => t.currencyInfo.currencyId === _currencyId)?.currencyInfo
+  }, [cashOverride.enabled, cashOverride.tokens, _currencyId])
+
+  const { currencyInfo } = useCurrencyInfoQuery(_currencyId, {
+    ...options,
+    skip: options?.skip || !!cashMatch,
+  })
+
+  return cashMatch ?? currencyInfo
 }
 
 export function useCurrencyInfoWithLoading(
@@ -79,7 +93,25 @@ export function useCurrencyInfoWithLoading(
   loading: boolean
   error?: Error
 } {
-  return useCurrencyInfoQuery(_currencyId, options)
+  const cashOverride = useCashTokenOverride()
+
+  const cashMatch = useMemo(() => {
+    if (!cashOverride.enabled || !_currencyId) {
+      return undefined
+    }
+    return cashOverride.tokens.find((t) => t.currencyInfo.currencyId === _currencyId)?.currencyInfo
+  }, [cashOverride.enabled, cashOverride.tokens, _currencyId])
+
+  const result = useCurrencyInfoQuery(_currencyId, {
+    ...options,
+    skip: options?.skip || !!cashMatch,
+  })
+
+  return {
+    currencyInfo: cashMatch ?? result.currencyInfo,
+    loading: cashMatch ? false : result.loading,
+    error: cashMatch ? undefined : result.error,
+  }
 }
 
 export function useCurrencyInfos(

@@ -10,6 +10,7 @@ import { PresetAmountButton } from 'uniswap/src/components/CurrencyInputPanel/Am
 import type { PresetPercentage } from 'uniswap/src/components/CurrencyInputPanel/AmountInputPresets/types'
 import { PRESET_PERCENTAGES } from 'uniswap/src/components/CurrencyInputPanel/AmountInputPresets/utils'
 import { DefaultTokenOptions } from 'uniswap/src/components/CurrencyInputPanel/DefaultTokenOptions/DefaultTokenOptions'
+import { useCashTokenOverride } from 'uniswap/src/components/TokenSelector/CashTokenOverrideContext'
 import type { CurrencyInfo } from 'uniswap/src/features/dataApi/types'
 import { ElementName } from 'uniswap/src/features/telemetry/constants'
 import { CurrencyField } from 'uniswap/src/types/currency'
@@ -51,12 +52,17 @@ export function CurrencyInputPanelHeader({
     [currencyAmount, currencyBalance, currencyField, onSetPresetValue],
   )
 
+  const cashOverride = useCashTokenOverride()
+
   if (!headerLabel && !showDefaultTokenOptions) {
     return null
   }
 
   const showInputPresets =
     (isWebAppDesktop || isExtensionApp) && !hidePresets && currencyField === CurrencyField.INPUT && currencyBalance
+
+  // When cash override active: pills are on input row; otherwise output row
+  const pillCurrencyField = cashOverride.enabled ? CurrencyField.INPUT : CurrencyField.OUTPUT
 
   return (
     <Flex row justifyContent="space-between">
@@ -71,7 +77,7 @@ export function CurrencyInputPanelHeader({
       )}
       {showDefaultTokenOptions && isWebAppDesktop && (
         <Flex position="absolute" right={0} top={-spacing.spacing6}>
-          <DefaultTokenOptions currencyField={CurrencyField.OUTPUT} />
+          <DefaultTokenOptions currencyField={pillCurrencyField} />
         </Flex>
       )}
     </Flex>

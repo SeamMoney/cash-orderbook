@@ -16,6 +16,7 @@ import { CurrencyInputPanelInput } from 'uniswap/src/components/CurrencyInputPan
 import { CurrencyInputPanelValue } from 'uniswap/src/components/CurrencyInputPanel/CurrencyInputPanelValue'
 import { useIndicativeQuoteTextDisplay } from 'uniswap/src/components/CurrencyInputPanel/hooks/useIndicativeQuoteTextDisplay'
 import type { CurrencyInputPanelProps, CurrencyInputPanelRef } from 'uniswap/src/components/CurrencyInputPanel/types'
+import { useCashTokenOverride } from 'uniswap/src/components/TokenSelector/CashTokenOverrideContext'
 import { ElementName } from 'uniswap/src/features/telemetry/constants'
 import { CurrencyField } from 'uniswap/src/types/currency'
 import { isExtensionApp, isMobileWeb, isWebAppDesktop } from 'utilities/src/platform'
@@ -68,9 +69,15 @@ export const CurrencyInputPanel = memo(
       const display = useIndicativeQuoteTextDisplay(props)
       const { value, usdValue } = display
 
+      const cashOverride = useCashTokenOverride()
+
       const isOutput = currencyField === CurrencyField.OUTPUT
 
-      const showDefaultTokenOptions = isOutput && !currencyInfo
+      // When cash override active: show pills on input (top/sell) row
+      // Otherwise: show on output (bottom/buy) row (original behavior)
+      const showDefaultTokenOptions = cashOverride.enabled
+        ? !isOutput && !currencyInfo
+        : isOutput && !currencyInfo
 
       const showInsufficientBalanceWarning =
         !isOutput && !!currencyBalance && !!currencyAmount && currencyBalance.lessThan(currencyAmount)
