@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { TokenSelectorOption } from 'uniswap/src/components/lists/items/types'
 import { OnchainItemSection } from 'uniswap/src/components/lists/OnchainItemList/types'
+import { useCashTokenOverride } from 'uniswap/src/components/TokenSelector/CashTokenOverrideContext'
 import { TokenSelectorEmptySearchList } from 'uniswap/src/components/TokenSelector/lists/TokenSelectorEmptySearchList'
 import { TokenSelectorSearchResultsList } from 'uniswap/src/components/TokenSelector/lists/TokenSelectorSearchResultsList'
 import { TokenSelectorSendList } from 'uniswap/src/components/TokenSelector/lists/TokenSelectorSendList'
@@ -46,7 +47,22 @@ export function useTokenSelectorList({
   debouncedSearchFilter: string | null
   parsedChainFilter: UniverseChainId | null
 }): JSX.Element | undefined {
+  const cashOverride = useCashTokenOverride()
+
   return useMemo(() => {
+    // When CASH override is active, always show the swap list (our tokens only)
+    if (cashOverride.enabled) {
+      return (
+        <TokenSelectorSwapList
+          oppositeSelectedToken={variation === TokenSelectorVariation.SwapInput ? output : input}
+          addresses={addresses}
+          chainFilter={chainFilter}
+          renderedInModal={renderedInModal}
+          onSelectCurrency={onSelectCurrency}
+        />
+      )
+    }
+
     if (searchInFocus && !searchFilter && !isTestnetModeEnabled) {
       return (
         <TokenSelectorEmptySearchList
@@ -110,6 +126,7 @@ export function useTokenSelectorList({
         return undefined
     }
   }, [
+    cashOverride.enabled,
     searchInFocus,
     searchFilter,
     isTestnetModeEnabled,

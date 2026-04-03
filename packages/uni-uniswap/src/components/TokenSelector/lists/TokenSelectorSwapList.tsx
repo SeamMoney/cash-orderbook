@@ -3,6 +3,7 @@ import { memo, useCallback, useMemo, useRef } from 'react'
 import { TokenSelectorOption } from 'uniswap/src/components/lists/items/types'
 import { type OnchainItemSection, OnchainItemSectionName } from 'uniswap/src/components/lists/OnchainItemList/types'
 import { useOnchainItemListSection } from 'uniswap/src/components/lists/utils'
+import { useCashTokenOverride } from 'uniswap/src/components/TokenSelector/CashTokenOverrideContext'
 import { useCommonTokensOptionsWithFallback } from 'uniswap/src/components/TokenSelector/hooks/useCommonTokensOptionsWithFallback'
 import { useFavoriteTokensOptions } from 'uniswap/src/components/TokenSelector/hooks/useFavoriteTokensOptions'
 import { usePortfolioTokenOptions } from 'uniswap/src/components/TokenSelector/hooks/usePortfolioTokenOptions'
@@ -23,6 +24,7 @@ function useTokenSectionsForSwap({
   chainFilter,
   oppositeSelectedToken,
 }: TokenSectionsHookProps): GqlResult<OnchainItemSection<TokenSelectorOption>[]> {
+  const cashOverride = useCashTokenOverride()
   const { defaultChainId, isTestnetModeEnabled } = useEnabledChains()
 
   const {
@@ -133,6 +135,14 @@ function useTokenSectionsForSwap({
   })
 
   const sections = useMemo(() => {
+    // CASH override: show only the override tokens
+    if (cashOverride.enabled) {
+      return [{
+        data: cashOverride.tokens,
+        sectionKey: OnchainItemSectionName.SuggestedTokens,
+      }]
+    }
+
     if (isSwapListLoading({ loading, portfolioSection, trendingSection, isTestnetModeEnabled })) {
       return undefined
     }
@@ -152,6 +162,8 @@ function useTokenSectionsForSwap({
       ...(trendingSection ?? []),
     ]
   }, [
+    cashOverride.enabled,
+    cashOverride.tokens,
     loading,
     portfolioSection,
     trendingSection,
@@ -165,11 +177,11 @@ function useTokenSectionsForSwap({
   return useMemo(
     () => ({
       data: sections,
-      loading,
-      error: error || undefined,
+      loading: cashOverride.enabled ? false : loading,
+      error: cashOverride.enabled ? undefined : error || undefined,
       refetch,
     }),
-    [error, loading, refetch, sections],
+    [cashOverride.enabled, error, loading, refetch, sections],
   )
 }
 

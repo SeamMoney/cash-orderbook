@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 import { Flex } from 'ui/src'
 import { getNativeAddress } from 'uniswap/src/constants/addresses'
+import { useCashTokenOverride } from 'uniswap/src/components/TokenSelector/CashTokenOverrideContext'
 import { useUrlContext } from 'uniswap/src/contexts/UrlContext'
 import { isUniverseChainId, toGraphQLChain } from 'uniswap/src/features/chains/utils'
 import { useCurrencyInfo } from 'uniswap/src/features/tokens/useCurrencyInfo'
@@ -33,12 +34,13 @@ export function TDPSwapComponent() {
   }))
   const navigate = useNavigate()
 
+  const cashOverride = useCashTokenOverride()
   const currencyInfo = useCurrencyInfo(currencyId(currency))
 
   const { inputCurrency, outputCurrency } = useSwapInitialCurrencies()
 
-  // Other token to prefill the swap form with
-  const initialInputCurrency = inputCurrency
+  // When CASH override is active, don't default to ETH — let user select from our token list
+  const initialInputCurrency = cashOverride.enabled ? undefined : inputCurrency
   // If the initial input currency is the same as the TDP currency, then we are selling the TDP currency
   const initialOutputCurrency = useMemo((): Currency | undefined => {
     if (

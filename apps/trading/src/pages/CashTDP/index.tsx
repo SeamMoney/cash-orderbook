@@ -11,11 +11,13 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { Helmet } from 'react-helmet-async/lib/index'
 import { Flex, Text } from 'ui/src'
+import { CashTokenOverrideProvider } from 'uniswap/src/components/TokenSelector/CashTokenOverrideContext'
 import { useScroll } from '~/hooks/useScroll'
 import { useScrollCompact } from '~/hooks/useScrollCompact'
+import { CASH_TOKEN_OPTIONS, USD1_CURRENCY } from '~/pages/CashTDP/cashTokenList'
+import { CashTDPProvider } from '~/pages/CashTDP/CashTDPProvider'
 import { TokenDetailsPageSkeleton } from '~/pages/TokenDetails/components/skeleton/Skeleton'
 import { TokenDetailsContent } from '~/pages/TokenDetails/components/TokenDetails'
-import { CashTDPProvider } from '~/pages/CashTDP/CashTDPProvider'
 import { useTDPStore } from '~/pages/TokenDetails/context/useTDPStore'
 
 // ---------------------------------------------------------------------------
@@ -93,9 +95,11 @@ export default function CashTokenDetailPage() {
           </Flex>
         }
       >
-        <CashTDPProvider>
-          <CashTDPContent />
-        </CashTDPProvider>
+        <CashTokenOverrideProvider tokens={CASH_TOKEN_OPTIONS} defaultInputCurrency={USD1_CURRENCY}>
+          <CashTDPProvider>
+            <CashTDPContent />
+          </CashTDPProvider>
+        </CashTokenOverrideProvider>
       </TDPErrorBoundary>
     </>
   )
