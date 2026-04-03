@@ -1,0 +1,94 @@
+{
+  "groupId": "swap-widget",
+  "testedAt": "2026-04-03T03:03:28Z",
+  "isolation": {
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "appUrl": "http://localhost:3200/cash",
+    "surfaceBoundary": "localhost:3200 only",
+    "browserSession": "swap-widget-int-004-005"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "INT-004",
+      "title": "Swap widget defaults to CASH",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Navigate to /cash and inspect swap widget default tokens",
+          "expected": "CASH is shown as default swap token (not ETH)",
+          "observed": "Swap widget showed CASH in default pair state (U USD1 -> C CASH); ETH was not shown in selector state"
+        },
+        {
+          "action": "Open token selector from swap widget",
+          "expected": "Selector includes CASH, USD1, USDC, USDT, USDe",
+          "observed": "Selector showed CASH, USD1, USDC, USDT, and USDe"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "swap-integration/swap-widget/INT-004-default-swap-widget.png",
+          "swap-integration/swap-widget/INT-004-token-selector-options.png"
+        ],
+        "consoleErrors": "agent-browser errors reported 3x 'Failed to fetch' (background noise not blocking assertion)",
+        "network": "In-page fetch checks: GET /cash-api/depth -> 200, GET /cash-api/market -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "INT-005",
+      "title": "Swap execution wired",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "With disconnected wallet and empty input, inspect swap CTA and quote section",
+          "expected": "Disconnected/no-amount state is appropriate",
+          "observed": "CTA displayed 'Connect Wallet'; no quote details (Exchange rate/Route/Minimum received hidden); 'You receive 0 CASH' shown"
+        },
+        {
+          "action": "Enter amount 1 in swap input",
+          "expected": "Quote appears and CTA state is appropriate",
+          "observed": "Quote rendered (You receive 1,033.955794 CASH; Exchange rate/Route/Price impact/Minimum received visible) while CTA remained 'Connect Wallet'"
+        },
+        {
+          "action": "Attempt wallet-connect path for connected submit validation",
+          "expected": "If wallet connection is feasible, continue to Swap submit path",
+          "observed": "Connect modal opened with Google/Apple options and Petra/Nightly/Backpack install links, but no connected wallet context was available in this headless isolated run"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "swap-integration/swap-widget/INT-005-disconnected-no-amount-clean.png",
+          "swap-integration/swap-widget/INT-005-with-amount-quote-clean.png",
+          "swap-integration/swap-widget/INT-005-wallet-connect-modal.png"
+        ],
+        "consoleErrors": "agent-browser errors reported 3x 'Failed to fetch'; console also showed recurring external RPC 403 noise from non-CASH providers",
+        "network": "In-page fetch checks: GET /cash-api/depth -> 200, GET /cash-api/market -> 200; quote rendering observed in UI after amount entry"
+      },
+      "issues": "Connected swap-submit path could not be validated in this environment due unavailable wallet connection context (no injected wallet session/credentials). Pre-submit disconnected/no-amount/with-amount behavior was validated."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "agent-browser network request capture returned empty for this run",
+      "resolved": true,
+      "resolution": "Used in-page fetch() checks to capture local API statuses for required network evidence",
+      "affectedAssertions": [
+        "INT-004",
+        "INT-005"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Connected wallet + swap-submit path not feasible in isolated headless session",
+      "affectedAssertions": [
+        "INT-005"
+      ],
+      "quickFixAttempted": "Opened Connect Wallet modal and verified available options; only install/social-login paths were present, but no connected wallet context was available for transaction submission"
+    }
+  ],
+  "summary": "Tested 2 assertions: INT-004 passed; INT-005 pre-submit behavior validated but overall marked blocked on connected swap-submit path due wallet-connect unavailability in this environment."
+}

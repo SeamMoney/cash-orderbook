@@ -1,0 +1,23 @@
+{
+  "milestone": "swap-integration",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 2,
+    "passed": 1,
+    "failed": 0,
+    "blocked": 1
+  },
+  "passedAssertions": [
+    "INT-004"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [
+    {
+      "id": "INT-005",
+      "blockedBy": "Connected swap-submit path could not be validated in this headless environment due unavailable wallet connection context (no injected wallet session/credentials). Pre-submit CTA and quote behavior were validated."
+    }
+  ],
+  "appliedUpdates": [],
+  "previousRound": null
+}
