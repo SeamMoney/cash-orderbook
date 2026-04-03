@@ -12,7 +12,7 @@ import { TDPBreadcrumb } from '~/pages/TokenDetails/components/header/TDPBreadcr
 import { TokenDetailsHeader } from '~/pages/TokenDetails/components/header/TokenDetailsHeader'
 import { CashTokenDescription } from '~/pages/CashTDP/CashTokenDescription'
 import { LeftPanel, RightPanel, TokenDetailsLayout } from '~/pages/TokenDetails/components/skeleton/Skeleton'
-import { TDPSwapComponent } from '~/pages/TokenDetails/components/swap/TDPSwapComponent'
+import { CashSwapWidget } from '~/pages/CashTDP/CashSwapWidget'
 import { DetailsHeaderContainer } from '~/components/Explore/stickyHeader/DetailsHeaderContainer'
 import { CashStatsSection } from '~/pages/CashTDP/CashStats'
 import { CashActivitySection } from '~/pages/CashTDP/CashTransactions'
@@ -42,7 +42,7 @@ export function CashTokenDetailsContent({ isCompact }: { isCompact: boolean }) {
         <RightPanel>
           {/* Swap always visible on desktop */}
           <Flex display={isDesktop ? 'flex' : 'none'}>
-            <TDPSwapComponent />
+            <CashSwapWidget />
           </Flex>
         </RightPanel>
       </TokenDetailsLayout>
