@@ -1,0 +1,46 @@
+{
+  "milestone": "swap-integration",
+  "round": 2,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "pnpm --dir \"/Users/maxmohammadi/cash-orderbook\" --filter @cash/api --filter @cash/orderbook-sdk --filter @cash/shared --filter @cash/scripts test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm --dir \"/Users/maxmohammadi/cash-orderbook\" --filter @cash/api --filter @cash/orderbook-sdk --filter @cash/shared --filter @cash/scripts typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm --dir \"/Users/maxmohammadi/cash-orderbook\" --filter @cash/api --filter @cash/orderbook-sdk --filter @cash/shared --filter @cash/scripts lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "failedFeatures": [
+      "fix-swap-balance-mapping"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "fix-swap-balance-mapping",
+      "severity": "blocking",
+      "description": "CashSwapWidget maps `USD1` to zero balance instead of the existing quote-balance source, so connected users can be incorrectly blocked with `Insufficient USD1 balance` on the default USD1→CASH path."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [],
+  "rejectedObservations": [
+    {
+      "observation": "Quote-asset balance naming remains confusing (`USD1` product semantics vs backend `usdc` balance field).",
+      "reason": "already-documented in .factory/library/cash-quote-balance-field-mapping.md; no new shared-state action to apply in this round"
+    }
+  ],
+  "previousRound": ".factory/validation/swap-integration/scrutiny/synthesis.round1.json"
+}

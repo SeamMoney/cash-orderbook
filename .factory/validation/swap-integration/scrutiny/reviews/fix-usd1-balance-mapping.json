@@ -1,0 +1,15 @@
+{
+  "featureId": "fix-usd1-balance-mapping",
+  "reviewedAt": "2026-04-03T02:41:53Z",
+  "commitId": "dc5da30",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix directly addresses the prior blocking issue: USD1 is now mapped to the quote balance field (`balances.usdc.available`) in both balance lookup functions used by swap CTA state and token-selector rows.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": "/Users/maxmohammadi/cash-orderbook/.factory/validation/swap-integration/scrutiny/reviews/fix-swap-balance-mapping.json",
+  "summary": "Review result: pass. Commit dc5da30 fixes the previously failed USD1 mapping by updating both `getTokenBalance` and token-selector `getBalance` so USD1 no longer falls back to zero, resolving the false insufficient-balance behavior."
+}
