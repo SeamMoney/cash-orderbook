@@ -115,7 +115,7 @@ function createWagmiConfig(params: {
       return createClient({
         chain,
         batch: { multicall: true },
-        pollingInterval: 12_000,
+        pollingInterval: Infinity,
         transport: fallback(
           orderedTransportUrls(chain).map((url) =>
             createObservableTransport({

@@ -5,8 +5,7 @@ import { type PersistConfig, persistReducer, persistStore } from 'redux-persist'
 import createSagaMiddleware from 'redux-saga'
 import { delegationListenerMiddleware } from 'uniswap/src/features/smartWallet/delegation/slice'
 import { isDevEnv, isTestEnv } from 'utilities/src/environment/env'
-import { createDatadogReduxEnhancer } from 'utilities/src/logger/datadog/Datadog'
-import { ALLOW_ANALYTICS_ATOM_KEY } from 'utilities/src/telemetry/analytics/constants'
+
 import { updateVersion } from '~/state/global/actions'
 import { customCreateMigrate, INDEXED_DB_REDUX_TABLE_NAME, migrations, PERSIST_VERSION } from '~/state/migrations'
 import { routingApi } from '~/state/routing/slice'
@@ -36,18 +35,10 @@ const persistedReducer = persistReducer(persistConfig, interfaceReducer)
 
 const sagaMiddleware = createSagaMiddleware()
 
-const dataDogReduxEnhancer = createDatadogReduxEnhancer({
-  shouldLogReduxState: (): boolean => {
-    const allowAnalytics = window.localStorage.getItem(ALLOW_ANALYTICS_ATOM_KEY) !== 'false'
-    // Do not log the state if a user has opted out of analytics.
-    return !!allowAnalytics
-  },
-})
-
 export function createDefaultStore() {
   const store = configureStore({
     reducer: persistedReducer,
-    enhancers: (defaultEnhancers) => defaultEnhancers.concat(dataDogReduxEnhancer),
+    enhancers: (defaultEnhancers) => defaultEnhancers,
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         thunk: true,
@@ -75,7 +66,6 @@ export function createDefaultStore() {
               ],
             },
       })
-        .concat(routingApi.middleware)
         .concat(sagaMiddleware)
         .concat(walletCapabilitiesListenerMiddleware.middleware)
         .concat(delegationListenerMiddleware.middleware),

@@ -18,7 +18,7 @@ const retryLink = getRetryLink()
 
 export const apolloClient = new ApolloClient({
   connectToDevTools: true,
-  link: from([datadogLink, retryLink, httpLink]),
+  link: from([retryLink, httpLink]),
   headers: {
     'Content-Type': 'application/json',
     Origin: 'https://app.uniswap.org',
@@ -26,7 +26,7 @@ export const apolloClient = new ApolloClient({
   cache: setupSharedApolloCache(),
   defaultOptions: {
     watchQuery: {
-      fetchPolicy: 'cache-and-network',
+      fetchPolicy: 'cache-first',
     },
   },
 })
