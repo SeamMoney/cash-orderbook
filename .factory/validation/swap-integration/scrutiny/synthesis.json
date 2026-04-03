@@ -1,0 +1,54 @@
+{
+  "milestone": "swap-integration",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "pnpm --dir \"/Users/maxmohammadi/cash-orderbook\" --filter @cash/api --filter @cash/orderbook-sdk --filter @cash/shared --filter @cash/scripts test",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "pnpm --dir \"/Users/maxmohammadi/cash-orderbook\" --filter @cash/api --filter @cash/orderbook-sdk --filter @cash/shared --filter @cash/scripts typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "pnpm --dir \"/Users/maxmohammadi/cash-orderbook\" --filter @cash/api --filter @cash/orderbook-sdk --filter @cash/shared --filter @cash/scripts lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "failedFeatures": [
+      "swap-execution-wiring"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "swap-execution-wiring",
+      "severity": "blocking",
+      "description": "CashSwapWidget only maps balances for CASH/USDC while default input token is USD1, so insufficient-balance detection does not trigger for USD1 and CTA state can incorrectly show Swap instead of Insufficient USD1 balance."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "library",
+      "description": "Documented quote-asset balance field mapping gap (`USD1` UI symbol vs backend `usdc` balance field) in .factory/library/cash-quote-balance-field-mapping.md.",
+      "sourceFeature": "swap-execution-wiring"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "skills/fork-worker",
+      "suggestion": "Add explicit Vite env guidance to ensure `VITE_*` variables are available at runtime (including `envPrefix: []` gotcha when present) during Next.js -> Vite ports.",
+      "evidence": "Swap-execution handoff reported envPrefix debugging and missing guidance in fork-worker instructions, leading to avoidable integration friction.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [],
+  "previousRound": null
+}

@@ -1,0 +1,39 @@
+{
+  "featureId": "swap-execution-wiring",
+  "reviewedAt": "2026-04-03T02:15:17Z",
+  "commitId": "60d88b8",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature correctly replaces the Uniswap swap widget with CASH execution paths (orderbook + Panora), limit tab UI, and token selector. However, a required CTA behavior is not met: insufficient-balance detection does not work for the default USD1->CASH path.",
+    "issues": [
+      {
+        "file": "apps/trading/src/pages/CashTDP/CashSwapWidget.tsx",
+        "line": 150,
+        "severity": "blocking",
+        "description": "Balance lookup only handles `CASH` and `USDC`, but the default input token is `USD1` (line 61). As a result, `fromBalance` is null for USD1 and `insufficientBalance` never becomes true (line 157), so the CTA can show `Swap` instead of `Insufficient USD1 balance`, violating the required CTA state behavior."
+      },
+      {
+        "file": "apps/trading/src/pages/CashTDP/CashSwapWidget.tsx",
+        "line": 924,
+        "severity": "non_blocking",
+        "description": "Token-selector balance rendering has the same symbol-mapping gap (`CASH`/`USDC` only), so USD1/USDT/USDe rows display no balance even though those tokens are presented as supported swap inputs."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "knowledge",
+      "observation": "The quote-asset balance naming (`usdc`) is ambiguous relative to USD1-based product behavior and is not clearly documented in shared state.",
+      "evidence": "shared/src/index.ts:211-213 defines UserBalances as `cash` + `usdc`; api/src/routes/balances.ts:7 documents `/balances` returning `usdc`; mission AGENTS.md uses USD1 terminology for swap flow and token addresses (/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/AGENTS.md:28,47)."
+    },
+    {
+      "area": "skills",
+      "observation": "fork-worker guidance is missing the `envPrefix: []`/`VITE_*` gotcha that directly affected this implementation.",
+      "evidence": "Handoff records envPrefix-related debugging and explicitly suggests adding this to the skill (/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/handoffs/2026-04-03T01-45-27-306Z__swap-execution-wiring__dba10e50-8f36-41fe-b4d9-ddb528d2cce1.json:56-57,69), while .factory/skills/fork-worker/SKILL.md has no envPrefix/VITE guidance."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review result: fail. Core swap wiring is present, but insufficient-balance CTA behavior is incorrect for the default USD1 route due token-to-balance mapping mismatch. Shared-state documentation should clarify quote-balance naming and add the Vite envPrefix gotcha to fork-worker guidance."
+}
