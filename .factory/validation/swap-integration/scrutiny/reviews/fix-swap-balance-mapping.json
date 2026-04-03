@@ -1,0 +1,34 @@
+{
+  "featureId": "fix-swap-balance-mapping",
+  "reviewedAt": "2026-04-03T02:33:41Z",
+  "commitId": "2cd7413",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The fix removes the null-balance branch from the prior failure, but it over-corrects by hardcoding USD1 to zero balance. That still violates correct CTA behavior for connected users with quote funds and introduces UI balance regressions.",
+    "issues": [
+      {
+        "file": "apps/trading/src/pages/CashTDP/CashSwapWidget.tsx",
+        "line": 151,
+        "severity": "blocking",
+        "description": "`getTokenBalance` returns `0` for `USD1` (and other non-USDC symbols). In this codebase, `balances.usdc` is the quote balance for USD1; returning 0 makes `insufficientBalance` true for any positive USD1 input, so connected users can be incorrectly blocked with `Insufficient USD1 balance` on the default USD1→CASH path."
+      },
+      {
+        "file": "apps/trading/src/pages/CashTDP/CashSwapWidget.tsx",
+        "line": 713,
+        "severity": "non_blocking",
+        "description": "Limit tab quote-balance display now calls `getTokenBalance('USD1')`, which resolves to 0 under the current mapping; funded wallets therefore display `0.0000`. Token selector rows have the same regression via `getBalance` (line 927)."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Quote-asset balance naming is still error-prone across shared state: product behavior is USD1-first while the shared/API balance field remains named `usdc`, and this fix repeated the mapping mistake.",
+      "evidence": "shared/src/index.ts:211-213 (`UserBalances.cash` + `UserBalances.usdc`), mission AGENTS.md:47 (primary orderbook route CASH↔USD1), api/src/state/orderbook-state.ts:505 and 521 (`balances.usdc` used as USD1 quote), CashSwapWidget.tsx:151 and 927 (USD1 mapped to 0)."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/swap-integration/scrutiny/reviews/swap-execution-wiring.json",
+  "summary": "Review result: fail. The rerun addresses the original null-mapping symptom but does not fully resolve the blocking CTA behavior, because USD1 is mapped to zero rather than to the existing quote-balance field."
+}

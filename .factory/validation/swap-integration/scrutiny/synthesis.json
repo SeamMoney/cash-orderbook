@@ -1,6 +1,6 @@
 {
   "milestone": "swap-integration",
-  "round": 1,
+  "round": 2,
   "status": "fail",
   "validatorsRun": {
     "test": {
@@ -24,31 +24,23 @@
     "passed": 0,
     "failed": 1,
     "failedFeatures": [
-      "swap-execution-wiring"
+      "fix-swap-balance-mapping"
     ]
   },
   "blockingIssues": [
     {
-      "featureId": "swap-execution-wiring",
+      "featureId": "fix-swap-balance-mapping",
       "severity": "blocking",
-      "description": "CashSwapWidget only maps balances for CASH/USDC while default input token is USD1, so insufficient-balance detection does not trigger for USD1 and CTA state can incorrectly show Swap instead of Insufficient USD1 balance."
+      "description": "CashSwapWidget maps `USD1` to zero balance instead of the existing quote-balance source, so connected users can be incorrectly blocked with `Insufficient USD1 balance` on the default USD1→CASH path."
     }
   ],
-  "appliedUpdates": [
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [],
+  "rejectedObservations": [
     {
-      "target": "library",
-      "description": "Documented quote-asset balance field mapping gap (`USD1` UI symbol vs backend `usdc` balance field) in .factory/library/cash-quote-balance-field-mapping.md.",
-      "sourceFeature": "swap-execution-wiring"
+      "observation": "Quote-asset balance naming remains confusing (`USD1` product semantics vs backend `usdc` balance field).",
+      "reason": "already-documented in .factory/library/cash-quote-balance-field-mapping.md; no new shared-state action to apply in this round"
     }
   ],
-  "suggestedGuidanceUpdates": [
-    {
-      "target": "skills/fork-worker",
-      "suggestion": "Add explicit Vite env guidance to ensure `VITE_*` variables are available at runtime (including `envPrefix: []` gotcha when present) during Next.js -> Vite ports.",
-      "evidence": "Swap-execution handoff reported envPrefix debugging and missing guidance in fork-worker instructions, leading to avoidable integration friction.",
-      "isSystemic": false
-    }
-  ],
-  "rejectedObservations": [],
-  "previousRound": null
+  "previousRound": ".factory/validation/swap-integration/scrutiny/synthesis.round1.json"
 }
