@@ -54,21 +54,19 @@ export function useCashTokenData(): {
       const isFirstFetch = !hasLoaded
       try {
         if (isFirstFetch) setLoading(true)
-        const market = await fetchMarket()
 
-        // Also fetch 1d candles to derive 52w high/low
+        // Fetch market data and 52w candles in parallel
+        const [market, dailyCandles] = await Promise.all([
+          fetchMarket(),
+          fetchCandles('1d').catch(() => [] as CashCandle[]),
+        ])
+
         let high52w: number | null = null
         let low52w: number | null = null
-        try {
-          const dailyCandles = await fetchCandles('1d')
-          if (dailyCandles.length > 0) {
-            // Take last 365 candles (or all available)
-            const yearCandles = dailyCandles.slice(-365)
-            high52w = Math.max(...yearCandles.map((c) => c.high))
-            low52w = Math.min(...yearCandles.map((c) => c.low))
-          }
-        } catch {
-          // Non-critical
+        if (dailyCandles.length > 0) {
+          const yearCandles = dailyCandles.slice(-365)
+          high52w = Math.max(...yearCandles.map((c) => c.high))
+          low52w = Math.min(...yearCandles.map((c) => c.low))
         }
 
         if (!cancelled) {
