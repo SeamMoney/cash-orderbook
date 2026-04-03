@@ -38,6 +38,24 @@ interface TokenInfo {
   name: string
   decimals: number
   gradient: string
+  /** URL for the token logo image (Panora or data URI). Falls back to gradient circle if absent. */
+  logoUrl?: string
+}
+
+/** CASH green dollar sign logo as data URI (matches NavIcon.tsx) */
+const CASH_LOGO_URL = `data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none">' +
+    '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-1.5c-1.5-.27-2.82-1.13-3.28-2.59l1.63-.65c.36 1.13 1.38 1.64 2.65 1.64 1.33 0 2.14-.55 2.14-1.46 0-.82-.58-1.27-2.14-1.72-1.88-.54-3.35-1.19-3.35-3.04 0-1.63 1.28-2.72 3.35-3.02V6h2v1.65c1.31.29 2.22 1.1 2.58 2.35l-1.63.65c-.28-.89-1.02-1.5-2.14-1.5-1.22 0-1.93.58-1.93 1.37 0 .74.59 1.13 2.14 1.58 2.08.58 3.35 1.29 3.35 3.18 0 1.73-1.34 2.82-3.37 3.12V17z" fill="#00D54B"/>' +
+    '</svg>',
+)}`
+
+/** Real token logo URLs from Panora asset CDN */
+const TOKEN_LOGO_URLS: Record<string, string> = {
+  CASH: CASH_LOGO_URL,
+  USD1: 'https://assets.panora.exchange/tokens/aptos/USD1.png',
+  USDC: 'https://assets.panora.exchange/tokens/aptos/USDC.svg',
+  USDT: 'https://assets.panora.exchange/tokens/aptos/USDT.svg',
+  USDe: 'https://assets.panora.exchange/tokens/aptos/USDe.png',
 }
 
 /** All supported tokens — CASH first, then stablecoins (excluding GHO which is TBD) */
@@ -47,12 +65,14 @@ const SUPPORTED_TOKENS: TokenInfo[] = [
     name: 'CASH',
     decimals: CASH_DECIMALS,
     gradient: 'from-green-400 to-emerald-600',
+    logoUrl: TOKEN_LOGO_URLS['CASH'],
   },
   ...STABLECOINS.filter((s) => s.symbol !== 'GHO').map((s) => ({
     symbol: s.symbol,
     name: s.name,
     decimals: s.decimals,
     gradient: s.gradient,
+    logoUrl: TOKEN_LOGO_URLS[s.symbol],
   })),
 ]
 
@@ -794,6 +814,35 @@ export function CashSwapWidget(): React.ReactElement {
 // Sub-components
 // ---------------------------------------------------------------------------
 
+/** Token icon — renders real logo image when available, gradient circle as fallback */
+function TokenIcon({ token, size = 28 }: { token: TokenInfo; size?: number }): React.ReactElement {
+  if (token.logoUrl) {
+    return (
+      <img
+        src={token.logoUrl}
+        alt={token.symbol}
+        width={size}
+        height={size}
+        style={{ borderRadius: '50%', objectFit: 'cover' }}
+      />
+    )
+  }
+  return (
+    <Flex
+      width={size}
+      height={size}
+      borderRadius="$roundedFull"
+      alignItems="center"
+      justifyContent="center"
+      style={{ backgroundImage: getGradientCSS(token.gradient) }}
+    >
+      <Text variant="body4" fontWeight="600" color="$neutral1" style={{ fontSize: size < 30 ? 10 : 14 }}>
+        {token.symbol[0]}
+      </Text>
+    </Flex>
+  )
+}
+
 /** Token pill button showing icon + symbol + chevron */
 function TokenPill({ token, onClick }: { token: TokenInfo; onClick: () => void }): React.ReactElement {
   return (
@@ -811,18 +860,7 @@ function TokenPill({ token, onClick }: { token: TokenInfo; onClick: () => void }
       onPress={onClick}
       data-testid={`token-selector-${token.symbol}`}
     >
-      <Flex
-        width={28}
-        height={28}
-        borderRadius="$roundedFull"
-        alignItems="center"
-        justifyContent="center"
-        style={{ backgroundImage: getGradientCSS(token.gradient) }}
-      >
-        <Text variant="body4" fontWeight="600" color="$neutral1" style={{ fontSize: 10 }}>
-          {token.symbol[0]}
-        </Text>
-      </Flex>
+      <TokenIcon token={token} size={28} />
       <Text variant="buttonLabel2" fontWeight="500" color="$neutral1">
         {token.symbol}
       </Text>
@@ -936,11 +974,11 @@ function TokenSelectorOverlay({
       left={0}
       right={0}
       bottom={0}
-      zIndex={100}
+      zIndex={100010}
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 100,
+        zIndex: 100010,
       }}
     >
       {/* Backdrop */}
@@ -973,7 +1011,7 @@ function TokenSelectorOverlay({
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          zIndex: 101,
+          zIndex: 100011,
         }}
         data-testid="token-selector-modal"
       >
@@ -1018,18 +1056,7 @@ function TokenSelectorOverlay({
                 onPress={isSelected ? undefined : () => onSelect(token)}
                 data-testid={`token-option-${token.symbol}`}
               >
-                <Flex
-                  width={36}
-                  height={36}
-                  borderRadius="$roundedFull"
-                  alignItems="center"
-                  justifyContent="center"
-                  style={{ backgroundImage: getGradientCSS(token.gradient) }}
-                >
-                  <Text variant="body4" fontWeight="600" color="$neutral1">
-                    {token.symbol[0]}
-                  </Text>
-                </Flex>
+                <TokenIcon token={token} size={36} />
                 <Flex flex={1}>
                   <Text variant="body2" color="$neutral1">
                     {token.name}

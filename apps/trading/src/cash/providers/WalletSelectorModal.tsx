@@ -303,7 +303,7 @@ export function WalletSelectorModal({ isOpen, onClose }: WalletSelectorModalProp
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 9999,
+        zIndex: 100010,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

@@ -32,6 +32,16 @@ import { createTDPStore } from '~/pages/TokenDetails/context/createTDPStore'
 
 const CASH_GREEN = '#00D54B'
 
+/**
+ * Data URI for the CASH green dollar sign logo (same SVG as NavIcon.tsx).
+ * Used by TokenDetailsHeader → TokenLogo to render the token icon.
+ */
+const CASH_LOGO_URL = `data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none">' +
+    '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-1.5c-1.5-.27-2.82-1.13-3.28-2.59l1.63-.65c.36 1.13 1.38 1.64 2.65 1.64 1.33 0 2.14-.55 2.14-1.46 0-.82-.58-1.27-2.14-1.72-1.88-.54-3.35-1.19-3.35-3.04 0-1.63 1.28-2.72 3.35-3.02V6h2v1.65c1.31.29 2.22 1.1 2.58 2.35l-1.63.65c-.28-.89-1.02-1.5-2.14-1.5-1.22 0-1.93.58-1.93 1.37 0 .74.59 1.13 2.14 1.58 2.08.58 3.35 1.29 3.35 3.18 0 1.73-1.34 2.82-3.37 3.12V17z" fill="#00D54B"/>' +
+    '</svg>',
+)}`
+
 /** Total CASH token supply — all 1 billion tokens minted at genesis, no vesting. */
 const CASH_TOTAL_SUPPLY = 1_000_000_000
 
@@ -103,7 +113,7 @@ function buildTokenQueryData(market: {
         description: CASH_DESCRIPTION,
         homepageUrl: 'https://github.com/nicholasgasior/cash-orderbook',
         twitterName: 'CashOrderbook',
-        logoUrl: null,
+        logoUrl: CASH_LOGO_URL,
         isSpam: false,
         tokens: [
           {
