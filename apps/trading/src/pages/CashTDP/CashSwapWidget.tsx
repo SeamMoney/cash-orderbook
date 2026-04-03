@@ -148,7 +148,9 @@ export function CashSwapWidget(): React.ReactElement {
       if (!balances) return null
       if (symbol === 'CASH') return balances.cash.available
       if (symbol === 'USDC') return balances.usdc.available
-      return null
+      // USD1, USDT, USDe — not tracked by our API yet; treat as 0 so the
+      // insufficient-balance CTA fires correctly when the wallet is connected.
+      return 0
     },
     [balances],
   )
@@ -708,7 +710,7 @@ export function CashSwapWidget(): React.ReactElement {
                   <Text variant="body4" color="$neutral2">
                     {limitSide === 'sell'
                       ? formatBalance(balances.cash.available, 4)
-                      : formatBalance(balances.usdc.available, 4)}
+                      : formatBalance(getTokenBalance('USD1') ?? 0, 4)}
                   </Text>
                 </Text>
               )}
@@ -922,7 +924,8 @@ function TokenSelectorOverlay({
       if (!balances) return null
       if (symbol === 'CASH') return balances.cash.available
       if (symbol === 'USDC') return balances.usdc.available
-      return null
+      // USD1, USDT, USDe — not tracked by our API yet; show 0 when connected
+      return 0
     },
     [balances],
   )
