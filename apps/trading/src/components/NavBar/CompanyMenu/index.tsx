@@ -6,7 +6,6 @@ import { ElementName } from 'uniswap/src/features/telemetry/constants'
 import Trace from 'uniswap/src/features/telemetry/Trace'
 import { TestID } from 'uniswap/src/test/fixtures/testIDs'
 import { ArrowChangeDown } from '~/components/Icons/ArrowChangeDown'
-import { NavIcon } from '~/components/Logo/NavIcon'
 import { MenuDropdown } from '~/components/NavBar/CompanyMenu/MenuDropdown'
 import { MobileMenuDrawer } from '~/components/NavBar/CompanyMenu/MobileMenuDrawer'
 import { useIsMobileDrawer } from '~/components/NavBar/ScreenSizes'
@@ -25,7 +24,6 @@ export function CompanyMenu() {
   const popoverRef = useRef<Popover>(null)
   const media = useMedia()
   const isMobileDrawer = useIsMobileDrawer()
-  const isLargeScreen = !media.xxl
   const location = useLocation()
   const [isOpen, setIsOpen] = useState(false)
 
@@ -54,13 +52,13 @@ export function CompanyMenu() {
         >
           <Trace logPress element={ElementName.NavbarCompanyMenuLogo}>
             <Link to="/?intro=true" style={{ textDecoration: 'none' }}>
-              <Flex row alignItems="center" gap="$gap4" data-testid={TestID.NavUniswapLogo}>
-                <NavIcon />
-                {isLargeScreen && (
-                  <Text variant="subheading1" color="$accent1" userSelect="none">
-                    CASH
-                  </Text>
-                )}
+              <Flex row alignItems="center" gap="$none" data-testid={TestID.NavUniswapLogo}>
+                <Text variant="subheading1" fontWeight="bold" fontSize={20} color="#00D54B" userSelect="none">
+                  $
+                </Text>
+                <Text variant="subheading1" fontWeight="bold" fontSize={20} color="$neutral1" userSelect="none">
+                  CASH
+                </Text>
               </Flex>
             </Link>
           </Trace>

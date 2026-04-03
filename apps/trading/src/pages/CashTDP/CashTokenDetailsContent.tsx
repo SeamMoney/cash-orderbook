@@ -22,7 +22,7 @@ import { buildCurrencyId } from 'uniswap/src/utils/currencyId'
 import { DetailsHeaderContainer } from '~/components/Explore/stickyHeader/DetailsHeaderContainer'
 import { MobileBottomBar, TDPActionTabs } from '~/components/NavBar/MobileBottomBar'
 import { ScrollDirection, useScroll } from '~/hooks/useScroll'
-import { ActivitySection } from '~/pages/TokenDetails/components/activity/ActivitySection'
+import { CashActivitySection } from '~/pages/CashTDP/CashTransactions'
 import { BalanceSummary, PageChainBalanceSummary } from '~/pages/TokenDetails/components/balances/BalanceSummary'
 import { ChartSection } from '~/pages/TokenDetails/components/chart/ChartSection'
 import { TDPBreadcrumb } from '~/pages/TokenDetails/components/header/TDPBreadcrumb'
@@ -112,7 +112,7 @@ export function CashTokenDetailsContent({ isCompact }: { isCompact: boolean }) {
           {/* CASH override: use Aptos-aware description with Aptos Explorer links */}
           <CashTokenDescription />
 
-          <ActivitySection />
+          <CashActivitySection />
           {isTDPTokenCarouselEnabled && (
             <TokenCarousel
               title={t('explore.popularOn.title', { chain: chainLabel })}
