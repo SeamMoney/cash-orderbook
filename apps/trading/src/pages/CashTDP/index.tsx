@@ -8,17 +8,55 @@
  * difference is the data source (CASH REST/WS API instead of GraphQL).
  */
 
-import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { Component, type ErrorInfo, type ReactNode, useEffect, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async/lib/index'
 import { Flex, Text } from 'ui/src'
 import { CashTokenOverrideProvider } from 'uniswap/src/components/TokenSelector/CashTokenOverrideContext'
-import { useScroll } from '~/hooks/useScroll'
-import { useScrollCompact } from '~/hooks/useScrollCompact'
 import { CASH_TOKEN_OPTIONS, USD1_CURRENCY } from '~/pages/CashTDP/cashTokenList'
 import { CashTDPProvider } from '~/pages/CashTDP/CashTDPProvider'
 import { TokenDetailsContent } from '~/pages/TokenDetails/components/TokenDetails'
 import { TokenDetailsPageSkeleton } from '~/pages/TokenDetails/components/skeleton/Skeleton'
 import { useTDPStore } from '~/pages/TokenDetails/context/useTDPStore'
+
+/**
+ * Tracks only the compact/expanded threshold crossing — never updates state on
+ * every scroll pixel. CashTDPContent only re-renders when the header mode flips.
+ */
+function useIsCompact(thresholdCompact = 100, thresholdExpanded = 60): boolean {
+  const [isCompact, setIsCompact] = useState(false)
+  const isCompactRef = useRef(false)
+  const rafRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    const check = () => {
+      const scrollY = window.scrollY
+      const prev = isCompactRef.current
+      let next = prev
+      if (!prev && scrollY > thresholdCompact) next = true
+      else if (prev && scrollY < thresholdExpanded) next = false
+      if (next !== prev) {
+        isCompactRef.current = next
+        setIsCompact(next)
+      }
+      rafRef.current = null
+    }
+
+    const onScroll = () => {
+      if (rafRef.current === null) {
+        rafRef.current = requestAnimationFrame(check)
+      }
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    check()
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+    }
+  }, [thresholdCompact, thresholdExpanded])
+
+  return isCompact
+}
 
 // ---------------------------------------------------------------------------
 // Error boundary — catches EVM-specific crashes (wagmi, provider context, etc.)
@@ -62,8 +100,7 @@ class TDPErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState>
 // ---------------------------------------------------------------------------
 
 function CashTDPContent() {
-  const { height: scrollY } = useScroll()
-  const isCompact = useScrollCompact({ scrollY, thresholdCompact: 100, thresholdExpanded: 60 })
+  const isCompact = useIsCompact(100, 60)
   const { currency, tokenQuery } = useTDPStore((s) => ({
     currency: s.currency,
     tokenQuery: s.tokenQuery,
