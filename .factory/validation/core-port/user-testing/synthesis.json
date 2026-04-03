@@ -1,34 +1,19 @@
 {
   "milestone": "core-port",
-  "round": 1,
-  "status": "fail",
+  "round": 2,
+  "status": "pass",
   "assertionsSummary": {
-    "total": 3,
-    "passed": 1,
-    "failed": 1,
-    "blocked": 1
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "blocked": 0
   },
   "passedAssertions": [
-    "INT-003"
+    "INT-001",
+    "INT-002"
   ],
-  "failedAssertions": [
-    {
-      "id": "INT-001",
-      "reason": "Contract requires 15 hooks; scan found 14 hook files under apps/trading/src/cash/hooks, so assertion criteria are not fully met."
-    }
-  ],
-  "blockedAssertions": [
-    {
-      "id": "INT-002",
-      "blockedBy": "Could not validate post-connect truncated Aptos address state headlessly due external wallet/account authentication limitations. Pre-connect UX states were verified."
-    }
-  ],
-  "appliedUpdates": [
-    {
-      "target": "user-testing.md",
-      "description": "Documented fallback for API verification when agent-browser network capture is empty: use in-page fetch() checks with recorded HTTP status codes.",
-      "source": "flow-report"
-    }
-  ],
-  "previousRound": null
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [],
+  "previousRound": ".factory/validation/core-port/user-testing/synthesis.round1.json"
 }

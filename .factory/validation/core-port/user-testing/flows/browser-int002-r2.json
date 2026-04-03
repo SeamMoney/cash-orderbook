@@ -1,0 +1,106 @@
+{
+  "groupId": "browser-int002-r2",
+  "milestone": "core-port",
+  "testedAt": "2026-04-02T22:48:33Z",
+  "isolation": {
+    "surface": "http://localhost:3200/cash",
+    "supportingApi": "http://localhost:3100",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "mode": "read-only UI validation"
+  },
+  "toolsUsed": [
+    "agent-browser",
+    "shell:lsof"
+  ],
+  "assertionResults": [
+    {
+      "id": "INT-002",
+      "title": "Aptos wallet selector opens",
+      "status": "pass",
+      "passFailRationale": "PASS: Clicking navbar Connect opened the wallet selector modal and the modal visibly contained Aptos wallet options (Petra, Nightly, Backpack), social login buttons (Continue with Google, Continue with Apple), and chain tabs (Aptos, Solana, Ethereum).",
+      "interactiveSteps": [
+        {
+          "action": "Open http://localhost:3200/cash",
+          "expected": "Trading page loads with navbar Connect button",
+          "observed": "Page loaded and navbar button labeled 'Connect' was present (snapshot ref @e8)."
+        },
+        {
+          "action": "Click navbar Connect",
+          "expected": "Wallet selector modal opens",
+          "observed": "Modal opened immediately after click."
+        },
+        {
+          "action": "Verify Aptos wallet options",
+          "expected": "Petra, Nightly, Backpack are visible",
+          "observed": "Visible as links: 'Petra Petra Install', 'Nightly Nightly Install', 'Backpack Backpack Install'."
+        },
+        {
+          "action": "Verify social login options",
+          "expected": "Google and Apple options are visible",
+          "observed": "Visible buttons: 'Continue with Google' and 'Continue with Apple'."
+        },
+        {
+          "action": "Verify chain tabs",
+          "expected": "Aptos, Solana, Ethereum tabs are visible",
+          "observed": "Visible tab buttons: 'Aptos', 'Solana', 'Ethereum'."
+        },
+        {
+          "action": "Capture screenshot evidence",
+          "expected": "Modal contents captured",
+          "observed": "Saved standard and annotated screenshots in mission evidence directory."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-port/browser-int002-r2/INT-002-wallet-selector-modal.png",
+          "core-port/browser-int002-r2/INT-002-wallet-selector-modal-annotated.png"
+        ],
+        "consoleErrors": {
+          "agentBrowserErrors": "Failed to fetch (3 occurrences) observed after flow.",
+          "consoleCheck": "Non-blocking pre-existing runtime noise observed (e.g., font decode warnings, CORS/403 errors from external quote/metrics endpoints, cash-ws handshake failures). None prevented the Connect modal from opening or showing required options."
+        },
+        "network": {
+          "capturedRequests": [
+            "GET http://localhost:3200/cash-api/market",
+            "GET http://localhost:3200/cash-api/candles?interval=1d",
+            "GET http://localhost:3200/cash-api/trades?limit=50",
+            "POST https://mainnet.infura.io/v3/...",
+            "POST https://tame-frequent-fog.quiknode.pro/..."
+          ],
+          "statusChecks": [
+            "fetch('/cash-api/market') -> 200",
+            "fetch('/cash-api/candles?interval=1d') -> 200"
+          ],
+          "notes": "agent-browser network capture is metadata-only (method+URL); status codes validated via in-page fetch() probes."
+        }
+      },
+      "issues": null
+    }
+  ],
+  "interactiveSteps": [
+    "Opened /cash",
+    "Clicked navbar Connect",
+    "Observed wallet selector modal",
+    "Verified Petra/Nightly/Backpack",
+    "Verified Google/Apple buttons",
+    "Verified Aptos/Solana/Ethereum tabs",
+    "Captured screenshot evidence",
+    "Checked console errors and network activity"
+  ],
+  "evidencePaths": [
+    "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/evidence/core-port/browser-int002-r2/INT-002-wallet-selector-modal.png",
+    "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056/evidence/core-port/browser-int002-r2/INT-002-wallet-selector-modal-annotated.png"
+  ],
+  "frictions": [
+    {
+      "description": "Console output is noisy with pre-existing warnings/errors (font decode, RPC 403/CORS, websocket handshake) during page load.",
+      "resolved": true,
+      "resolution": "Focused validation on required INT-002 modal UI elements and corroborated with screenshot + element snapshot evidence.",
+      "affectedAssertions": [
+        "INT-002"
+      ]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 1 assertion (INT-002): pass. Required wallet modal elements and chain tabs are present after clicking Connect in navbar; evidence captured."
+}

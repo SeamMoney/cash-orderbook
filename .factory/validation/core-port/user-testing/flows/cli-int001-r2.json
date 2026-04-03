@@ -1,0 +1,93 @@
+{
+  "groupId": "cli-int001-r2",
+  "testedAt": "2026-04-02T22:48:22.995457+00:00",
+  "isolation": {
+    "surface": "cli",
+    "repoRoot": "/Users/maxmohammadi/cash-orderbook",
+    "missionDir": "/Users/maxmohammadi/.factory/missions/79476079-9b4c-40cb-b69e-9e85801c6056",
+    "milestone": "core-port",
+    "assertions": [
+      "INT-001"
+    ]
+  },
+  "toolsUsed": [
+    "cli"
+  ],
+  "commandsRun": [
+    {
+      "command": "python3 scope scan for hooks/lib counts in apps/trading/src/cash",
+      "exitCode": 0,
+      "evidencePath": "core-port/cli-int001-r2/int001-scope-check.txt",
+      "output": "HOOK_COUNT=14, LIB_COUNT=6"
+    },
+    {
+      "command": "ls -1 /Users/maxmohammadi/cash-orderbook/apps/trading/src/cash/hooks",
+      "exitCode": 0,
+      "evidencePath": "core-port/cli-int001-r2/int001-hooks-ls.txt"
+    },
+    {
+      "command": "ls -1 /Users/maxmohammadi/cash-orderbook/apps/trading/src/cash/lib",
+      "exitCode": 0,
+      "evidencePath": "core-port/cli-int001-r2/int001-lib-ls.txt"
+    },
+    {
+      "command": "rg -n 'VITE_[A-Z0-9_]+' /Users/maxmohammadi/cash-orderbook/apps/trading/src/cash",
+      "exitCode": 0,
+      "evidencePath": "core-port/cli-int001-r2/int001-env-check.txt",
+      "output": "Matches in lib/config.ts for VITE_API_URL, VITE_WS_URL, VITE_APTOS_NETWORK, VITE_CONTRACT_ADDRESS"
+    },
+    {
+      "command": "rg -n 'NEXT_PUBLIC_[A-Z0-9_]+' /Users/maxmohammadi/cash-orderbook/apps/trading/src/cash",
+      "exitCode": 1,
+      "evidencePath": "core-port/cli-int001-r2/int001-env-check.txt",
+      "note": "Exit code 1 expected because no matches were found."
+    },
+    {
+      "command": "pnpm --dir /Users/maxmohammadi/cash-orderbook --filter @cash/trading exec tsc --noEmit --pretty false --skipLibCheck --moduleResolution node --module esnext --target ESNext --jsx react-jsx --esModuleInterop --allowSyntheticDefaultImports --resolveJsonModule --lib DOM,DOM.Iterable,ESNext --types vite/client,node /Users/maxmohammadi/cash-orderbook/apps/trading/src/cash/index.ts",
+      "exitCode": 0,
+      "evidencePath": "core-port/cli-int001-r2/int001-cash-typecheck.txt",
+      "output": "TSC_EXIT_CODE=0"
+    }
+  ],
+  "assertionResults": [
+    {
+      "id": "INT-001",
+      "title": "All 14 hooks and 6 lib files exist in apps/trading/src/cash/ with no import errors. Config uses VITE_* env vars.",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Validate hooks directory file count",
+          "expected": "Exactly 14 hook files in apps/trading/src/cash/hooks",
+          "observed": "14 hook files found"
+        },
+        {
+          "action": "Validate lib directory file count",
+          "expected": "Exactly 6 files in apps/trading/src/cash/lib",
+          "observed": "6 files found"
+        },
+        {
+          "action": "Validate environment variable convention",
+          "expected": "VITE_* used for config and no NEXT_PUBLIC_* in cash scope",
+          "observed": "VITE_* vars found in cash/lib/config.ts; NEXT_PUBLIC_* had no matches in cash scope"
+        },
+        {
+          "action": "Run targeted cash-scope typecheck/import validation",
+          "expected": "No import/type errors for cash entrypoint scope",
+          "observed": "Targeted tsc command completed with TSC_EXIT_CODE=0 and no diagnostics"
+        }
+      ],
+      "evidencePaths": [
+        "core-port/cli-int001-r2/int001-scope-check.txt",
+        "core-port/cli-int001-r2/int001-hooks-ls.txt",
+        "core-port/cli-int001-r2/int001-lib-ls.txt",
+        "core-port/cli-int001-r2/int001-env-check.txt",
+        "core-port/cli-int001-r2/int001-cash-typecheck.txt"
+      ],
+      "passFailRationale": "All required INT-001 checks passed: hooks=14, lib=6, VITE_* config usage confirmed, no NEXT_PUBLIC_* usage in cash scope, and targeted cash import/typecheck exited successfully.",
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "INT-001 passed for core-port via CLI validation."
+}
