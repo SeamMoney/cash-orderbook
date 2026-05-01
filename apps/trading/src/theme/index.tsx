@@ -13,7 +13,7 @@ const MEDIA_WIDTHS = {
   deprecated_upToLarge: 1280,
 }
 
-export const MAX_CONTENT_WIDTH_PX = 1200
+export const MAX_CONTENT_WIDTH_PX = 1440
 
 const deprecated_mediaWidthTemplates: { [width in keyof typeof MEDIA_WIDTHS]: typeof css } = Object.keys(
   MEDIA_WIDTHS,
