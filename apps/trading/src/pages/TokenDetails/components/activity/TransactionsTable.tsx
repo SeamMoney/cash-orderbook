@@ -135,7 +135,7 @@ export function TransactionsTable({ chainId, referenceToken }: { chainId: Univer
     return [
       columnHelper.accessor((row) => row, {
         id: 'timestamp',
-        maxSize: 80,
+        maxSize: 120,
         header: () => (
           <HeaderCell justifyContent="flex-start" grow>
             <Flex row gap="$gap4" alignItems="center">
@@ -160,7 +160,7 @@ export function TransactionsTable({ chainId, referenceToken }: { chainId: Univer
       }),
       columnHelper.accessor((row) => row.output.address, {
         id: 'swap-type',
-        maxSize: 80,
+        maxSize: 120,
         header: () => (
           <HeaderCell justifyContent="flex-start" grow>
             <FilterHeaderRow
@@ -210,7 +210,7 @@ export function TransactionsTable({ chainId, referenceToken }: { chainId: Univer
             : row.output.amount,
         {
           id: 'reference-amount',
-          maxSize: 80,
+          maxSize: 140,
           header: () => (
             <HeaderCell justifyContent="flex-end">
               <Text variant="body3" color="$neutral2">
@@ -252,7 +252,7 @@ export function TransactionsTable({ chainId, referenceToken }: { chainId: Univer
         },
         {
           id: 'non-reference-amount',
-          maxSize: 160,
+          maxSize: 240,
           header: () => (
             <HeaderCell justifyContent="flex-end">
               <Text variant="body3" color="$neutral2">
@@ -269,7 +269,7 @@ export function TransactionsTable({ chainId, referenceToken }: { chainId: Univer
       ),
       columnHelper.accessor((row) => row.value, {
         id: 'fiat-value',
-        maxSize: 100,
+        maxSize: 160,
         header: () => (
           <HeaderCell justifyContent="flex-end">
             <Flex row gap="$gap4" justifyContent="flex-end">
@@ -285,7 +285,7 @@ export function TransactionsTable({ chainId, referenceToken }: { chainId: Univer
       }),
       columnHelper.accessor((row) => row.makerAddress, {
         id: 'maker-address',
-        maxSize: 130,
+        maxSize: 200,
         header: () => (
           <HeaderCell justifyContent="flex-end">
             <Text variant="body3" color="$neutral2">
