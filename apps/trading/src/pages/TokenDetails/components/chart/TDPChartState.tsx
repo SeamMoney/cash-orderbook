@@ -40,7 +40,7 @@ export function useCreateTDPChartState(
   tokenDBAddress: string | undefined,
   currencyChainName: GraphQLApi.Chain,
 ): TDPChartState {
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>(TimePeriod.DAY)
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>(TimePeriod.MAX)
 
   const [chartType, setChartType] = useState<TokenDetailsChartType>(ChartType.PRICE)
   const [priceChartType, setPriceChartType] = useState<PriceChartType>(PriceChartType.LINE)
