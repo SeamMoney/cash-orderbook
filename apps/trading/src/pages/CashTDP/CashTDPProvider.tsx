@@ -180,7 +180,7 @@ function candleToVolumeData(candle: CashCandle): SingleHistogramData {
 }
 
 function useCashChartState(currentPrice?: number): TDPChartState {
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>(TimePeriod.DAY)
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>(TimePeriod.MAX)
   const [chartType, setChartType] = useState<ChartType.PRICE | ChartType.VOLUME | ChartType.TVL>(ChartType.PRICE)
   const [priceChartType, setPriceChartType] = useState<PriceChartType>(PriceChartType.LINE)
 

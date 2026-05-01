@@ -1,6 +1,5 @@
-import { Anchor, styled } from 'ui/src'
+import { Anchor, Flex, styled, Text } from 'ui/src'
 import { useCurrentLocale } from 'uniswap/src/features/language/hooks'
-import { TableText } from '~/components/Table/shared/TableText'
 import { MouseoverTooltip, TooltipSize } from '~/components/Tooltip'
 import { ClickableTamaguiStyle } from '~/theme/components/styles'
 
@@ -26,20 +25,16 @@ const StyledTimestampRow = styled(StyledExternalLink, {
 })
 
 /**
- * Renders the timestamp as "Mon D, HH:MM" (e.g. "Apr 30, 8:32 PM"). Hovering
- * shows the full date including year. Clicking opens the explorer link.
+ * Renders the timestamp on two lines: "Mon D" and "HH:MM" (e.g. "Apr 30" /
+ * "8:32 PM"). Hover shows the full date with year. Click opens the explorer.
  * @param timestamp: unix timestamp in SECONDS
  */
 export const TimestampCell = ({ timestamp, link }: { timestamp: number; link: string }) => {
   const locale = useCurrentLocale()
   const date = new Date(timestamp * 1000)
 
-  const cellLabel = date.toLocaleString(locale, {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
+  const day = date.toLocaleString(locale, { month: 'short', day: 'numeric' })
+  const time = date.toLocaleString(locale, { hour: 'numeric', minute: '2-digit' })
 
   const fullDate = date.toLocaleString(locale, {
     year: 'numeric',
@@ -52,7 +47,14 @@ export const TimestampCell = ({ timestamp, link }: { timestamp: number; link: st
   return (
     <StyledTimestampRow href={link}>
       <MouseoverTooltip text={fullDate} placement="top" size={TooltipSize.Max}>
-        <TableText>{cellLabel}</TableText>
+        <Flex>
+          <Text variant="body3" color="$neutral1">
+            {day}
+          </Text>
+          <Text variant="body4" color="$neutral2">
+            {time}
+          </Text>
+        </Flex>
       </MouseoverTooltip>
     </StyledTimestampRow>
   )
