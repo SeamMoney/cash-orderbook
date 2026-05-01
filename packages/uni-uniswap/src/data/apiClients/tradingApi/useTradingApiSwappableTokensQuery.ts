@@ -3,6 +3,7 @@ import { skipToken, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { TradingApi, UseQueryApiHelperHookArgs } from '@universe/api'
 import { type SwappableTokensParams } from '@universe/api'
 import { useEffect } from 'react'
+import { useCashTokenOverride } from 'uniswap/src/components/TokenSelector/CashTokenOverrideContext'
 import { uniswapUrls } from 'uniswap/src/constants/urls'
 import { TradingApiClient } from 'uniswap/src/data/apiClients/tradingApi/TradingApiClient'
 import type { TradeableAsset } from 'uniswap/src/entities/assets'
@@ -21,11 +22,14 @@ export function useTradingApiSwappableTokensQuery({
   SwappableTokensParams,
   TradingApi.GetSwappableTokensResponse
 >): UseQueryResult<TradingApi.GetSwappableTokensResponse> {
+  const cashOverride = useCashTokenOverride()
   const queryKey = swappableTokensQueryKey(params)
 
   return useQuery<TradingApi.GetSwappableTokensResponse>({
     queryKey,
-    queryFn: params ? swappableTokensQueryFn(params) : skipToken,
+    queryFn: params && !cashOverride.enabled ? swappableTokensQueryFn(params) : skipToken,
+    // When CASH override is active, disable the query entirely (EVM-only, CORS-blocked).
+    enabled: cashOverride.enabled ? false : undefined,
     // In order for `getSwappableTokensQueryData` to be more likely to have cached data,
     // we set the `gcTime` to the longest possible time.
     gcTime: MAX_REACT_QUERY_CACHE_TIME_MS,
@@ -46,9 +50,16 @@ export function getSwappableTokensQueryData({
 }
 
 export function usePrefetchSwappableTokens(input: Maybe<TradeableAsset>): void {
+  const cashOverride = useCashTokenOverride()
   const queryClient = useQueryClient()
 
   useEffect(() => {
+    // When CASH override is active, skip prefetching swappable tokens from the
+    // Uniswap trading API — it's EVM-only and will CORS-fail for our Aptos app.
+    if (cashOverride.enabled) {
+      return
+    }
+
     const prefetchSwappableTokens = async (): Promise<void> => {
       const tokenIn = input?.address ? getTokenAddressFromChainForTradingApi(input.address, input.chainId) : undefined
       const tokenInChainId = toTradingApiSupportedChainId(input?.chainId)
@@ -76,7 +87,7 @@ export function usePrefetchSwappableTokens(input: Maybe<TradeableAsset>): void {
         tags: { file: 'useTradingApiSwappableTokensQuery', function: 'prefetchSwappableTokens' },
       })
     })
-  }, [input, queryClient])
+  }, [input, queryClient, cashOverride.enabled])
 }
 
 const swappableTokensQueryKey = (params?: SwappableTokensParams): QueryKey => {

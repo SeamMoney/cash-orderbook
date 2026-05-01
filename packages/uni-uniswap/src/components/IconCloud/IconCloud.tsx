@@ -65,7 +65,7 @@ export function IconCloud<T extends ItemData>({
         return {
           x,
           y,
-          blur: (1 / size) * 500 * ((x > leftThreshold && x < rightThreshold) || y < 100 ? 5 : 1), // make blur bigger for smaller icons
+          blur: (1 / size) * 900 * ((x > leftThreshold && x < rightThreshold) || y < 100 ? 5 : 1), // 1.8x blur multiplier for more atmospheric look
           size,
           color: item.color,
           opacity: randomFloat(0.5, 1.0) * ((x > leftThreshold && x < rightThreshold) || y < 100 ? 0.75 : 1),

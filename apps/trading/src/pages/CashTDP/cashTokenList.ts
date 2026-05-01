@@ -41,7 +41,7 @@ function makeTokenOption(
 export const CASH_TOKEN_OPTIONS: TokenOption[] = [
   makeTokenOption(
     '0xe66fef668077ab8dc5ea65539b6250d8ca3fc024ea4f16555fca9eaeb73b41d1',
-    8,
+    6,
     'CASH',
     'CASH',
     'https://assets.panora.exchange/tokens/aptos/CASH.png',
@@ -76,5 +76,8 @@ export const CASH_TOKEN_OPTIONS: TokenOption[] = [
   ),
 ]
 
-/** USD1 currency for use as default swap input */
+/** USD1 currency */
 export const USD1_CURRENCY = CASH_TOKEN_OPTIONS[1]!.currencyInfo.currency
+
+/** CASH currency — used as the default Sell token on the swap page */
+export const CASH_CURRENCY = CASH_TOKEN_OPTIONS[0]!.currencyInfo.currency

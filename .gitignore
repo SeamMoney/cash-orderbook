@@ -35,3 +35,6 @@ Thumbs.db
 
 # Turbo
 .turbo/
+
+# Local debug screenshots
+screenshots/

@@ -16,8 +16,12 @@ export const Header = memo(function Header() {
   const { isScrolledDown } = useScroll()
   const isPortfolioPage = useIsPage(PageType.PORTFOLIO)
   const isExplorePage = useIsPage(PageType.EXPLORE)
-  const isHeaderTransparent = !isScrolledDown && !isPortfolioPage && !isExplorePage
-  const navHasBottomBorder = isScrolledDown
+  const isSwapPage = useIsPage(PageType.SWAP)
+  const isLimitPage = useIsPage(PageType.LIMIT)
+  // Always-transparent header on /swap and /limit (hero layout — page can't scroll).
+  const isHeroPage = isSwapPage || isLimitPage
+  const isHeaderTransparent = isHeroPage || (!isScrolledDown && !isPortfolioPage && !isExplorePage)
+  const navHasBottomBorder = isScrolledDown && !isHeroPage
   const renderUkBanner = useRenderUkBanner()
   const extensionEligible = useMobileAppPromoBannerEligible()
   const renderUniswapWrapped2025Banner = useRenderUniswapWrapped2025Banner()

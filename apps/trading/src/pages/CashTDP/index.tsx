@@ -12,8 +12,10 @@ import { Component, type ErrorInfo, type ReactNode, useEffect, useRef, useState 
 import { Helmet } from 'react-helmet-async/lib/index'
 import { Flex, Text } from 'ui/src'
 import { CashTokenOverrideProvider } from 'uniswap/src/components/TokenSelector/CashTokenOverrideContext'
-import { CASH_TOKEN_OPTIONS, USD1_CURRENCY } from '~/pages/CashTDP/cashTokenList'
+import { CASH_TOKEN_OPTIONS } from '~/pages/CashTDP/cashTokenList'
+import { AptosSwapButton } from '~/pages/CashTDP/AptosSwapButton'
 import { CashTDPProvider } from '~/pages/CashTDP/CashTDPProvider'
+import { useCashOverrideProps } from '~/pages/CashTDP/useCashOverrideProps'
 import { TokenDetailsContent } from '~/pages/TokenDetails/components/TokenDetails'
 import { TokenDetailsPageSkeleton } from '~/pages/TokenDetails/components/skeleton/Skeleton'
 import { useTDPStore } from '~/pages/TokenDetails/context/useTDPStore'
@@ -118,6 +120,7 @@ function CashTDPContent() {
 // ---------------------------------------------------------------------------
 
 export default function CashTokenDetailPage() {
+  const { getQuote, getBalance, getUsdPrice } = useCashOverrideProps()
   return (
     <>
       <Helmet>
@@ -132,7 +135,13 @@ export default function CashTokenDetailPage() {
           </Flex>
         }
       >
-        <CashTokenOverrideProvider tokens={CASH_TOKEN_OPTIONS} defaultInputCurrency={USD1_CURRENCY}>
+        <CashTokenOverrideProvider
+          tokens={CASH_TOKEN_OPTIONS}
+          SwapButtonComponent={AptosSwapButton}
+          getQuote={getQuote}
+          getBalance={getBalance}
+          getUsdPrice={getUsdPrice}
+        >
           <CashTDPProvider>
             <CashTDPContent />
           </CashTDPProvider>

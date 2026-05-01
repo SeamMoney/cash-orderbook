@@ -1,8 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useWallet } from '@aptos-labs/wallet-adapter-react'
 import { truncateAddress, formatBalance } from '../lib/utils'
-import { useBalances } from '../hooks/use-balances'
-import { useAccountSubscription } from '../hooks/use-account-subscription'
+import { useAptosWalletBalances } from '../hooks/use-aptos-balances'
 import { WalletSelectorModal } from './WalletSelectorModal'
 
 /**
@@ -35,6 +34,16 @@ function getWalletBadge(walletName: string | undefined): string | null {
   return null
 }
 
+/** Deterministic color from a string — used to generate avatar gradients from wallet addresses. */
+function stringToColor(str: string): string {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const hue = Math.abs(hash) % 360
+  return `hsl(${hue}, 70%, 55%)`
+}
+
 /**
  * AptosConnectButton — Shows either a "Connect" button or connected wallet state.
  *
@@ -49,10 +58,7 @@ export function AptosConnectButton(): React.ReactElement {
 
   const walletAddress = connected && account?.address ? account.address.toString() : undefined
 
-  const { balances, updateBalances } = useBalances(walletAddress)
-
-  // Subscribe to WS account channel for real-time balance updates
-  useAccountSubscription(walletAddress, updateBalances)
+  const aptosBalances = useAptosWalletBalances(walletAddress)
 
   const badge = getWalletBadge(wallet?.name)
 
@@ -102,61 +108,88 @@ export function AptosConnectButton(): React.ReactElement {
     )
   }
 
-  // Connected state: show address with dropdown
+  // Connected state: address pill (desktop) or compact circle (mobile)
   return (
     <div style={{ position: 'relative' }}>
+      <style>{`
+        .cash-wallet-trigger {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 12px 6px 6px;
+          height: 36px;
+          border-radius: 999px;
+          border: 1px solid rgba(255,255,255,0.12);
+          background-color: #1A1A1A;
+          color: white;
+          font-family: inherit;
+          font-size: 14px;
+          cursor: pointer;
+          transition: background-color 0.15s;
+        }
+        .cash-wallet-trigger:hover {
+          background-color: #2A2A2A;
+        }
+        .cash-wallet-avatar {
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          display: block;
+          flex-shrink: 0;
+        }
+        .cash-wallet-address {
+          font-family: 'Basel', monospace;
+          font-size: 13px;
+          font-weight: 500;
+          letter-spacing: 0;
+        }
+        @media (max-width: 768px) {
+          .cash-wallet-trigger {
+            padding: 0;
+            border: none;
+            background-color: transparent;
+            height: auto;
+            width: 24px;
+            height: 24px;
+          }
+          .cash-wallet-trigger:hover {
+            background-color: transparent;
+          }
+          .cash-wallet-avatar {
+            width: 24px;
+            height: 24px;
+          }
+          .cash-wallet-address,
+          .cash-wallet-chevron {
+            display: none;
+          }
+        }
+      `}</style>
       <button
         onClick={() => setDropdownOpen(!dropdownOpen)}
         data-testid="aptos-connected-button"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '8px 12px',
-          borderRadius: 20,
-          border: '1px solid #2A2A2A',
-          backgroundColor: '#1A1A1A',
-          color: 'white',
-          fontFamily: 'monospace',
-          fontSize: 14,
-          cursor: 'pointer',
-          transition: 'background-color 0.15s',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = '#2A2A2A'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = '#1A1A1A'
-        }}
+        aria-label="Wallet"
+        className="cash-wallet-trigger"
       >
-        {badge && (
+        {wallet?.icon ? (
+          <img
+            src={wallet.icon}
+            alt={wallet.name}
+            className="cash-wallet-avatar"
+          />
+        ) : (
           <span
+            className="cash-wallet-avatar"
             style={{
-              padding: '2px 6px',
-              fontSize: 10,
-              fontWeight: 600,
-              borderRadius: 999,
-              backgroundColor: badge === 'X-Chain' ? 'rgba(249, 115, 22, 0.2)' : 'rgba(59, 130, 246, 0.2)',
-              color: badge === 'X-Chain' ? '#F97316' : '#3B82F6',
+              background: `linear-gradient(135deg, ${stringToColor(account.address.toString())} 0%, ${stringToColor(account.address.toString().slice(-8))} 100%)`,
             }}
-          >
-            {badge}
-          </span>
+          />
         )}
-        {wallet?.icon && (
-          <img src={wallet.icon} alt={wallet.name} style={{ width: 16, height: 16, borderRadius: 4 }} />
-        )}
-        <span
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            backgroundColor: '#10B981',
-            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-          }}
-        />
-        <span style={{ fontFamily: 'monospace' }}>{truncateAddress(account.address.toString())}</span>
+        <span className="cash-wallet-address">
+          {truncateAddress(account.address.toString())}
+        </span>
         <svg
+          className="cash-wallet-chevron"
           width="12"
           height="12"
           viewBox="0 0 24 24"
@@ -171,26 +204,67 @@ export function AptosConnectButton(): React.ReactElement {
       {/* Dropdown */}
       {dropdownOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop with subtle scrim on mobile */}
           <div
-            style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
+            className="cash-wallet-backdrop"
             onClick={() => setDropdownOpen(false)}
           />
-          <div
-            style={{
-              position: 'absolute',
-              right: 0,
-              top: '100%',
-              marginTop: 8,
-              zIndex: 9999,
-              width: 224,
-              borderRadius: 12,
-              border: '1px solid #2A2A2A',
-              backgroundColor: '#1A1A1A',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-              padding: '4px 0',
-            }}
-          >
+          <style>{`
+            .cash-wallet-backdrop {
+              position: fixed;
+              inset: 0;
+              z-index: 9998;
+              background-color: transparent;
+            }
+            .cash-wallet-dropdown {
+              position: absolute;
+              right: 0;
+              top: 100%;
+              margin-top: 8px;
+              z-index: 9999;
+              width: 280px;
+              border-radius: 12px;
+              border: 1px solid rgba(255,255,255,0.12);
+              background-color: #1A1A1A;
+              box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+              padding: 4px 0;
+            }
+            @media (max-width: 640px) {
+              .cash-wallet-backdrop {
+                background-color: rgba(0, 0, 0, 0.5);
+              }
+              .cash-wallet-dropdown {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                top: auto;
+                margin: 0;
+                width: 100%;
+                border-radius: 16px 16px 0 0;
+                border-bottom: 0;
+                padding: 12px 0 24px;
+                animation: cashSheetUp 0.25s ease-out;
+              }
+              .cash-wallet-handle {
+                display: block !important;
+              }
+            }
+            .cash-wallet-handle {
+              display: none;
+              width: 36px;
+              height: 4px;
+              border-radius: 999px;
+              background-color: rgba(255,255,255,0.2);
+              margin: 0 auto 8px;
+            }
+            @keyframes cashSheetUp {
+              from { transform: translateY(100%); }
+              to   { transform: translateY(0); }
+            }
+          `}</style>
+          <div className="cash-wallet-dropdown">
+            <div className="cash-wallet-handle" />
             {/* Address */}
             <div style={{ padding: '8px 12px', borderBottom: '1px solid #2A2A2A' }}>
               <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', margin: '0 0 4px' }}>Connected Address</p>
@@ -202,18 +276,17 @@ export function AptosConnectButton(): React.ReactElement {
             {/* Balances */}
             <div style={{ padding: '8px 12px', borderBottom: '1px solid #2A2A2A' }}>
               <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', margin: '0 0 4px' }}>Balances</p>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>CASH</span>
-                <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'white' }}>
-                  {balances ? formatBalance(balances.cash.available, 2) : '—'}
-                </span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>USD1</span>
-                <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'white' }}>
-                  {balances ? formatBalance(balances.usdc.available, 2) : '—'}
-                </span>
-              </div>
+              {['CASH', 'USD1', 'USDC', 'USDt', 'USDe', 'APT'].map((sym) => {
+                const bal = aptosBalances.bySymbol.get(sym)
+                return (
+                  <div key={sym} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>{sym}</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'white' }}>
+                      {bal !== undefined ? formatBalance(bal, 2) : '—'}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
 
             {/* Actions */}

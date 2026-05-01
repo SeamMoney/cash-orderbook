@@ -54,12 +54,10 @@ export const TokenIcon = memo(
       })
     })
 
-    const animation = useMemo(() => {
-      if (!isHoverable) {
-        return undefined
-      }
-      return get200MsAnimationDelayFromIndex(animationIndex)
-    }, [animationIndex])
+    // Use a uniform short animation for all icons — staggering by index made
+    // some icons miss the hover window (the last one had ~1s delay, by which
+    // time the user might have already moved away). All show together now.
+    const animation = isHoverable ? '100ms' : undefined
 
     const traceProperties = useMemo(() => {
       return {

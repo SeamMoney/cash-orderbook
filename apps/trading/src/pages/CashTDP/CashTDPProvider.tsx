@@ -18,11 +18,11 @@ import { UniverseChainId } from 'uniswap/src/features/chains/types'
 import type { PriceChartData } from '~/components/Charts/PriceChart'
 import { ChartType, DataQuality, PriceChartType } from '~/components/Charts/utils'
 import type { SingleHistogramData } from '~/components/Charts/VolumeChart/utils'
-import { TimePeriod, toHistoryDuration } from '~/appGraphql/data/util'
-import { fetchCandles, fetchMarket, type CashCandle, type CashCandleInterval } from '~/data/api'
-import { useCashTokenData } from '~/data/hooks'
+import { TimePeriod } from '~/appGraphql/data/util'
+import type { CashCandle } from '~/data/api'
+import { useCashTokenData, fetchGeckoTerminalOhlcv, fetchHistoricalCandles } from '~/data/hooks'
 import type { TDPChartState } from '~/pages/TokenDetails/components/chart/TDPChartState'
-import type { MultiChainMap, PendingTDPContext, LoadedTDPContext } from '~/pages/TokenDetails/context/TDPContext'
+import type { MultiChainMap, LoadedTDPContext } from '~/pages/TokenDetails/context/TDPContext'
 import { TDPStoreContext } from '~/pages/TokenDetails/context/TDPContext'
 import { createTDPStore } from '~/pages/TokenDetails/context/createTDPStore'
 
@@ -35,9 +35,6 @@ const CASH_GREEN = '#00D54B'
 /** CASH logo from Panora token list */
 const CASH_LOGO_URL = 'https://assets.panora.exchange/tokens/aptos/CASH.png'
 
-/** Total CASH token supply — all 1 billion tokens minted at genesis, no vesting. */
-const CASH_TOTAL_SUPPLY = 1_000_000_000
-
 /** CASH contract address on Aptos */
 const CASH_CONTRACT_ADDRESS = '0xe66fef668077ab8dc5ea65539b6250d8ca3fc024ea4f16555fca9eaeb73b41d1'
 
@@ -45,24 +42,7 @@ const CASH_CONTRACT_ADDRESS = '0xe66fef668077ab8dc5ea65539b6250d8ca3fc024ea4f165
 const CASH_DESCRIPTION =
   'CASH is a token on the Aptos blockchain powering the CASH Orderbook, a high-performance Central Limit Order Book (CLOB) for zero-slippage trading. Built on Aptos\' parallel execution engine (Block-STM), the CASH Orderbook delivers sub-second finality and throughput exceeding 100,000 transactions per second, enabling institutional-grade trading with price-time priority matching, maker/taker fee tiers, and full on-chain settlement via the FungibleAsset standard.'
 
-/** Map TimePeriod → API candle interval */
-const PERIOD_TO_INTERVAL: Record<TimePeriod, CashCandleInterval> = {
-  [TimePeriod.HOUR]: '1m',
-  [TimePeriod.DAY]: '5m',
-  [TimePeriod.WEEK]: '1h',
-  [TimePeriod.MONTH]: '1h',
-  [TimePeriod.YEAR]: '1d',
-  [TimePeriod.MAX]: '1d',
-}
-
-/** How far back each time period reaches */
-const PERIOD_MS: Record<string, number> = {
-  [TimePeriod.HOUR]: 60 * 60 * 1000,
-  [TimePeriod.DAY]: 24 * 60 * 60 * 1000,
-  [TimePeriod.WEEK]: 7 * 24 * 60 * 60 * 1000,
-  [TimePeriod.MONTH]: 30 * 24 * 60 * 60 * 1000,
-  [TimePeriod.YEAR]: 365 * 24 * 60 * 60 * 1000,
-}
+// Chart periods use GeckoTerminal OHLCV exclusively — no backend candle mapping needed.
 
 // ---------------------------------------------------------------------------
 // Helpers — build a mock TokenWebQuery result from CASH API data
@@ -75,6 +55,7 @@ function buildTokenQueryData(market: {
   low52w: number | null
   marketCap: number | null
   fdv: number | null
+  tvl: number | null
 }): GraphQLApi.TokenWebQuery {
   return {
     token: {
@@ -89,7 +70,7 @@ function buildTokenQueryData(market: {
       market: {
         __typename: 'TokenMarket' as const,
         id: 'cash-market',
-        totalValueLocked: { __typename: 'Amount' as const, id: 'cash-tvl', value: null, currency: GraphQLApi.Currency.Usd },
+        totalValueLocked: { __typename: 'Amount' as const, id: 'cash-tvl', value: market.tvl, currency: GraphQLApi.Currency.Usd },
         price: { __typename: 'Amount' as const, id: 'cash-price', value: market.lastPrice, currency: GraphQLApi.Currency.Usd },
         volume24H: { __typename: 'Amount' as const, id: 'cash-vol', value: market.volume24h, currency: GraphQLApi.Currency.Usd },
         priceHigh52W: market.high52w != null
@@ -198,7 +179,7 @@ function candleToVolumeData(candle: CashCandle): SingleHistogramData {
   }
 }
 
-function useCashChartState(): TDPChartState {
+function useCashChartState(currentPrice?: number): TDPChartState {
   const [timePeriod, setTimePeriod] = useState<TimePeriod>(TimePeriod.DAY)
   const [chartType, setChartType] = useState<ChartType.PRICE | ChartType.VOLUME | ChartType.TVL>(ChartType.PRICE)
   const [priceChartType, setPriceChartType] = useState<PriceChartType>(PriceChartType.LINE)
@@ -213,21 +194,58 @@ function useCashChartState(): TDPChartState {
     async function load(): Promise<void> {
       try {
         setLoading(true)
-        const interval = PERIOD_TO_INTERVAL[timePeriod]
-        const candles = await fetchCandles(interval)
 
-        // Filter by time period
-        const now = Date.now()
-        const cutoffMs = PERIOD_MS[timePeriod]
-        const cutoff = cutoffMs ? now - cutoffMs : 0
-        const filtered = cutoff > 0 ? candles.filter((c) => c.timestamp >= cutoff) : candles
+        let candles: CashCandle[]
+
+        // All periods use on-chain historical daily candles from the static JSON.
+        const historicalCandles = await fetchHistoricalCandles()
+        // Copy so we don't mutate the cache
+        const allCandles = [...historicalCandles]
+
+        // Append a synthetic "now" candle at the current timestamp so the
+        // dot sits at the very end of the line
+        const nowMs = Date.now()
+        const lastCandle = allCandles[allCandles.length - 1]
+        const nowPrice = currentPrice && currentPrice > 0 ? currentPrice : lastCandle?.close ?? 0
+        if (lastCandle && nowMs > lastCandle.timestamp && nowPrice > 0) {
+          allCandles.push({
+            timestamp: nowMs,
+            open: nowPrice,
+            high: nowPrice,
+            low: nowPrice,
+            close: nowPrice,
+            volume: 0,
+          })
+        }
+
+        if (timePeriod === TimePeriod.MAX) {
+          candles = allCandles
+        } else if (timePeriod === TimePeriod.YEAR) {
+          const cutoff = nowMs - 365 * 24 * 60 * 60 * 1000
+          candles = allCandles.filter((c) => c.timestamp >= cutoff)
+        } else if (timePeriod === TimePeriod.MONTH) {
+          const cutoff = nowMs - 30 * 24 * 60 * 60 * 1000
+          candles = allCandles.filter((c) => c.timestamp >= cutoff)
+        } else if (timePeriod === TimePeriod.WEEK) {
+          const cutoff = nowMs - 7 * 24 * 60 * 60 * 1000
+          candles = allCandles.filter((c) => c.timestamp >= cutoff)
+        } else {
+          // 1D / 1H — show last 14 daily candles for visual context
+          candles = allCandles.slice(-14)
+        }
 
         if (!cancelled) {
-          setPriceEntries(filtered.map(candleToPriceChartData))
-          setVolumeEntries(filtered.map(candleToVolumeData))
+          // Deduplicate by time (seconds) — lightweight-charts requires strictly ascending
+          const priceData = candles.map(candleToPriceChartData)
+            .filter((d, i, arr) => i === 0 || d.time !== arr[i - 1].time)
+          const volumeData = candles.map(candleToVolumeData)
+            .filter((d, i, arr) => i === 0 || d.time !== arr[i - 1].time)
+          setPriceEntries(priceData)
+          setVolumeEntries(volumeData)
         }
-      } catch {
-        // Keep existing data on error
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('[CashChart] Failed to load candles for', timePeriod, err)
       } finally {
         if (!cancelled) {
           setLoading(false)
@@ -237,7 +255,7 @@ function useCashChartState(): TDPChartState {
 
     void load()
     return () => { cancelled = true }
-  }, [timePeriod])
+  }, [timePeriod, currentPrice])
 
   return useMemo(() => {
     const priceQuery = {
@@ -292,7 +310,7 @@ interface CashTDPProviderProps {
 
 export function CashTDPProvider({ children }: CashTDPProviderProps): JSX.Element {
   const { data: tokenData, loading: tokenLoading } = useCashTokenData()
-  const chartState = useCashChartState()
+  const chartState = useCashChartState(tokenData?.price)
 
   // Create a Token-like currency for CASH so the header shows name/symbol and
   // the address pill renders the contract address with a copy button.
@@ -317,6 +335,7 @@ export function CashTDPProvider({ children }: CashTDPProviderProps): JSX.Element
         low52w: tokenData?.low52w ?? null,
         marketCap: tokenData?.marketCap ?? null,
         fdv: tokenData?.fdv ?? null,
+        tvl: tokenData?.tvl ?? null,
       }),
     [tokenData],
   )

@@ -19,12 +19,13 @@ import { popupRegistry } from '~/components/Popups/registry'
 import { PopupType } from '~/components/Popups/types'
 import { NATIVE_CHAIN_ID } from '~/constants/tokens'
 import { useCurrency } from '~/hooks/Tokens'
+import { CASH_CURRENCY } from '~/pages/CashTDP/cashTokenList'
 import { Swap } from '~/pages/Swap'
 import { useTDPStore } from '~/pages/TokenDetails/context/useTDPStore'
 import { CurrencyState } from '~/state/swap/types'
 import { getInitialLogoUrl } from '~/utils/getInitialLogoURL'
 
-export function TDPSwapComponent() {
+export function TDPSwapComponent({ hideHeader = false }: { hideHeader?: boolean } = {}) {
   const { t } = useTranslation()
   const { address, currency, currencyChainId, tokenColor } = useTDPStore((s) => ({
     address: s.address,
@@ -39,10 +40,16 @@ export function TDPSwapComponent() {
 
   const { inputCurrency, outputCurrency } = useSwapInitialCurrencies()
 
-  // When CASH override is active, don't default to ETH — let user select from our token list
-  const initialInputCurrency = cashOverride.enabled ? undefined : inputCurrency
+  // When CASH override is active, default Sell to CASH and leave Buy empty
+  // (forces user to pick a stablecoin from our token list — never auto-select ETH).
+  const initialInputCurrency = cashOverride.enabled ? CASH_CURRENCY : inputCurrency
   // If the initial input currency is the same as the TDP currency, then we are selling the TDP currency
   const initialOutputCurrency = useMemo((): Currency | undefined => {
+    // CASH override: never default to an EVM token like ETH on the Buy side.
+    if (cashOverride.enabled) {
+      return undefined
+    }
+
     if (
       areCurrenciesEqual(initialInputCurrency, currency) &&
       // ensure the output is not equal to the input before setting
@@ -57,7 +64,7 @@ export function TDPSwapComponent() {
     }
 
     return currency
-  }, [currency, initialInputCurrency, outputCurrency])
+  }, [cashOverride.enabled, currency, initialInputCurrency, outputCurrency])
 
   const [prevTokens, setPrevTokens] = useState<CurrencyState>({
     inputCurrency: initialInputCurrency,
@@ -66,6 +73,13 @@ export function TDPSwapComponent() {
 
   const handleCurrencyChange = useCallback(
     (tokens: CurrencyState, isBridgePair?: boolean) => {
+      // When CASH override is active (Aptos/CASH page), all token changes stay on this page —
+      // never navigate to a Uniswap TDP for an Aptos token that doesn't exist on EVM.
+      if (cashOverride.enabled) {
+        setPrevTokens(tokens)
+        return
+      }
+
       const inputCurrencyURLAddress = getCurrencyURLAddress(tokens.inputCurrency)
       const outputCurrencyURLAddress = getCurrencyURLAddress(tokens.outputCurrency)
 
@@ -133,6 +147,7 @@ export function TDPSwapComponent() {
     <Flex gap="$gap12">
       <Swap
         syncTabToUrl={false}
+        hideHeader={hideHeader}
         initialInputChainId={currency.chainId}
         initialInputCurrency={initialInputCurrency}
         initialOutputCurrency={initialOutputCurrency}

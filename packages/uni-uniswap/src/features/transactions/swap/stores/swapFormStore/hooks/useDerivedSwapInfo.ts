@@ -17,6 +17,7 @@ import type { TransactionState } from 'uniswap/src/features/transactions/types/t
 import { useWallet } from 'uniswap/src/features/wallet/hooks/useWallet'
 import { CurrencyField } from 'uniswap/src/types/currency'
 import { buildCurrencyId } from 'uniswap/src/utils/currencyId'
+import { useCashTokenOverride } from 'uniswap/src/components/TokenSelector/CashTokenOverrideContext'
 
 /** Returns information derived from the current swap state */
 export function useDerivedSwapInfo({
@@ -60,6 +61,8 @@ export function useDerivedSwapInfo({
   const { evmAccount, svmAccount } = useWallet()
 
   const account = chainId === UniverseChainId.Solana ? svmAccount : evmAccount
+
+  const cashOverride = useCashTokenOverride()
 
   const currencies = useMemo(() => {
     return {
@@ -121,40 +124,145 @@ export function useDerivedSwapInfo({
     ],
   )
 
+  // When CASH override is active, skip ALL EVM trade/quote queries — they are useless
+  // (Aptos-only app; the Uniswap trading API calls will CORS-fail anyway).
+  const skipEvmTrade = cashOverride.enabled
+
   const existingPlanTrade = useTradeFromExistingPlan(tradeParams)
-  const tradeFromQuote = useTrade({ ...tradeParams, skip: !!existingPlanTrade })
+  const tradeFromQuote = useTrade({ ...tradeParams, skip: skipEvmTrade || !!existingPlanTrade })
   const trade = existingPlanTrade ?? tradeFromQuote
 
   const displayableTrade = trade.trade ?? trade.indicativeTrade
 
   const displayableTradeOutputAmount = displayableTrade?.outputAmount
 
+  // Cash override: compute quote-based output amount when routing API is not available
+  const cashQuoteOutputAmount = useMemo(() => {
+    if (
+      cashOverride.enabled &&
+      cashOverride.getQuote &&
+      isExactIn &&
+      currencyIn &&
+      currencyOut &&
+      exactAmountToken
+    ) {
+      const amount = parseFloat(exactAmountToken)
+      if (!isNaN(amount) && amount > 0) {
+        const outAddress = currencyOut.wrapped.address.toLowerCase()
+        // CASH address contains 'e66fef' — if output is CASH, direction is 'buy'; otherwise 'sell'
+        const direction: 'buy' | 'sell' = outAddress.includes('e66fef') ? 'buy' : 'sell'
+        const quote = cashOverride.getQuote(amount, direction)
+        if (quote && quote.sufficientLiquidity) {
+          return getCurrencyAmount({
+            value: quote.outputAmount.toFixed(currencyOut.decimals),
+            valueType: ValueType.Exact,
+            currency: currencyOut,
+          })
+        }
+      }
+    }
+    return undefined
+  }, [cashOverride, isExactIn, currencyIn, currencyOut, exactAmountToken])
+
   const currencyAmounts = useMemo(
     () => ({
       [CurrencyField.INPUT]:
         exactCurrencyField === CurrencyField.INPUT ? amountSpecified : displayableTrade?.inputAmount,
       [CurrencyField.OUTPUT]:
-        exactCurrencyField === CurrencyField.OUTPUT ? amountSpecified : displayableTradeOutputAmount,
+        exactCurrencyField === CurrencyField.OUTPUT
+          ? amountSpecified
+          : (cashQuoteOutputAmount ?? displayableTradeOutputAmount),
     }),
-    [exactCurrencyField, amountSpecified, displayableTrade?.inputAmount, displayableTradeOutputAmount],
+    [exactCurrencyField, amountSpecified, displayableTrade?.inputAmount, displayableTradeOutputAmount, cashQuoteOutputAmount],
   )
 
   const inputCurrencyUSDValue = useUSDCValue(currencyAmounts[CurrencyField.INPUT])
   const outputCurrencyUSDValue = useUSDCValue(currencyAmounts[CurrencyField.OUTPUT])
 
+  // Cash override: compute USD value from override price × amount.
+  // The input currency itself is used as the wrapper (only .toExact() is read downstream).
+  const cashInputUSD = useMemo(() => {
+    if (!cashOverride.enabled || !cashOverride.getUsdPrice || !currencyIn) return undefined
+    const addr = (currencyIn as any).address ?? currencyIn.wrapped?.address
+    if (!addr) return undefined
+    const price = cashOverride.getUsdPrice(addr)
+    const amt = currencyAmounts[CurrencyField.INPUT]
+    if (price == null || !amt) return undefined
+    const human = parseFloat(amt.toExact())
+    if (!isFinite(human)) return undefined
+    const usd = human * price
+    return getCurrencyAmount({
+      value: usd.toFixed(currencyIn.decimals),
+      valueType: ValueType.Exact,
+      currency: currencyIn,
+    }) ?? undefined
+  }, [cashOverride, currencyIn, currencyAmounts])
+
+  const cashOutputUSD = useMemo(() => {
+    if (!cashOverride.enabled || !cashOverride.getUsdPrice || !currencyOut) return undefined
+    const addr = (currencyOut as any).address ?? currencyOut.wrapped?.address
+    if (!addr) return undefined
+    const price = cashOverride.getUsdPrice(addr)
+    const amt = currencyAmounts[CurrencyField.OUTPUT]
+    if (price == null || !amt) return undefined
+    const human = parseFloat(amt.toExact())
+    if (!isFinite(human)) return undefined
+    const usd = human * price
+    return getCurrencyAmount({
+      value: usd.toFixed(currencyOut.decimals),
+      valueType: ValueType.Exact,
+      currency: currencyOut,
+    }) ?? undefined
+  }, [cashOverride, currencyOut, currencyAmounts])
+
   const currencyAmountsUSDValue = useMemo(() => {
     return {
-      [CurrencyField.INPUT]: inputCurrencyUSDValue,
-      [CurrencyField.OUTPUT]: outputCurrencyUSDValue,
+      [CurrencyField.INPUT]: cashInputUSD ?? inputCurrencyUSDValue,
+      [CurrencyField.OUTPUT]: cashOutputUSD ?? outputCurrencyUSDValue,
     }
-  }, [inputCurrencyUSDValue, outputCurrencyUSDValue])
+  }, [inputCurrencyUSDValue, outputCurrencyUSDValue, cashInputUSD, cashOutputUSD])
+
+  // Cash override: inject on-chain balances from Aptos Indexer.
+  // Use (currency as any).address directly — currencyIn.wrapped.address returns
+  // WETH because our fake currencies have NativeCurrency as prototype.
+  const cashTokenInBalance = useMemo(() => {
+    if (cashOverride.enabled && cashOverride.getBalance && currencyIn) {
+      const addr = (currencyIn as any).address ?? currencyIn.wrapped?.address
+      if (!addr) return undefined
+      const raw = cashOverride.getBalance(addr)
+      if (raw !== null) {
+        return getCurrencyAmount({
+          value: Math.max(0, raw).toFixed(currencyIn.decimals),
+          valueType: ValueType.Exact,
+          currency: currencyIn,
+        })
+      }
+    }
+    return undefined
+  }, [cashOverride, currencyIn])
+
+  const cashTokenOutBalance = useMemo(() => {
+    if (cashOverride.enabled && cashOverride.getBalance && currencyOut) {
+      const addr = (currencyOut as any).address ?? currencyOut.wrapped?.address
+      if (!addr) return undefined
+      const raw = cashOverride.getBalance(addr)
+      if (raw !== null) {
+        return getCurrencyAmount({
+          value: Math.max(0, raw).toFixed(currencyOut.decimals),
+          valueType: ValueType.Exact,
+          currency: currencyOut,
+        })
+      }
+    }
+    return undefined
+  }, [cashOverride, currencyOut])
 
   const currencyBalances = useMemo(() => {
     return {
-      [CurrencyField.INPUT]: tokenInBalance,
-      [CurrencyField.OUTPUT]: tokenOutBalance,
+      [CurrencyField.INPUT]: cashTokenInBalance ?? tokenInBalance,
+      [CurrencyField.OUTPUT]: cashTokenOutBalance ?? tokenOutBalance,
     }
-  }, [tokenInBalance, tokenOutBalance])
+  }, [tokenInBalance, tokenOutBalance, cashTokenInBalance, cashTokenOutBalance])
 
   return useMemo(() => {
     return {

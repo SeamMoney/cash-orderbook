@@ -105,7 +105,11 @@
     "wss://relay.walletconnect.com",
     "wss://relay.walletconnect.org",
     "wss://ws-us3.pusher.com/",
-    "wss://nbstream.binance.com"
+    "wss://nbstream.binance.com",
+    "https://api.geckoterminal.com",
+    "https://*.aptoslabs.com",
+    "wss://*.aptoslabs.com",
+    "https://api.panora.exchange"
   ],
   "workerSrc": ["'self'", "blob:"]
 }

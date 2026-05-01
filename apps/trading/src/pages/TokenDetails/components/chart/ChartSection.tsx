@@ -1,8 +1,11 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Flex } from 'ui/src'
+import { useLocation } from 'react-router'
+import { Flex, Text } from 'ui/src'
 import { useTokenPriceChange } from 'uniswap/src/features/dataApi/tokenDetails/useTokenDetailsData'
 import { currencyId } from 'uniswap/src/utils/currencyId'
+import { useLocalizationContext } from 'uniswap/src/features/language/LocalizationContext'
+import { NumberType } from 'utilities/src/format/types'
 import { TimePeriod, toHistoryDuration } from '~/appGraphql/data/util'
 import { ChartSkeleton } from '~/components/Charts/LoadingState'
 import { PriceChart } from '~/components/Charts/PriceChart'
@@ -21,6 +24,25 @@ export function ChartSection() {
   }))
   const { activeQuery, timePeriod, priceChartType } = chartState
   const { t } = useTranslation()
+  const { pathname } = useLocation()
+  const isCashPage = pathname === '/cash'
+  const { convertFiatAmountFormatted } = useLocalizationContext()
+
+  const CASH_TOTAL_SUPPLY = 1_000_000_000
+  const renderMarketCap = useCallback(
+    (price: number) => {
+      if (!isCashPage || !price) return null
+      const mcap = price * CASH_TOTAL_SUPPLY
+      return (
+        <Flex position="absolute" top={68} left={0} zIndex="$mask" pointerEvents="none">
+          <Text variant="body3" color="$neutral2">
+            Mcap {convertFiatAmountFormatted(mcap, NumberType.FiatTokenStats)}
+          </Text>
+        </Flex>
+      )
+    },
+    [isCashPage, convertFiatAmountFormatted],
+  )
 
   // Get the 24hr price change from API to ensure consistency with mobile
   // Both platforms now show the same 24hr change regardless of selected chart period
@@ -67,6 +89,7 @@ export function ChartSection() {
             timePeriod={toHistoryDuration(timePeriod)}
             pricePercentChange={pricePercentChange}
             overrideColor={tokenColor}
+            renderHeaderExtra={renderMarketCap}
           />
         )
       case ChartType.VOLUME:

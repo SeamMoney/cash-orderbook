@@ -63,7 +63,6 @@ export default function Navbar() {
 
         <Right>
           {!isSearchBarVisible && <SearchBar />}
-          {!isConnected && <PreferenceMenu />}
           {isTestnetModeEnabled && <TestnetModeTooltip />}
           <AptosConnectButton />
         </Right>

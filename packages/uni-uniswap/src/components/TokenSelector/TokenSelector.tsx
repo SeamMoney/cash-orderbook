@@ -1,18 +1,13 @@
 import type { BottomSheetView } from '@gorhom/bottom-sheet'
 import { Currency } from '@uniswap/sdk-core'
-import { FeatureFlags, useFeatureFlag } from '@universe/gating'
-import { ComponentProps, memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Flex, ModalCloseIcon, Text, useMedia, useScrollbarStyles, useSporeColors } from 'ui/src'
 import { InfoCircleFilled } from 'ui/src/components/icons/InfoCircleFilled'
-import { spacing, zIndexes } from 'ui/src/theme'
+import { spacing } from 'ui/src/theme'
 import PasteButton from 'uniswap/src/components/buttons/PasteButton'
 import { useBottomSheetContext } from 'uniswap/src/components/modals/BottomSheetContext'
 import { Modal } from 'uniswap/src/components/modals/Modal'
-import { NetworkFilter } from 'uniswap/src/components/network/NetworkFilter'
-import { NetworkFilterV2 } from 'uniswap/src/components/network/NetworkFilterV2/NetworkFilterV2'
-import type { TieredNetworkOptions } from 'uniswap/src/components/network/NetworkFilterV2/types'
-import { useNetworkSelectorOptions } from 'uniswap/src/components/network/NetworkFilterV2/useNetworkSelectorOptions'
 import { CrosschainSwapsPromoBanner } from 'uniswap/src/components/TokenSelector/CrosschainSwapsPromoBanner'
 import { useClipboardCheck } from 'uniswap/src/components/TokenSelector/hooks/useClipboardCheck'
 import { useTokenSelectionHandler } from 'uniswap/src/components/TokenSelector/hooks/useTokenSelectionHandler'
@@ -68,20 +63,29 @@ export interface TokenSelectorProps {
   }) => void
 }
 
-function TokenSelectorNetworkFilter({
-  tieredOptions,
-  networkFilterV2Enabled,
-  styles,
-  ...props
-}: {
-  tieredOptions: TieredNetworkOptions | undefined
-  networkFilterV2Enabled: boolean
-} & ComponentProps<typeof NetworkFilter>): JSX.Element {
-  if (networkFilterV2Enabled) {
-    return <NetworkFilterV2 {...props} tieredOptions={tieredOptions} />
-  }
 
-  return <NetworkFilter {...props} styles={styles} />
+/** Static Aptos chain badge — replaces the EVM chain filter dropdown. */
+function AptosChainBadge(): JSX.Element {
+  return (
+    <Flex
+      row
+      alignItems="center"
+      justifyContent="center"
+      backgroundColor="$surface3"
+      borderRadius="$roundedFull"
+      width={32}
+      height={32}
+      flexShrink={0}
+    >
+      <svg width="20" height="20" viewBox="0 0 600 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M30.6608 171.033C18.0837 197.498 9.30164 226.119 5 256.181H255.339L309.999 171.033H30.6608Z" fill="currentColor"/>
+        <path d="M594.999 256.182C590.687 226.111 581.915 197.499 569.338 171.034H419.288L364.648 85.8753H508.549C454.803 33.2026 381.199 0.716797 299.994 0.716797C218.79 0.716797 145.195 33.2026 91.4395 85.8653H364.648L309.988 171.024L364.648 256.172H594.989L594.999 256.182Z" fill="currentColor"/>
+        <path d="M146.04 426.5L91.3809 511.648C145.136 564.311 218.601 597.284 299.805 597.284C381.01 597.284 455.718 565.99 509.672 511.648H200.7L146.04 426.5Z" fill="currentColor"/>
+        <path d="M200.68 341.331H5C9.31157 371.412 18.0837 400.024 30.6608 426.489H146.04L200.68 341.331Z" fill="currentColor"/>
+        <path d="M255.339 426.499H569.339C581.916 400.034 590.698 371.413 595 341.351H309.999L255.339 256.192L200.68 341.341" fill="currentColor"/>
+      </svg>
+    </Flex>
+  )
 }
 
 export function TokenSelectorContent({
@@ -117,17 +121,7 @@ export function TokenSelectorContent({
 
   const { chains: enabledChains, isTestnetModeEnabled } = useEnabledChains()
 
-  const isNetworkFilterV2FlagEnabled = useFeatureFlag(FeatureFlags.NetworkFilterV2)
-  const networkFilterV2Enabled =
-    isNetworkFilterV2FlagEnabled &&
-    [TokenSelectorVariation.SwapInput, TokenSelectorVariation.SwapOutput].includes(variation)
   const effectiveChainIds = chainIds ?? enabledChains
-
-  const tieredNetworkOptions = useNetworkSelectorOptions({
-    addresses,
-    chainIds: effectiveChainIds,
-    enabled: networkFilterV2Enabled,
-  })
 
   const { t } = useTranslation()
 
@@ -205,20 +199,9 @@ export function TokenSelectorContent({
             autoFocus={shouldAutoFocusSearch}
             backgroundColor="$surface2"
             endAdornment={
-              <Flex row alignItems="center">
+              <Flex row alignItems="center" gap="$spacing4">
                 {hasClipboardString && <PasteButton inline textVariant="buttonLabel3" onPress={handlePaste} />}
-                <TokenSelectorNetworkFilter
-                  tieredOptions={tieredNetworkOptions}
-                  networkFilterV2Enabled={networkFilterV2Enabled}
-                  includeAllNetworks={!isTestnetModeEnabled}
-                  chainIds={effectiveChainIds}
-                  selectedChain={chainFilter}
-                  styles={isExtensionApp || media.md ? { dropdownZIndex: zIndexes.overlay } : undefined}
-                  onPressChain={(newChainId) => {
-                    onChangeChainFilter(newChainId)
-                    onSelectChain?.(newChainId)
-                  }}
-                />
+                <AptosChainBadge />
               </Flex>
             }
             placeholder={t('tokens.selector.search.placeholder')}

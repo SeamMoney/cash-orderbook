@@ -28,7 +28,7 @@ export const SelectTokenButton = memo(function _SelectTokenButton({
   const validTokenColor = validColor(tokenColor)
   const hoverStyle: { backgroundColor: ComponentProps<typeof Flex>['backgroundColor'] } = useMemo(
     () => ({
-      backgroundColor: selectedCurrencyInfo ? '$surface1Hovered' : (validTokenColor ?? '$accent1Hovered'),
+      backgroundColor: selectedCurrencyInfo ? 'transparent' : (validTokenColor ?? '$accent1Hovered'),
       filter: validTokenColor ? getHoverCssFilter({ isDarkMode }) : undefined,
     }),
     [selectedCurrencyInfo, validTokenColor, isDarkMode],
@@ -47,12 +47,12 @@ export const SelectTokenButton = memo(function _SelectTokenButton({
     )
   }
 
-  const textColor = selectedCurrencyInfo ? '$neutral1' : tokenColor ? getContrastPassingTextColor(tokenColor) : '$white'
+  const textColor = selectedCurrencyInfo ? '$neutral1' : '$white'
   const chevronColor = selectedCurrencyInfo ? '$neutral2' : textColor
 
   return (
     <TouchableArea
-      backgroundColor={selectedCurrencyInfo ? '$surface1' : (validTokenColor ?? '$accent1')}
+      backgroundColor={selectedCurrencyInfo ? 'transparent' : (validTokenColor ?? '$accent1')}
       borderRadius="$roundedFull"
       testID={testID}
       borderColor="$surface3Solid"

@@ -1,4 +1,5 @@
 import { Accordion, Flex } from 'ui/src'
+import { useCashTokenOverride } from 'uniswap/src/components/TokenSelector/CashTokenOverrideContext'
 import { SwapFormButton } from 'uniswap/src/features/transactions/swap/components/SwapFormButton/SwapFormButton'
 import { ExpandableRows } from 'uniswap/src/features/transactions/swap/form/SwapFormScreen/SwapFormScreenDetails/ExpandableRows'
 import { SwapFormScreenFooter } from 'uniswap/src/features/transactions/swap/form/SwapFormScreen/SwapFormScreenDetails/SwapFormScreenFooter/SwapFormScreenFooter'
@@ -11,6 +12,8 @@ export function SwapFormScreenDetails(): JSX.Element {
     tokenColor: state.tokenColor,
     showFooter: state.showFooter,
   }))
+  const cashOverride = useCashTokenOverride()
+  const AptosButton = cashOverride.enabled ? cashOverride.SwapButtonComponent : undefined
 
   return (
     <Accordion collapsible type="single" overflow="hidden">
@@ -23,14 +26,20 @@ export function SwapFormScreenDetails(): JSX.Element {
             `}</style>
         <Flex>
           <Flex>
-            <SwapFormWarningStoreContextProvider>
-              <SwapFormButton tokenColor={tokenColor} />
-              <SwapFormWarningModals />
-            </SwapFormWarningStoreContextProvider>
+            {AptosButton ? (
+              <AptosButton />
+            ) : (
+              <SwapFormWarningStoreContextProvider>
+                <SwapFormButton tokenColor={tokenColor} />
+                <SwapFormWarningModals />
+              </SwapFormWarningStoreContextProvider>
+            )}
           </Flex>
-          <SwapFormScreenFooter />
+          {/* Skip Uniswap's footer when AptosButton is in charge — AptosSwapButton
+              already renders the rate line + expandable details via SwapRouteInfo. */}
+          {!AptosButton && <SwapFormScreenFooter />}
         </Flex>
-        {showFooter ? <ExpandableRows /> : null}
+        {!AptosButton && showFooter ? <ExpandableRows /> : null}
       </Accordion.Item>
     </Accordion>
   )

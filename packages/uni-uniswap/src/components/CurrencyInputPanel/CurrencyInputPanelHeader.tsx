@@ -62,7 +62,9 @@ export function CurrencyInputPanelHeader({
     (isWebAppDesktop || isExtensionApp) && !hidePresets && currencyField === CurrencyField.INPUT && currencyBalance
 
   // When cash override active: pills are on input row; otherwise output row
-  const pillCurrencyField = cashOverride.enabled ? CurrencyField.INPUT : CurrencyField.OUTPUT
+  // When cashOverride is enabled, pills appear over whichever row is empty —
+  // so they should populate that row, i.e. use the panel's own currencyField.
+  const pillCurrencyField = cashOverride.enabled ? currencyField : CurrencyField.OUTPUT
 
   return (
     <Flex row justifyContent="space-between">

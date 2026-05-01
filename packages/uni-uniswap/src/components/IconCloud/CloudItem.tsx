@@ -1,36 +1,19 @@
-import { startTransition, useEffect, useState } from 'react'
 import { Flex, type FlexProps, styled } from 'ui/src'
 import { validColor } from 'ui/src/theme'
 import { ItemData, ItemPoint } from 'uniswap/src/components/IconCloud/IconCloud'
 import { randomChoice } from 'uniswap/src/components/IconCloud/utils'
-import { ONE_SECOND_MS } from 'utilities/src/time/time'
 
 function TokenIconPositioner({
   size,
-  delay,
+  delay: _delay,
   ...rest
 }: FlexProps & {
   size: number
   delay: number
 }): JSX.Element | null {
-  const [show, setShow] = useState(false)
-
-  useEffect(() => {
-    const tm = setTimeout(() => {
-      startTransition(() => {
-        setShow(true)
-      })
-    }, delay * ONE_SECOND_MS)
-
-    return () => {
-      clearTimeout(tm)
-    }
-  }, [delay])
-
-  if (!show) {
-    return null
-  }
-
+  // Render immediately. The original implementation staggered orbs by `delay`
+  // seconds based on distance-from-center, which made hover unreliable for ~1s
+  // after page load (orbs were still animating in when the user reached for them).
   return <Flex pointerEvents="auto" width={size} height={size} {...rest} />
 }
 
@@ -172,25 +155,11 @@ export function CloudItem<T extends ItemData>({
 
   return (
     <Flex position="absolute" group="item" top={y} left={x} width={size} height={size} transformOrigin="center center">
-      <Flex animation="bouncy" enterStyle={{ y: 30 }}>
+      <Flex>
         <TokenIconPositioner
-          animation="bouncy"
           delay={delay}
-          rotate="15deg"
           opacity={1}
           scale={1}
-          enterStyle={{
-            scale: 0,
-            opacity: 0,
-            y: 30,
-            rotate: '-15deg',
-          }}
-          exitStyle={{
-            scale: 3,
-            opacity: 0,
-            rotate: '15deg',
-            y: 10,
-          }}
           size={size}
         >
           <FloatContainer duration={floatDuration} paused={isPaused}>

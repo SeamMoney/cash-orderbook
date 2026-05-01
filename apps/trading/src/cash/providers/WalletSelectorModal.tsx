@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useWallet, WalletItem, isInstallRequired } from '@aptos-labs/wallet-adapter-react'
 import {
   groupAndSortWallets,
@@ -298,7 +299,7 @@ export function WalletSelectorModal({ isOpen, onClose }: WalletSelectorModalProp
 
   if (!isOpen) return null
 
-  return (
+  return createPortal(
     <div
       style={{
         position: 'fixed',
@@ -517,7 +518,8 @@ export function WalletSelectorModal({ isOpen, onClose }: WalletSelectorModalProp
           }
         }
       `}</style>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

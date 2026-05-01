@@ -74,21 +74,20 @@ const TokenOptionItem = memo(function _TokenOptionItem({
   const balanceText = isTestnetModeEnabled ? tokenBalance : fiatBalance
   const quantityText = isTestnetModeEnabled ? undefined : tokenBalance
 
-  // Token protection modal
+  // Token protection warnings are disabled — this app only surfaces trusted CASH/stablecoin tokens
   const severity = getTokenWarningSeverity(currencyInfo)
   const [showWarningModal, setShowWarningModal] = useState(false)
   const tokenProtectionWarning = getTokenProtectionWarning(currencyInfo)
   const { tokenWarningDismissed } = useDismissedTokenWarnings(currencyInfo.currency, tokenProtectionWarning)
   const isBlocked = severity === WarningSeverity.Blocked
-  const shouldShowWarningModalOnPress =
-    showWarnings && (isBlocked || (severity !== WarningSeverity.None && !tokenWarningDismissed))
+  const shouldShowWarningModalOnPress = false
 
   const isBridgedAsset = Boolean(currencyInfo.isBridged)
   const [showBridgedAssetWarningModal, setShowBridgedAssetWarningModal] = useState(false)
   const { tokenWarningDismissed: bridgedAssetTokenWarningDismissed } = useDismissedBridgedAssetWarnings(
     currencyInfo.currency,
   )
-  const shouldShowBridgedAssetWarningModalOnPress = showWarnings && isBridgedAsset && !bridgedAssetTokenWarningDismissed
+  const shouldShowBridgedAssetWarningModalOnPress = false
   const hasWarningModals = shouldShowWarningModalOnPress || shouldShowBridgedAssetWarningModalOnPress
 
   const setWarningModalVisible = useCallback(

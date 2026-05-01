@@ -213,7 +213,7 @@ export const CurrencyInputPanelInput = memo(
                 )}
               </Flex>
             ) : showDefaultTokenOptions && !isWebAppDesktop ? (
-              <DefaultTokenOptions currencyField={cashOverride.enabled ? CurrencyField.INPUT : CurrencyField.OUTPUT} />
+              <DefaultTokenOptions currencyField={cashOverride.enabled ? currencyField : CurrencyField.OUTPUT} />
             ) : (
               <TouchableArea onPress={onShowTokenSelector}>
                 <Text

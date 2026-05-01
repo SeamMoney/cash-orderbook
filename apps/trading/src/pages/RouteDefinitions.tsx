@@ -1,16 +1,11 @@
 import { lazy, ReactNode, Suspense, useMemo } from 'react'
 import { matchPath, Navigate, useLocation } from 'react-router'
 import i18n from 'uniswap/src/i18n'
-import { getExploreDescription, getExploreTitle } from '~/pages/getExploreTitle'
-// High-traffic pages should not be lazy-loaded.
-import Swap from '~/pages/Swap'
 import { isBrowserRouterEnabled } from '~/utils/env'
 
-const RedirectExplore = lazy(() => import('~/pages/Explore/redirects'))
 const NotFound = lazy(() => import('~/pages/NotFound'))
-const TokenDetails = lazy(() => import('~/pages/TokenDetails/TokenDetailsPage'))
 const CashTokenDetailPage = lazy(() => import('~/pages/CashTDP'))
-const PoolDetails = lazy(() => import('~/pages/PoolDetails'))
+const CashSwapPage = lazy(() => import('~/pages/CashTDP/CashSwapPage'))
 
 interface RouterConfig {
   browserRouterEnabled?: boolean
@@ -37,9 +32,6 @@ const StaticTitlesAndDescriptions = {
   CashTitle: 'CASH Orderbook',
   SwapTitle: i18n.t('title.buySellTradeEthereum'),
   SwapDescription: i18n.t('title.swappingMadeSimple'),
-  DetailsPageBaseTitle: i18n.t('common.buyAndSell'),
-  TDPDescription: i18n.t('title.realTime'),
-  PDPDescription: i18n.t('title.tradeTokens'),
 }
 
 export interface RouteDefinition {
@@ -78,23 +70,6 @@ export const routes: RouteDefinition[] = [
       return <Navigate to="/cash" replace />
     },
   }),
-  createRouteDefinition({
-    path: '/explore',
-    getTitle: getExploreTitle,
-    getDescription: getExploreDescription,
-    nestedPaths: [':tab', ':chainName', ':tab/:chainName'],
-    getElement: () => <RedirectExplore />,
-  }),
-  createRouteDefinition({
-    path: '/explore/tokens/:chainName/:tokenAddress',
-    getTitle: () => i18n.t('common.buyAndSell'),
-    getDescription: () => StaticTitlesAndDescriptions.TDPDescription,
-    getElement: () => (
-      <Suspense fallback={null}>
-        <TokenDetails />
-      </Suspense>
-    ),
-  }),
   // CASH Token Detail Page — uses our REST/WS API instead of GraphQL
   createRouteDefinition({
     path: '/cash',
@@ -107,61 +82,18 @@ export const routes: RouteDefinition[] = [
     ),
   }),
   createRouteDefinition({
-    path: '/tokens',
-    getTitle: getExploreTitle,
-    getDescription: getExploreDescription,
-    getElement: () => <Navigate to="/explore/tokens" replace />,
-  }),
-  createRouteDefinition({
-    path: '/tokens/:chainName',
-    getTitle: getExploreTitle,
-    getDescription: getExploreDescription,
-    getElement: () => <RedirectExplore />,
-  }),
-  createRouteDefinition({
-    path: '/tokens/:chainName/:tokenAddress',
-    getTitle: () => StaticTitlesAndDescriptions.DetailsPageBaseTitle,
-    getDescription: () => StaticTitlesAndDescriptions.TDPDescription,
-    getElement: () => <RedirectExplore />,
-  }),
-  createRouteDefinition({
-    path: '/explore/pools/:chainName/:poolAddress',
-    getTitle: () => StaticTitlesAndDescriptions.DetailsPageBaseTitle,
-    getDescription: () => StaticTitlesAndDescriptions.PDPDescription,
-    getElement: () => (
-      <Suspense fallback={null}>
-        <PoolDetails />
-      </Suspense>
-    ),
-  }),
-  createRouteDefinition({
-    path: '/buy',
-    getElement: () => <Swap />,
-    getTitle: () => StaticTitlesAndDescriptions.SwapTitle,
-  }),
-  createRouteDefinition({
-    path: '/sell',
-    getElement: () => <Swap />,
-    getTitle: () => StaticTitlesAndDescriptions.SwapTitle,
-  }),
-  createRouteDefinition({
-    path: '/send',
-    getElement: () => <Swap />,
-    getTitle: () => i18n.t('title.sendTokens'),
-  }),
-  createRouteDefinition({
     path: '/limits',
     getElement: () => <Navigate to="/limit" replace />,
     getTitle: () => i18n.t('title.placeLimit'),
   }),
   createRouteDefinition({
     path: '/limit',
-    getElement: () => <Swap />,
+    getElement: () => <CashSwapPage />,
     getTitle: () => i18n.t('title.placeLimit'),
   }),
   createRouteDefinition({
     path: '/swap',
-    getElement: () => <Swap />,
+    getElement: () => <CashSwapPage />,
     getTitle: () => StaticTitlesAndDescriptions.SwapTitle,
   }),
   createRouteDefinition({ path: '*', getElement: () => <Navigate to="/not-found" replace /> }),

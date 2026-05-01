@@ -11,7 +11,7 @@ import {
   PriceLineOptions,
   UTCTimestamp,
 } from 'lightweight-charts'
-import { useMemo } from 'react'
+import { type ReactNode, useMemo } from 'react'
 import { Trans } from 'react-i18next'
 import { Flex, styled, Text } from 'ui/src'
 import { opacify } from 'ui/src/theme'
@@ -436,7 +436,8 @@ export function PriceChart({
   headerTotalValueOverride,
   hideYAxis,
   yAxisFormatter,
-}: PriceChartProps) {
+  renderHeaderExtra,
+}: PriceChartProps & { renderHeaderExtra?: (price: number) => ReactNode }) {
   const startingPrice = data[0]
   const lastPrice = data[data.length - 1]
   const { min, max } = getCandlestickPriceBounds(data)
@@ -465,21 +466,24 @@ export function PriceChart({
         const headerValue = crosshairData ? crosshairData.value : (headerTotalValueOverride ?? lastPrice.value)
 
         return (
-          <ChartHeader
-            value={headerValue}
-            additionalFields={
-              <PriceChartDelta
-                startingPrice={startingPrice.close}
-                endingPrice={(crosshairData ?? lastPrice).close}
-                shouldIncludeFiatDelta
-                shouldTreatAsStablecoin={shouldTreatAsStablecoin}
-                pricePercentChange={pricePercentChange}
-                isHovering={!!crosshairData}
-              />
-            }
-            valueFormatterType={NumberType.FiatTokenPrice}
-            time={crosshairData?.time}
-          />
+          <>
+            <ChartHeader
+              value={headerValue}
+              additionalFields={
+                <PriceChartDelta
+                  startingPrice={startingPrice.close}
+                  endingPrice={(crosshairData ?? lastPrice).close}
+                  shouldIncludeFiatDelta
+                  shouldTreatAsStablecoin={shouldTreatAsStablecoin}
+                  pricePercentChange={pricePercentChange}
+                  isHovering={!!crosshairData}
+                />
+              }
+              valueFormatterType={NumberType.FiatTokenPrice}
+              time={crosshairData?.time}
+            />
+            {renderHeaderExtra?.(headerValue ?? 0)}
+          </>
         )
       }}
     </Chart>

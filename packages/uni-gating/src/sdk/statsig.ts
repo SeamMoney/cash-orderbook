@@ -1,7 +1,15 @@
+import { Log, LogLevel } from '@statsig/client-core'
 import { StatsigClient } from '@statsig/react-bindings'
 import { getConfig } from '@universe/config'
 import { LocalOverrideAdapterWrapper } from '@universe/gating/src/LocalOverrideAdapterWrapper'
 import { isTestEnv } from 'utilities/src/environment/env'
+
+// Suppress Statsig WARN-level console spam when no API key is configured.
+// Without a valid StatsigClient every hook logs a noisy warning on every render;
+// downgrading to Error-only keeps genuine errors visible while silencing the noise.
+if (!getConfig().statsigApiKey && !isTestEnv()) {
+  Log.level = LogLevel.None
+}
 
 export {
   StatsigClient,

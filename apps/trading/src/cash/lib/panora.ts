@@ -46,6 +46,16 @@ export interface PanoraQuote {
   routeDescription: string;
   /** USD equivalent of the output amount from Panora. `null` when unavailable. */
   toTokenAmountUSD: number | null;
+  /** USD equivalent of the input amount. `null` when unavailable. */
+  fromTokenAmountUSD: number | null;
+  /** Slippage percentage the API used (e.g. 1 = 1%). */
+  slippagePercentage: number;
+  /** Fee percentage charged (usually 0). */
+  feePercentage: number;
+  /** Input token symbol from the API. */
+  fromTokenSymbol: string;
+  /** Output token symbol from the API. */
+  toTokenSymbol: string;
 }
 
 /** Error class for Panora-specific failures. */
@@ -187,6 +197,16 @@ export async function getPanoraQuote(
         ? parseFloat(String(rawUSD))
         : null;
 
+    // Parse additional fields
+    const rawFromUSD = data.fromTokenAmountUSD;
+    const fromTokenAmountUSD =
+      rawFromUSD !== null && rawFromUSD !== undefined
+        ? parseFloat(String(rawFromUSD))
+        : null;
+
+    const slippagePercentage = parseFloat(bestQuote.slippagePercentage ?? "1");
+    const feePercentage = parseFloat(bestQuote.feePercentage ?? "0");
+
     return {
       outputAmount,
       inputAmount: amount,
@@ -201,6 +221,14 @@ export async function getPanoraQuote(
         toTokenAmountUSD !== null && !isNaN(toTokenAmountUSD)
           ? toTokenAmountUSD
           : null,
+      fromTokenAmountUSD:
+        fromTokenAmountUSD !== null && !isNaN(fromTokenAmountUSD)
+          ? fromTokenAmountUSD
+          : null,
+      slippagePercentage: isNaN(slippagePercentage) ? 1 : slippagePercentage,
+      feePercentage: isNaN(feePercentage) ? 0 : feePercentage,
+      fromTokenSymbol: data.fromToken?.symbol ?? fromToken,
+      toTokenSymbol: data.toToken?.symbol ?? toToken,
     };
   } catch (err) {
     if (err instanceof PanoraError) throw err;
@@ -294,9 +322,10 @@ export async function getPanoraSwapPayload(
 
 /** Shape of the Panora GET /swap/quote response. */
 interface PanoraQuoteResponse {
-  fromToken?: { address: string; decimals: number; current_price: number };
-  toToken?: { address: string; decimals: number; current_price: number };
+  fromToken?: { address: string; decimals: number; current_price: number; symbol?: string; name?: string };
+  toToken?: { address: string; decimals: number; current_price: number; symbol?: string; name?: string };
   fromTokenAmount?: string;
+  fromTokenAmountUSD?: string;
   quotes: PanoraQuoteEntry[];
 }
 
@@ -312,11 +341,15 @@ interface PanoraQuoteEntry {
   toTokenAmount: string;
   priceImpact: string | null;
   slippagePercentage: string;
+  feePercentage?: string;
   feeTokenAmount: string;
+  feeTokenAmountUSD?: string;
   minToTokenAmount: string;
   toTokenAmountUSD: string | null;
   /** Routing path — array of DEX hops used for the swap. */
   routes?: PanoraRoute[] | null;
+  /** Singular route field (API actually returns this). */
+  route?: PanoraRoute[] | null;
 }
 
 interface PanoraSwapEntry extends PanoraQuoteEntry {

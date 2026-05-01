@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Flex } from 'ui/src'
 import { CurrencyInputPanel } from 'uniswap/src/components/CurrencyInputPanel/CurrencyInputPanel'
+import { useCashTokenOverride } from 'uniswap/src/components/TokenSelector/CashTokenOverrideContext'
 import { SectionName } from 'uniswap/src/features/telemetry/constants'
 import { Trace } from 'uniswap/src/features/telemetry/Trace'
 import { useCurrencyInputFocusedStyle } from 'uniswap/src/features/transactions/swap/form/SwapFormScreen/hooks/useCurrencyInputFocusedStyle'
@@ -54,7 +55,13 @@ export function SwapFormCurrencyInputPanel(): JSX.Element {
     onToggleIsFiatMode: s.onToggleIsFiatMode,
   }))
 
-  const focusedStyles = useCurrencyInputFocusedStyle(focusOnCurrencyField === CurrencyField.INPUT)
+  // When CASH override is active, the Sell/INPUT row always uses the focused style
+  // (dark $surface1 + border) so it visually matches Uniswap's homepage where the
+  // pre-selected token row reads as the "active" panel without needing user click.
+  const cashOverride = useCashTokenOverride()
+  const focusedStyles = useCurrencyInputFocusedStyle(
+    focusOnCurrencyField === CurrencyField.INPUT || cashOverride.enabled,
+  )
 
   return (
     <Trace section={SectionName.CurrencyInputPanel}>

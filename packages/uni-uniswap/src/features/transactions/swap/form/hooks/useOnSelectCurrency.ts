@@ -24,6 +24,7 @@ import { areCurrencyIdsEqual, currencyAddress, currencyId } from 'uniswap/src/ut
 import { useEvent } from 'utilities/src/react/hooks'
 import { useValueAsRef } from 'utilities/src/react/useValueAsRef'
 import { useTrace } from 'utilities/src/telemetry/trace/TraceContext'
+import { useCashTokenOverride } from 'uniswap/src/components/TokenSelector/CashTokenOverrideContext'
 
 export function useOnSelectCurrency({
   onSelect,
@@ -50,6 +51,7 @@ export function useOnSelectCurrency({
   }))
 
   const traceRef = useValueAsRef(useTrace())
+  const cashOverride = useCashTokenOverride()
 
   const inputCurrencyIds = useMemo(() => (input ? [currencyId(input)] : []), [input])
   const inputTokenProjects = useTokenProjects(inputCurrencyIds)
@@ -99,7 +101,13 @@ export function useOnSelectCurrency({
           : false)
 
       // swap order if tokens are the same
-      if (otherFieldTradeableAsset && areCurrencyIdsEqual(currencyId(currency), currencyId(otherFieldTradeableAsset))) {
+      // (skip when cash override is active — our fake currencies share a common
+      // NativeCurrency prototype and `currencyId` may falsely report equality)
+      if (
+        !cashOverride.enabled &&
+        otherFieldTradeableAsset &&
+        areCurrencyIdsEqual(currencyId(currency), currencyId(otherFieldTradeableAsset))
+      ) {
         const previouslySelectedTradableAsset = field === CurrencyField.INPUT ? input : output
         // Given that we're swapping the order of tokens, we should also swap the `exactCurrencyField` and update the `focusOnCurrencyField` to make sure the correct input field is focused.
         newState.exactCurrencyField =

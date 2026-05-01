@@ -73,10 +73,11 @@ export const CurrencyInputPanel = memo(
 
       const isOutput = currencyField === CurrencyField.OUTPUT
 
-      // When cash override active: show pills on input (top/sell) row
-      // Otherwise: show on output (bottom/buy) row (original behavior)
+      // When cash override is active: show quick-select pills on whichever row has no
+      // token selected (Sell starts with CASH pre-filled, so pills typically appear on Buy).
+      // Otherwise: original Uniswap behavior — show on output (bottom/buy) row only.
       const showDefaultTokenOptions = cashOverride.enabled
-        ? !isOutput && !currencyInfo
+        ? !currencyInfo
         : isOutput && !currencyInfo
 
       const showInsufficientBalanceWarning =
