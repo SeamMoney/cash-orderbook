@@ -72,4 +72,4 @@ export const DEFAULT_PILL_TIME_SELECTOR_OPTIONS = ORDERED_TIMES.map((time: TimeP
   value: DISPLAYS[time],
 })) as SegmentedControlOption[]
 
-export const EXPLORE_CHART_HEIGHT_PX = 356
+export const EXPLORE_CHART_HEIGHT_PX = 440
