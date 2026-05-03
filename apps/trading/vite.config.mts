@@ -375,7 +375,11 @@ export default defineConfig(({ mode }) => {
       },
       portWarningPlugin(isProduction),
       reactPlugin(),
-      isProduction || isStaging
+      // Tamagui static extractor: build-time CSS optimization. Requires the
+      // workspace package to be resolvable as `ui` (the legacy Uniswap name)
+      // which doesn't work on Vercel since we renamed it to @cash/uni-ui.
+      // Skip on Vercel — runtime CSS works fine, just slightly larger bundle.
+      (isProduction || isStaging) && !process.env.VERCEL
         ? tamaguiPlugin({
             config: '../../packages/uni-ui/src/tamagui.config.ts',
             components: ['ui', 'uniswap', 'utilities'],
