@@ -1,4 +1,5 @@
-import { isAddress } from '@ethersproject/address'
+import { utils as ethersUtils } from 'ethers'
+const isAddress = ethersUtils.isAddress
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Flex, Input, Text } from 'ui/src'

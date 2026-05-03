@@ -1,4 +1,5 @@
-import { isAddress } from '@ethersproject/address'
+import { utils as ethersUtils } from 'ethers'
+const isAddress = ethersUtils.isAddress
 import { CurrencyAmount, Token } from '@uniswap/sdk-core'
 import { useState } from 'react'
 import { Button, Flex, Text, View } from 'ui/src'
