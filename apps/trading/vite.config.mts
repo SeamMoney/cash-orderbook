@@ -116,8 +116,16 @@ const portWarningPlugin = (isProduction: boolean) =>
         },
       }
 
-// Get git commit hash
-const commitHash = execSync('git rev-parse HEAD').toString().trim()
+// Get git commit hash. On Vercel the build runs without a .git directory, so
+// fall back to the SHA Vercel injects via env var, then to a sentinel.
+const commitHash = (() => {
+  if (process.env.VERCEL_GIT_COMMIT_SHA) return process.env.VERCEL_GIT_COMMIT_SHA
+  try {
+    return execSync('git rev-parse HEAD').toString().trim()
+  } catch {
+    return 'unknown'
+  }
+})()
 
 // Compute next dev version from latest non-RC web/* git tag
 function getNextDevVersion(): string {
