@@ -5,40 +5,14 @@ import { Network } from '@aptos-labs/ts-sdk'
 const ACTIVE_NETWORK = Network.TESTNET
 
 /**
- * Lazy-initialize X-Chain wallet derivation.
- *
- * @aptos-labs/derived-wallet-ethereum requires ethers v6 (BrowserProvider, etc.),
- * but this project ships ethers v5. The import will fail gracefully at runtime —
- * cross-chain derived wallets won't work, but native Aptos wallets (Petra, Nightly,
- * Backpack) and Aptos Connect (Google/Apple) will work fine.
+ * Cross-chain wallet derivation (Ethereum/Solana → Aptos via signature) is
+ * disabled. The Aptos-labs derived wallet packages require ethers v6 and
+ * pull in EVM-specific bundle weight we don't need on an Aptos-only app.
+ * Native Aptos wallets (Petra, Nightly, Backpack) and Aptos Connect
+ * (Google/Apple) work without these.
  */
-let xChainInitialized = false
 function initXChainWallets(): void {
-  if (xChainInitialized) return
-  xChainInitialized = true
-
-  // Ethereum-derived wallets (MetaMask, Rainbow, etc.)
-  import('@aptos-labs/derived-wallet-ethereum')
-    .then(({ setupAutomaticEthereumWalletDerivation }) => {
-      setupAutomaticEthereumWalletDerivation({
-        defaultNetwork: ACTIVE_NETWORK,
-      })
-    })
-    .catch(() => {
-      // Expected: ethers v6 not available in this project
-      console.debug('[AptosWallet] Ethereum derived wallets unavailable (ethers v6 required)')
-    })
-
-  // Solana-derived wallets (Phantom Solana, etc.)
-  import('@aptos-labs/derived-wallet-solana')
-    .then(({ setupAutomaticSolanaWalletDerivation }) => {
-      setupAutomaticSolanaWalletDerivation({
-        defaultNetwork: ACTIVE_NETWORK,
-      })
-    })
-    .catch(() => {
-      console.debug('[AptosWallet] Solana derived wallets unavailable')
-    })
+  // intentional no-op
 }
 
 // Get dapp image URI for Aptos Connect
